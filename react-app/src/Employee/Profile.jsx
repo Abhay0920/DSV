@@ -16,6 +16,7 @@ import {
   Skeleton,
   Input,
   Chip,
+  Snackbar,Alert,
 } from "@mui/material";
 import {
   Table,
@@ -27,6 +28,8 @@ import {
   Paper,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import Slide from "@mui/material/Slide";
+
 import CloudDownloadSharpIcon from "@mui/icons-material/CloudDownloadSharp";
 import CloudUploadSharpIcon from "@mui/icons-material/CloudUploadSharp";
 import axios from "axios";
@@ -191,6 +194,15 @@ function Profile() {
     });
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+  function SlideTransition(props) {
+      return <Slide {...props} direction="down" />;
+    }
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -330,13 +342,13 @@ function Profile() {
         }
       );
       setLoading(false);
-
+       handleCloseCvModal();
       console.log(response);
-
-      if (response.ok) {
-        alert("Resume Uploaded successfully!");
+      if (response.ok === true ) {
+        handleAlert("success","Resume Uploaded successfully!");
+       
       } else {
-        alert("Resume Upload Failed.");
+         handleAlert("error","Resume Upload Failed.");
       }
     } catch (error) {
       setLoading(false);
@@ -395,6 +407,41 @@ function Profile() {
     setSkills(skills.filter((skill) => skill !== skillToRemove));
   };
 
+  const [errors, setErrors] = useState({});
+  
+    const validateForm = () => {
+      let newErrors = {}; // Create a new errors object
+    
+      // Mobile Number Validation (10 digits, starts with 6-9)
+      const mobileRegex = /^[6-9]\d{9}$/;
+      if (!editedInfo.phone || !mobileRegex.test(editedInfo.phone)) {
+        newErrors.mobile = "Invalid mobile number. It should be 10 digits and start with 6-9.";
+      }
+    
+      // About Me Validation (Optional, but must be 5-200 characters)
+      if (editedInfo.AboutME && (editedInfo.AboutME.length < 5 || editedInfo.AboutME.length > 200)) {
+        newErrors.aboutMe = "About Me should be between 5 to 200 characters.";
+      }
+    
+      // Address Validation (Must be at least 10 characters)
+      if (!editedInfo.address || editedInfo.address.length < 10) {
+        newErrors.address = "Address must be at least 10 characters long.";
+      }
+    
+      setErrors(newErrors); // Update state with errors
+    
+      return Object.keys(newErrors).length === 0; // Return true if no errors
+    };
+    
+
+    const handleSubmit= (e)=>{
+      e.preventDefault();
+      if(validateForm()){
+        handleSave();
+      }else {
+        console.log("Validation failed:", errors); // Debugging
+      }
+    }
 
   
 
@@ -640,14 +687,16 @@ function Profile() {
       {/* Edit Dialog */}
       <Dialog open={isEditing} onClose={handleCancel} fullWidth maxWidth="sm">
         <DialogTitle>Edit Profile</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{overflow:"visible"}}>
           <TextField
             label="Name"
             name="name"
             fullWidth
             value={editedInfo.name}
-            onChange={handleInputChange}
+            // onChange={handleInputChange}
             sx={{ marginBottom: 2 }}
+            disabled
+
           />
           <TextField
             label="Email"
@@ -656,6 +705,7 @@ function Profile() {
             value={editedInfo.email}
             // onChange={handleInputChange}
             sx={{ marginBottom: 2 }}
+            disabled
           />
           <TextField
             label="Phone"
@@ -663,6 +713,8 @@ function Profile() {
             fullWidth
             value={editedInfo.phone}
             onChange={handleInputChange}
+            error = {errors.mobile}
+            helperText={errors.mobile}
             sx={{ marginBottom: 2 }}
           />
           <TextField
@@ -670,6 +722,8 @@ function Profile() {
             name="address"
             fullWidth
             value={editedInfo.address}
+            error = {errors.address}
+            helperText={errors.address}
             onChange={handleInputChange}
             sx={{ marginBottom: 2 }}
           />
@@ -681,6 +735,8 @@ function Profile() {
             rows={4}
             value={editedInfo.AboutME}
             onChange={handleInputChange}
+            error = {errors.aboutMe}
+            helperText={errors.aboutMe}
             sx={{ marginBottom: 2 }}
           />
           <Box sx={{ marginBottom: 2 }}>
@@ -756,7 +812,7 @@ function Profile() {
           <Button onClick={handleCancel} color="error" variant="outlined">
             Cancel
           </Button>
-          <Button onClick={handleSave} color="primary" variant="contained">
+          <Button onClick={handleSubmit} color="primary" variant="contained">
             Save
           </Button>
         </DialogActions>
@@ -808,6 +864,35 @@ function Profile() {
           )}
         </DialogContent>
       </Dialog>
+      <Snackbar
+              open={snackbar.open}
+              autoHideDuration={3000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+              TransitionComponent={SlideTransition}
+            >
+              <Alert
+                onClose={handleCloseSnackbar}
+                severity={snackbar.severity}
+                variant="filled"
+                sx={{
+                  width: "100%",
+                  "&.MuiAlert-standardSuccess": {
+                    backgroundColor: "#4caf50",
+                    color: "#fff",
+                  },
+                  "&.MuiAlert-standardError": {
+                    backgroundColor: "#f44336",
+                    color: "#fff",
+                  },
+                  "& .MuiAlert-icon": {
+                    color: "#fff",
+                  },
+                }}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
     </Box>
   );
 }

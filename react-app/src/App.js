@@ -22,12 +22,37 @@ import Emp from "./Employee/Employee";
 import EmpFeedback from "./Employee/Feedback";
 import axios from "axios";
 
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchProjects } from "./redux/Project/ProjectSlice";
+import { fetchEmployees } from "./redux/Employee/EmployeeSlice";
+import { fetchTasks } from "./redux/Tasks/TaskSlice";
+import { fetchProfile, } from "./redux/Profile/Profile";
+import { fetchFeedback } from "./redux/Feedback/Feedback";
+import Login from "./Admin/Login";
+import { fetchEmpProject } from "./redux/EmpProject/EmpProjectSlice";
+import { fetchEmpTask } from "./redux/EmpTask/EmpTaskSlice";
 function App() {
   const [userRole, setUserRole] = useState(null);
   const [currUser, setCurrUser] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const dispatch = useDispatch();
 
+  useEffect(() => {   
+    //  const user = localStorage.getItem("currUser");
+    //  const parsedUser = JSON.parse(user);
+     
+    //  const id = parsedUser.userid;
+    dispatch(fetchProjects());
+    dispatch(fetchEmployees());
+    dispatch(fetchTasks());
+    dispatch(fetchProfile());
+    dispatch(fetchFeedback());
+    // dispatch(fetchEmpProject());
+    // dispatch(fetchEmpTask());
+   
+  }, [dispatch]);
+   
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -72,6 +97,7 @@ function App() {
 
           if (profileResponse.data.data) {
             localStorage.setItem("profileData", profileResponse.data.data);
+            
           } else {
             localStorage.setItem(
               "profileData",
@@ -99,7 +125,11 @@ function App() {
     checkAuth();
   }, []);
 
+  
+
   if (isCheckingAuth) {
+   
+   
     return (
       <div
         style={{
@@ -130,10 +160,12 @@ function App() {
     window.location.href = "/__catalyst/auth/login";
     return null;
   }
-
+  
   return (
   
       <Routes>
+         <Route path="login" element={<Login/>} />
+
         {userRole === "Super Admin" || userRole === "Admin" ? (
           <Route path="/" element={<Layout1 />}>
             <Route index element={<Dashboard />} />
@@ -154,6 +186,7 @@ function App() {
           </Route>
         )}
       </Routes>
+      
   
   );
 }

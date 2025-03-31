@@ -51,7 +51,11 @@ import axios from "axios";
 import { TimeEntry } from "./TimeEntry";
 import Slide from "@mui/material/Slide";
 import Project from "../Employee/Project";
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
+import { fetchTasks } from "../redux/Tasks/TaskSlice";
 
+import { fetchProjects } from "../redux/Project/ProjectSlice";
 const statusOptions = ["Open", "In Progress", "Completed"];
 const statusConfig = {
   Completed: {
@@ -77,8 +81,11 @@ const statusConfig = {
 function Task() {
 
   const location = useLocation();
-  const { projectId } = location.state || {};  // Access projectId from state
-  console.log("Got project id:", projectId); 
+  const dispatch = useDispatch();
+  
+  const { projectId } = location.state || {}; 
+  const { projectName } = location.state || {}; // Access projectId from state
+  
 
   const theme = useTheme();
   const [tasks, setTasks] = useState([]);
@@ -94,7 +101,7 @@ function Task() {
   const [assignOptions, setAssignOptions] = useState([]);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedAssignees, setSelectedAssignees] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [snackbar, setSnackbar] = useState({
@@ -102,10 +109,10 @@ function Task() {
     message: "",
     severity: "success",
   });
-
+  console.log("projectname,",projectName);
   const [newTask, setNewTask] = useState({
-    projectId: "",
-    project_name: "",
+    projectId: projectId || "",
+    project_name: projectName || "",
     name: "",
     assignTo: "",
     assignToID: "",
@@ -118,71 +125,122 @@ function Task() {
   const [TaskName, setTaskName] = useState("");
   const [errors, setErrors] = useState({});
 
+  const state = useSelector((state) => state.projectReducer);
+  const employeeState = useSelector((state) => state.employeeReducer);
+  const taskState = useSelector((state) => state.taskReducer);
+
+  console.log("projects", employeeState);
+  console.log("tasks", taskState);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const TaskResponse = await axios.get(
-          "/server/time_entry_management_application_function/tasks"
-        );
-        const ProjectResponse = await axios.get(
-          "/server/time_entry_management_application_function/projects"
-        );
-        const EmployeeResponse = await axios.get(
-          "/server/time_entry_management_application_function/employee"
-        );
+    if (state && state.data && employeeState && employeeState.data && taskState && taskState.data) {
+      // Format assign options for employees excluding admins
+      const formattedAssignTo = employeeState.data.users
+        .filter(
+          (employee) =>
+            employee.role_details?.role_name !== "Admin" &&
+            employee.role_details?.role_name !== "Super Admin"
+        )
+        .map((employee) => ({
+          username: `${employee.first_name} ${employee.last_name}`,
+          userID: employee.user_id,
+        }));
 
-        if (EmployeeResponse.status === 200) {
-          const formattedAssignTo = EmployeeResponse.data.users
-            .filter(
-              (employee) =>
-                employee.role_details.role_name !== "Admin" &&
-                employee.role_details.role_name !== "Super Admin"
-            )
-            .map((employee) => ({
-              username: `${employee.first_name} ${employee.last_name}`,
-              userID: employee.user_id,
-            }));
+      console.log("Formatted Assign To:", formattedAssignTo);
+      setAssignOptions(formattedAssignTo);
+      // Filter and map tasks based on projectId (if provided)
+      const tasksFromResponse = taskState.data.data
+        .filter((item) => (projectId ? item.ProjectID === projectId : true)) // Filter tasks by projectId
+        .map((item) => ({
+          id: item.ROWID,
+          taskid: item.ROWID,
+          name: item.Task_Name,
+          projectId: item.ProjectID,
+          project_name: item.Project_Name,
+          assignTo: item.Assign_To,
+          assignToID: item.Assign_To_ID,
+          status: item.Status,
+          startDate: item.Start_Date,
+          endDate: item.End_Date,
+          description: item.Description,
+        }));
 
-          setAssignOptions(formattedAssignTo);
-        }
-
-        // Filter tasks based on the provided projectId, if available
-        const tasksFromResponse = TaskResponse.data.data
-          .filter((item) => (projectId ? item.ProjectID === projectId : true)) // If projectId exists, filter tasks
-          .map((item) => ({
-            id: item.ROWID,
-            taskid: item.ROWID,
-            name: item.Task_Name,
-            projectId: item.ProjectID,
-            project_name: item.Project_Name,
-            assignTo: item.Assign_To,
-            assignToID: item.Assign_To_ID,
-            status: item.Status,
-            startDate: item.Start_Date,
-            endDate: item.End_Date,
-            description: item.Description,
-          }));
-
-          console.log("qwrewr",tasksFromResponse);
-          console.log("sdfgs",tasksFromResponse[0].project_name);
-          if (projectId) {
-            setTaskName(tasksFromResponse[0]?.project_name);
-          }
-          else setTaskName("Tasks");
-
-        setTasks(tasksFromResponse);
-        setProjects(ProjectResponse.data.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
+      // If projectId is provided, set the task name to the first task's project name, else set default value
+      if (projectId ) {
+        setTaskName(projectName);
+      } else {
+        setTaskName("Tasks");
       }
-    };
 
-    fetchData();
-  }, [projectId]);
+      setTasks(tasksFromResponse); // Update tasks in state
+      setProjects(state.data.data); // Set projects in state
+    }
+  }, [projectId, state, employeeState, taskState]);
+ 
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     setLoading(true);
+  //     try {
+  //       const TaskResponse = await axios.get(
+  //         "/server/time_entry_management_application_function/tasks"
+  //       );
+  //       const ProjectResponse = await axios.get(
+  //         "/server/time_entry_management_application_function/projects"
+  //       );
+  //       const EmployeeResponse = await axios.get(
+  //         "/server/time_entry_management_application_function/employee"
+  //       );
+
+  //       if (EmployeeResponse.status === 200) {
+  //         const formattedAssignTo = EmployeeResponse.data.users
+  //           .filter(
+  //             (employee) =>
+  //               employee.role_details.role_name !== "Admin" &&
+  //               employee.role_details.role_name !== "Super Admin"
+  //           )
+  //           .map((employee) => ({
+  //             username: `${employee.first_name} ${employee.last_name}`,
+  //             userID: employee.user_id,
+  //           }));
+
+  //         setAssignOptions(formattedAssignTo);
+  //       }
+
+  //       // Filter tasks based on the provided projectId, if available
+  //       const tasksFromResponse = TaskResponse.data.data
+  //         .filter((item) => (projectId ? item.ProjectID === projectId : true)) // If projectId exists, filter tasks
+  //         .map((item) => ({
+  //           id: item.ROWID,
+  //           taskid: item.ROWID,
+  //           name: item.Task_Name,
+  //           projectId: item.ProjectID,
+  //           project_name: item.Project_Name,
+  //           assignTo: item.Assign_To,
+  //           assignToID: item.Assign_To_ID,
+  //           status: item.Status,
+  //           startDate: item.Start_Date,
+  //           endDate: item.End_Date,
+  //           description: item.Description,
+  //         }));
+
+  //         console.log("qwrewr",tasksFromResponse);
+  //         console.log("sdfgs",tasksFromResponse[0].project_name);
+  //         if (projectId) {
+  //           setTaskName(tasksFromResponse[0]?.project_name);
+  //         }
+  //         else setTaskName("Tasks");
+
+  //       setTasks(tasksFromResponse);
+  //       setProjects(ProjectResponse.data.data);
+  //     } catch (error) {
+  //       console.error("Error fetching data:", error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchData();
+  // }, [projectId]);
 
   const handleSearch = (event) => {
     setSearchQuery(event.target.value);
@@ -205,6 +263,8 @@ function Task() {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+ 
+console.log("pagination",paginatedTasks)
 
   const toggleDrawer = (open) => {
     setDrawerOpen(open);
@@ -322,7 +382,8 @@ function Task() {
       const newTaskData = [...tasks, updateData];
       setTasks(newTaskData);
       handleCancel();
-      handleAlert("success", "Task added successfully");
+       handleAlert("success", "Task added successfully");
+       dispatch(fetchTasks());
     } catch (error) {
       handleAlert("error", error.message || "Error adding task");
     }
@@ -466,6 +527,7 @@ function Task() {
   const handleDeleteConfirm = async () => {
     if (taskToDelete) {
       try {
+        console.log("saasf",taskToDelete.id);
         const response = await axios.delete(
           `/server/time_entry_management_application_function/tasks/${taskToDelete.id}`
         );
@@ -492,6 +554,7 @@ function Task() {
   };
 
   const handleSubmit = () => {
+    
     if (validateForm()) {
       handleAddTask();
     }
@@ -929,7 +992,9 @@ function Task() {
                 ) : (
                   <TableBody>
                     {paginatedTasks.map((task) => (
+                      
                       <TableRow key={task.id}>
+                       
                         <TableCell>
                           {"T" + task.id.substr(task.id.length - 4)}
                         </TableCell>
@@ -1108,26 +1173,28 @@ function Task() {
       <Autocomplete
   options={projects}
   getOptionLabel={(option) => option.Project_Name} // Show project name
-  isOptionEqualToValue={(option, value) => option.ROWID === value} // Ensure correct selection
-  value={projects.find((option) => option.ROWID === newTask.projectId) || null}
+  isOptionEqualToValue={(option, value) => option.ROWID === value?.ROWID} // Ensure correct selection
+  value={projects.find((option) => option.ROWID ===  projectId) || null}
   onChange={(event, newValue) => {
     handleInputChange({
       target: { name: "projectId", value: newValue ? newValue.ROWID : "" },
     });
   }}
+  disabled={!!projectId} 
   renderInput={(params) => (
     <TextField
-      {...params}
-      label="Add Project"
-      name="projectId"
-      fullWidth
-      variant="outlined"
-      sx={{ marginBottom: 2 }}
-      error={!!errors.projectId}
-      helperText={errors.projectId}
-    />
+  {...params}
+  label="Project Name"
+  name="projectId"
+  fullWidth
+  variant="outlined"
+  sx={{ marginBottom: 2 }}
+  error={!!errors.projectId}
+  helperText={errors.projectId || ""}
+/>
   )}
 />
+
 
       {/* <TextField
         label="Add Project"
