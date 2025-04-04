@@ -67,6 +67,13 @@ const {
 const { getResume, updateResume } = require("./controller/resumeController");
 const { getFeedback, addFeedback } = require("./controller/feedbackController");
 
+const {
+  getAllIssues,
+  createIssue,
+  updateIssue,
+  deleteIssue,
+} = require("./controller/issueController");
+
 // Project Api..---------------------------------------------------------------------------------------------
 app.get("/projects", getAllProjects);
 app.get("/projects/:userid", getProjectsByUserId);
@@ -112,6 +119,12 @@ app.post("/resume/:user_ID", updateResume);
 // Feedback Api..---------------------------------------------------------------------------------------------
 app.get("/feedback", getFeedback);
 app.post("/feedback", addFeedback);
+
+//Issue  Api..---------------------------------------------------------------------------------------------
+app.get("/issue", getAllIssues);
+app.post("/issue", createIssue);
+app.post("/issue/:ROWID", updateIssue);
+app.delete("/issue/:ROWID", deleteIssue);
 
 app.use((req, res) => {
   res.status(404).send("The page you are looking for does not exist.");
