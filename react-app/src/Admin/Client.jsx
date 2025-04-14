@@ -73,7 +73,7 @@ export const Client = () => {
   const [loading, setLoading] = useState(false);
   const [clientToDelete, setclientToDelete] = useState(null);
   const dispatch = useDispatch();
-  const { data, } = useSelector((state) => state.clientReducer);
+  const { data } = useSelector((state) => state.clientReducer);
   const [isLoading, setisLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -85,26 +85,25 @@ export const Client = () => {
 
   const navigate = useNavigate();
 
-
   useEffect(() => {
     const fetchData = async () => {
       setisLoading(true);
       await dispatch(fetchClientData());
       setisLoading(false);
     };
-  
+
     if (!Array.isArray(data) || data.length === 0) {
       fetchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-    
+
   const toggleDrawer = (open) => {
     setDrawerOpen(open);
   };
 
-  const handleOpenDrawer = async (event,ROWID) => {
-    console.log("event",event.target);
+  const handleOpenDrawer = async (event, ROWID) => {
+    console.log("event", event.target);
     setLoading(true);
     setOpen(true);
 
@@ -444,7 +443,7 @@ export const Client = () => {
                     overflow: "hidden",
                     backgroundColor: theme.palette.background.paper,
                   }}
-                  onClick={(e) => handleOpenDrawer(e,data.ROWID)}
+                  onClick={(e) => handleOpenDrawer(e, data.ROWID)}
                 >
                   <Box
                     sx={{
@@ -502,15 +501,21 @@ export const Client = () => {
                       gutterBottom
                     >
                       <strong>Website:</strong>{" "}
-                      <a
-                        href={data.Website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: theme.palette.primary.main }}
-                      >
-                        {data.Website}
-                      </a>
+                      {data.Website ? (
+                        <a
+                          href={`https://${data.Website.replace(/^https?:\/\//, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: theme.palette.primary.main }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {data.Website}
+                        </a>
+                      ) : (
+                        "N/A"
+                      )}
                     </Typography>
+
                     <Typography
                       variant="body2"
                       color="text.secondary"
@@ -524,23 +529,13 @@ export const Client = () => {
                     sx={{
                       px: 2,
                       pb: 2,
-                      justifyContent: "flex-start",
-                      justifyContent: "space-between",
+                      display: "flex",
+                      alignItems: "center",
                     }}
                   >
-                    <Button
-                      size="small"
-                      variant="contained"
-                      color="primary"
-                      href={data.Website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ textTransform: "none", borderRadius: 2 }}
-                      onClick={(e) => e.stopPropagation()} 
-                    >
-                      Visit Website
-                    </Button>
-                    <Box>
+                   
+
+                    <Box sx={{ ml: "auto" }}>
                       <IconButton
                         color="error"
                         onClick={(e) => {
