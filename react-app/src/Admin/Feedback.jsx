@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import {
   Container,
   Typography,
@@ -60,7 +61,6 @@ const Feedback = () => {
       ? new Date(a.MODIFIEDTIME) - new Date(b.MODIFIEDTIME)
       : new Date(b.MODIFIEDTIME) - new Date(a.MODIFIEDTIME);
   });
-
   
   return (
     <div>
@@ -151,7 +151,7 @@ const Feedback = () => {
           </Card>
         </Grid>
       ))
-    : filteredFeedback.map((item) => (
+    : sortedFeedback.map((item) => (
         <Grid item xs={12} sm={6} md={4} key={item.id}>
           <Card
             component={Paper}

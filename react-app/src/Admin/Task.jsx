@@ -51,7 +51,7 @@ import axios from "axios";
 import { TimeEntry } from "./TimeEntry";
 import Slide from "@mui/material/Slide";
 import Project from "../Employee/Project";
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector } from "react-redux";
 import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 import { fetchTasks } from "../redux/Tasks/TaskSlice";
 
@@ -79,13 +79,11 @@ const statusConfig = {
 };
 
 function Task() {
-
   const location = useLocation();
   const dispatch = useDispatch();
-  
-  const { projectId } = location.state || {}; 
+
+  const { projectId } = location.state || {};
   const { projectName } = location.state || {}; // Access projectId from state
-  
 
   const theme = useTheme();
   const [tasks, setTasks] = useState([]);
@@ -109,7 +107,7 @@ function Task() {
     message: "",
     severity: "success",
   });
-  console.log("projectname,",projectName);
+  console.log("projectname,", projectName);
   const [newTask, setNewTask] = useState({
     projectId: projectId || "",
     project_name: projectName || "",
@@ -133,7 +131,14 @@ function Task() {
   console.log("tasks", taskState);
 
   useEffect(() => {
-    if (state && state.data && employeeState && employeeState.data && taskState && taskState.data) {
+    if (
+      state &&
+      state.data &&
+      employeeState &&
+      employeeState.data &&
+      taskState &&
+      taskState.data
+    ) {
       // Format assign options for employees excluding admins
       const formattedAssignTo = employeeState.data.users
         .filter(
@@ -166,7 +171,7 @@ function Task() {
         }));
 
       // If projectId is provided, set the task name to the first task's project name, else set default value
-      if (projectId ) {
+      if (projectId) {
         setTaskName(projectName);
       } else {
         setTaskName("Tasks");
@@ -176,7 +181,7 @@ function Task() {
       setProjects(state.data.data); // Set projects in state
     }
   }, [projectId, state, employeeState, taskState]);
- 
+
   // useEffect(() => {
   //   const fetchData = async () => {
   //     setLoading(true);
@@ -263,8 +268,8 @@ function Task() {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
- 
-console.log("pagination",paginatedTasks)
+
+  console.log("pagination", paginatedTasks);
 
   const toggleDrawer = (open) => {
     setDrawerOpen(open);
@@ -272,16 +277,21 @@ console.log("pagination",paginatedTasks)
 
   const validateForm = () => {
     let newErrors = {};
-    
+
     if (!newTask.projectId) newErrors.projectId = "Project is required";
     if (!newTask.name) newErrors.name = "Task name is required";
-    if (!newTask.assignToID) newErrors.assignToID = "At least one user must be assigned";
+    if (!newTask.assignToID)
+      newErrors.assignToID = "At least one user must be assigned";
     if (!newTask.status) newErrors.status = "Status is required";
     if (!newTask.startDate) newErrors.startDate = "Start date is required";
     if (!newTask.endDate) newErrors.endDate = "End date is required";
-    if (newTask.startDate && newTask.endDate && newTask.startDate > newTask.endDate)
+    if (
+      newTask.startDate &&
+      newTask.endDate &&
+      newTask.startDate > newTask.endDate
+    )
       newErrors.endDate = "End date cannot be before start date";
-  
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -289,37 +299,36 @@ console.log("pagination",paginatedTasks)
   const handleInputChange = (event) => {
     const { name, value } = event.target;
 
-    if (name === "projectId") {  
-        const selectedOption = projects.find((option) => option.ROWID === value);
-        if (selectedOption) {
-            setNewTask((prev) => ({
-                ...prev,
-                project_name: selectedOption.Project_Name,
-                projectId: selectedOption.ROWID,
-            }));
-        }
-    } else if (name === "assignToID") {  
-        //  Ensure value is always an array
-        const selectedValues = Array.isArray(value) ? value : value.split(",");
-
-        const selectedUsernames = selectedValues
-            .map((id) => {
-                const user = assignOptions.find((option) => option.userID === id);
-                return user ? user.username : "";
-            })
-            .filter(Boolean) // Remove empty names
-            .join(", ");
-
+    if (name === "projectId") {
+      const selectedOption = projects.find((option) => option.ROWID === value);
+      if (selectedOption) {
         setNewTask((prev) => ({
-            ...prev,
-            assignTo: selectedUsernames, // Store names
-            assignToID: selectedValues.join(","), //  Store IDs
+          ...prev,
+          project_name: selectedOption.Project_Name,
+          projectId: selectedOption.ROWID,
         }));
-    } else {
-        setNewTask((prev) => ({ ...prev, [name]: value }));
-    }
-};
+      }
+    } else if (name === "assignToID") {
+      //  Ensure value is always an array
+      const selectedValues = Array.isArray(value) ? value : value.split(",");
 
+      const selectedUsernames = selectedValues
+        .map((id) => {
+          const user = assignOptions.find((option) => option.userID === id);
+          return user ? user.username : "";
+        })
+        .filter(Boolean) // Remove empty names
+        .join(", ");
+
+      setNewTask((prev) => ({
+        ...prev,
+        assignTo: selectedUsernames, // Store names
+        assignToID: selectedValues.join(","), //  Store IDs
+      }));
+    } else {
+      setNewTask((prev) => ({ ...prev, [name]: value }));
+    }
+  };
 
   const handleAlert = (severity, message) => {
     setSnackbar({
@@ -382,8 +391,8 @@ console.log("pagination",paginatedTasks)
       const newTaskData = [...tasks, updateData];
       setTasks(newTaskData);
       handleCancel();
-       handleAlert("success", "Task added successfully");
-       dispatch(fetchTasks());
+      handleAlert("success", "Task added successfully");
+      dispatch(fetchTasks());
     } catch (error) {
       handleAlert("error", error.message || "Error adding task");
     }
@@ -527,7 +536,7 @@ console.log("pagination",paginatedTasks)
   const handleDeleteConfirm = async () => {
     if (taskToDelete) {
       try {
-        console.log("saasf",taskToDelete.id);
+        console.log("saasf", taskToDelete.id);
         const response = await axios.delete(
           `/server/time_entry_management_application_function/tasks/${taskToDelete.id}`
         );
@@ -554,7 +563,6 @@ console.log("pagination",paginatedTasks)
   };
 
   const handleSubmit = () => {
-    
     if (validateForm()) {
       handleAddTask();
     }
@@ -992,12 +1000,11 @@ console.log("pagination",paginatedTasks)
                 ) : (
                   <TableBody>
                     {paginatedTasks.map((task) => (
-                      
                       <TableRow key={task.id}>
-                       
                         <TableCell>
                           {"T" + task.id.substr(task.id.length - 4)}
                         </TableCell>
+
                         <TableCell>{task.name}</TableCell>
                         <TableCell>{task.project_name}</TableCell>
                         <TableCell>
@@ -1155,48 +1162,58 @@ console.log("pagination",paginatedTasks)
       </Grid>
 
       {/* Add Task Drawer */}
-      <Drawer anchor="right" open={drawerOpen} onClose={() => toggleDrawer(false)}>
-    <Box
-      sx={{
-        width: 400,
-        padding: 2,
-        position: "relative",
-        maxHeight: "90vh",
-        overflowY: "auto",
-        marginTop: "70px",
-      }}
-    >
-      <Typography variant="h5" sx={{ marginBottom: 3 }}>
-        Add Task
-      </Typography>
-      
-      <Autocomplete
-  options={projects}
-  getOptionLabel={(option) => option.Project_Name} // Show project name
-  isOptionEqualToValue={(option, value) => option.ROWID === value?.ROWID} // Ensure correct selection
-  value={projects.find((option) => option.ROWID ===  projectId) || null}
-  onChange={(event, newValue) => {
-    handleInputChange({
-      target: { name: "projectId", value: newValue ? newValue.ROWID : "" },
-    });
-  }}
-  disabled={!!projectId} 
-  renderInput={(params) => (
-    <TextField
-  {...params}
-  label="Project Name"
-  name="projectId"
-  fullWidth
-  variant="outlined"
-  sx={{ marginBottom: 2 }}
-  error={!!errors.projectId}
-  helperText={errors.projectId || ""}
-/>
-  )}
-/>
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => toggleDrawer(false)}
+      >
+        <Box
+          sx={{
+            width: 400,
+            padding: 2,
+            position: "relative",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            marginTop: "70px",
+          }}
+        >
+          <Typography variant="h5" sx={{ marginBottom: 3 }}>
+            Add Task
+          </Typography>
 
+          <Autocomplete
+            options={projects}
+            getOptionLabel={(option) => option.Project_Name} // Show project name
+            isOptionEqualToValue={(option, value) =>
+              option.ROWID === value?.ROWID
+            } // Ensure correct selection
+            value={
+              projects.find((option) => option.ROWID === projectId) || null
+            }
+            onChange={(event, newValue) => {
+              handleInputChange({
+                target: {
+                  name: "projectId",
+                  value: newValue ? newValue.ROWID : "",
+                },
+              });
+            }}
+            disabled={!!projectId}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Project Name"
+                name="projectId"
+                fullWidth
+                variant="outlined"
+                sx={{ marginBottom: 2 }}
+                error={!!errors.projectId}
+                helperText={errors.projectId || ""}
+              />
+            )}
+          />
 
-      {/* <TextField
+          {/* <TextField
         label="Add Project"
         name="project"
         fullWidth
@@ -1213,128 +1230,130 @@ console.log("pagination",paginatedTasks)
           </MenuItem>
         ))}
       </TextField> */}
-        
-      <TextField
-        label="Add Task"
-        name="name"
-        fullWidth
-        value={newTask.name}
-        onChange={handleInputChange}
-        sx={{ marginBottom: 2 }}
-        error={!!errors.name}
-        helperText={errors.name}
-      />
 
-<Autocomplete
-  multiple
-  options={assignOptions}
-  getOptionLabel={(option) => option.username}
-  value={assignOptions.filter((option) =>
-    Array.isArray(newTask.assignToID)
-      ? newTask.assignToID.includes(option.userID)
-      : typeof newTask.assignToID === "string"
-      ? newTask.assignToID.split(",").includes(option.userID)
-      : []
-  )}
-  onChange={(event, newValue) => {
-    const selectedValues = Array.isArray(newValue) ? newValue : [];
-    const selectedIDs = selectedValues.map((option) => option.userID);
+          <TextField
+            label="Add Task"
+            name="name"
+            fullWidth
+            value={newTask.name}
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.name}
+            helperText={errors.name}
+          />
 
-    handleInputChange({
-      target: {
-        name: "assignToID",
-        value: selectedIDs.length > 0 ? selectedIDs.join(",") : "", // Convert to a string
-      },
-    });
-  }}
-  renderInput={(params) => (
-    <TextField
-      {...params}
-      label="Associated"
-      name="assignToID"
-      fullWidth
-      error={!!errors.assignToID}
-      helperText={errors.assignToID}
-      sx={{ marginBottom: 2 }}
-    />
-  )}
-/>
-    
-      <TextField
-        select
-        fullWidth
-        label="Status"
-        name="status"
-        value={newTask.status}
-        onChange={handleInputChange}
-        sx={{ mb: 2 }}
-        error={!!errors.status}
-        helperText={errors.status}
-      >
-        {Object.keys(statusConfig).map((status) => (
-          <MenuItem
-            key={status}
-            value={status}
-            sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}
+          <Autocomplete
+            multiple
+            options={assignOptions}
+            getOptionLabel={(option) => option.username}
+            value={assignOptions.filter((option) =>
+              Array.isArray(newTask.assignToID)
+                ? newTask.assignToID.includes(option.userID)
+                : typeof newTask.assignToID === "string"
+                  ? newTask.assignToID.split(",").includes(option.userID)
+                  : []
+            )}
+            onChange={(event, newValue) => {
+              const selectedValues = Array.isArray(newValue) ? newValue : [];
+              const selectedIDs = selectedValues.map((option) => option.userID);
+
+              handleInputChange({
+                target: {
+                  name: "assignToID",
+                  value: selectedIDs.length > 0 ? selectedIDs.join(",") : "", // Convert to a string
+                },
+              });
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Associated"
+                name="assignToID"
+                fullWidth
+                error={!!errors.assignToID}
+                helperText={errors.assignToID}
+                sx={{ marginBottom: 2 }}
+              />
+            )}
+          />
+
+          <TextField
+            select
+            fullWidth
+            label="Status"
+            name="status"
+            value={newTask.status}
+            onChange={handleInputChange}
+            sx={{ mb: 2 }}
+            error={!!errors.status}
+            helperText={errors.status}
           >
-            <Box
-              component={statusConfig[status].icon}
-              sx={{ color: statusConfig[status].color, fontSize: "1.1rem" }}
-            />
-            <Typography sx={{ color: statusConfig[status].color, fontWeight: 500 }}>
-              {status}
-            </Typography>
-          </MenuItem>
-        ))}
-      </TextField>
+            {Object.keys(statusConfig).map((status) => (
+              <MenuItem
+                key={status}
+                value={status}
+                sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}
+              >
+                <Box
+                  component={statusConfig[status].icon}
+                  sx={{ color: statusConfig[status].color, fontSize: "1.1rem" }}
+                />
+                <Typography
+                  sx={{ color: statusConfig[status].color, fontWeight: 500 }}
+                >
+                  {status}
+                </Typography>
+              </MenuItem>
+            ))}
+          </TextField>
 
-      <TextField
-        label="Start Date"
-        name="startDate"
-        fullWidth
-        type="date"
-        value={newTask.startDate}
-        onChange={handleInputChange}
-        InputLabelProps={{ shrink: true }}
-        sx={{ marginBottom: 2 }}
-        error={!!errors.startDate}
-        helperText={errors.startDate}
-      />
+          <TextField
+            label="Start Date"
+            name="startDate"
+            fullWidth
+            type="date"
+            value={newTask.startDate}
+            onChange={handleInputChange}
+            InputLabelProps={{ shrink: true }}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.startDate}
+            helperText={errors.startDate}
+          />
 
-      <TextField
-        label="End Date"
-        name="endDate"
-        fullWidth
-        type="date"
-        value={newTask.endDate}
-        onChange={handleInputChange}
-        InputLabelProps={{ shrink: true }}
-        sx={{ marginBottom: 2 }}
-        error={!!errors.endDate}
-        helperText={errors.endDate}
-      />
+          <TextField
+            label="End Date"
+            name="endDate"
+            fullWidth
+            type="date"
+            value={newTask.endDate}
+            onChange={handleInputChange}
+            InputLabelProps={{ shrink: true }}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.endDate}
+            helperText={errors.endDate}
+          />
 
-      <TextField
-        label="Add Description"
-        name="description"
-        fullWidth
-        multiline
-        rows={4}
-        value={newTask.description}
-        onChange={handleInputChange}
-        sx={{ marginBottom: 3 }}
-      />
+          <TextField
+            label="Add Description"
+            name="description"
+            fullWidth
+            multiline
+            rows={4}
+            value={newTask.description}
+            onChange={handleInputChange}
+            sx={{ marginBottom: 3 }}
+          />
 
-      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Button variant="contained" color="primary" onClick={handleSubmit}>
-          Add
-        </Button>
-        <Button variant="outlined" color="error" onClick={handleCancel}>
-          Cancel
-        </Button>
-      </Box>
-    </Box>
-  </Drawer>
+          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+            <Button variant="contained" color="primary" onClick={handleSubmit}>
+              Add
+            </Button>
+            <Button variant="outlined" color="error" onClick={handleCancel}>
+              Cancel
+            </Button>
+          </Box>
+        </Box>
+      </Drawer>
 
       {/* Edit Task */}
       <Modal
@@ -1581,11 +1600,6 @@ console.log("pagination",paginatedTasks)
 }
 
 export default Task;
-
-
-
-
-
 
 // import React, { useEffect, useState } from "react";
 // import {

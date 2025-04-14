@@ -127,7 +127,6 @@ const deleteUser = async (req, res) => {
   }
 };
 const { USER_STATUS } = require("zcatalyst-sdk-node/lib/user-management/user-management");
-
 const updateUserStatus = async (req, res) => {
   const user_ID = req.params.user_ID;
   const active = req.params.active !== "ACTIVE";

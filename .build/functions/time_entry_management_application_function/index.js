@@ -18,6 +18,10 @@ app.use(bodyParser.json());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+// Get a stratus instance
+// const stratus = catalyst.stratus();
+// console.log(stratus);
+
 // Initialize Catalyst app
 app.use((req, res, next) => {
   req.catalystApp = catalyst.initialize(req);
@@ -67,6 +71,29 @@ const {
 const { getResume, updateResume } = require("./controller/resumeController");
 const { getFeedback, addFeedback } = require("./controller/feedbackController");
 
+const {
+  getAllIssues,
+  createIssue,
+  updateIssue,
+  deleteIssue,
+  getAllAssignIssues,
+  getAllClientIssues,
+} = require("./controller/issueController");
+
+const {
+  getClientProjects,
+  getOrgContact,
+  updateClient,
+  createClient,
+  getClientOrg,
+  addContact,
+  getContact,
+  getClientTasks,
+  getClientData,
+  deleteORG,
+  deleteClient,
+} = require("./controller/clientController");
+
 // Project Api..---------------------------------------------------------------------------------------------
 app.get("/projects", getAllProjects);
 app.get("/projects/:userid", getProjectsByUserId);
@@ -112,6 +139,27 @@ app.post("/resume/:user_ID", updateResume);
 // Feedback Api..---------------------------------------------------------------------------------------------
 app.get("/feedback", getFeedback);
 app.post("/feedback", addFeedback);
+
+//Issue  Api..---------------------------------------------------------------------------------------------
+app.get("/issue", getAllIssues);
+app.get("/assignissue/:userID", getAllAssignIssues);
+app.get("/clientissue/:userID", getAllClientIssues);
+app.post("/issue", createIssue);
+app.post("/issue/:ROWID", updateIssue);
+app.delete("/issue/:ROWID", deleteIssue);
+
+//Client Api..---------------------------------------------------------------------------------------------
+app.get("/contactData/:userID", getClientData);
+app.post("/addContact", addContact);
+app.get("/contact", getContact);
+app.get("/contact/:id", getOrgContact);
+app.get("/clientOrg", getClientOrg);
+app.get("/clientProject/:id", getClientProjects);
+app.get("/contact/tasks/:id", getClientTasks);
+app.post("/createClient", createClient);
+app.post("/updateClient/:ROWID", updateClient);
+app.delete("/contact", deleteClient);
+app.delete("/org", deleteORG);
 
 app.use((req, res) => {
   res.status(404).send("The page you are looking for does not exist.");

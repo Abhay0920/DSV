@@ -44,7 +44,7 @@ export const TimeEntry = ({
   setViewTask,
   handleCloseViewModal,
 }) => {
-  const endTimeRef = useRef(null); // Create a ref for the TextField component
+// Create a ref for the TextField component
   const [loading, setLoading] = useState(false);
 
  
@@ -65,6 +65,18 @@ export const TimeEntry = ({
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState(null);
   const [todayTimeEntry,setTodayTimeEntry] = useState([]);
+
+  const dateInputRef = useRef(null);
+
+  const handleDateClick = () => {
+    dateInputRef.current?.showPicker();
+  };
+  const startTimeRef = useRef(null);
+  const endTimeRef = useRef(null);
+
+  const handleTimeClick = (ref) => {
+    ref.current?.showPicker();
+  };
 
   const validateForm = () => {
     let tempErrors = {};
@@ -648,7 +660,7 @@ export const TimeEntry = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        {/* <Grid item xs={12} sm={6}>
           <div className="dateInput"  onFocus={() => handleFocus("dateInput")} >
           <TextField
           
@@ -665,38 +677,59 @@ export const TimeEntry = ({
             helperText={errors.date}
           />
           </div>
-        </Grid>
+        </Grid> */}
+           <Grid item xs={12} sm={6}>
+      <div className="dateInput" onClick={handleDateClick}>
+        <TextField
+          label="Date"
+          name="date"
+          id="dateInput"
+          fullWidth
+          type="date"
+          inputRef={dateInputRef}
+          value={newTimesheetEntry.date}
+          InputLabelProps={{ shrink: true }}
+          onChange={handleTimesheetInputChange}
+          sx={{ mb: 2 }}
+          error={!!errors.date}
+          helperText={errors.date}
+        />
+      </div>
+    </Grid>
 
-        <Grid item xs={12} sm={6}>
-          <div className="timeInput1"   onFocus={() => handleFocus("timeInput1")}>
+
+    <Grid item xs={12} sm={6}>
+        <div className="timeInput1" onClick={() => handleTimeClick(startTimeRef)}>
           <TextField
             label="Start Time"
             id="timeInput1"
             name="startTime"
             fullWidth
             type="time"
+            inputRef={startTimeRef}
             value={newTimesheetEntry.startTime}
             onChange={handleTimesheetInputChange}
             InputLabelProps={{ shrink: true }}
-            sx={{ 
-              mb: 2, 
+            sx={{
+              mb: 2,
               "& input": { color: theme.palette.mode === "dark" ? "white" : "black" },
               "& .MuiSvgIcon-root": { color: theme.palette.mode === "dark" ? "white" : "black" },
             }}
             error={!!errors.startTime}
             helperText={errors.startTime}
           />
-          </div>
-        </Grid>
+        </div>
+      </Grid>
 
-        <Grid item xs={12} sm={6}>
-        <div className="timeInput2"   onFocus={() => handleFocus("timeInput2")}>
+      <Grid item xs={12} sm={6}>
+        <div className="timeInput2" onClick={() => handleTimeClick(endTimeRef)}>
           <TextField
             label="End Time"
             id="timeInput2"
             name="endTime"
             fullWidth
             type="time"
+            inputRef={endTimeRef}
             value={newTimesheetEntry.endTime}
             onChange={handleTimesheetInputChange}
             InputLabelProps={{ shrink: true }}
@@ -705,22 +738,22 @@ export const TimeEntry = ({
             helperText={errors.endTime}
           />
         </div>
-        </Grid>
+      </Grid>
 
-        <Grid item xs={12}>
-          <TextField
-            label="Note"
-            name="note"
-            fullWidth
-            multiline
-            rows={4}
-            value={newTimesheetEntry.note}
-            onChange={handleTimesheetInputChange}
-            sx={{ mb: 2 }}
-            error={!!errors.note}
-            helperText={errors.note}
-          />
-        </Grid>
+      <Grid item xs={12}>
+        <TextField
+          label="Note"
+          name="note"
+          fullWidth
+          multiline
+          rows={4}
+          value={newTimesheetEntry.note}
+          onChange={handleTimesheetInputChange}
+          sx={{ mb: 2 }}
+          error={!!errors.note}
+          helperText={errors.note}
+        />
+      </Grid>
 
         <Grid item xs={12}>
           <Button variant="contained" color="primary" onClick={handleSubmit} disabled={loading}>
@@ -1071,17 +1104,57 @@ export const TimeEntry = ({
         </Box>
       </Modal>
 
-      <Dialog open={openModal} onClose={handleCloseModal}>
-        <DialogTitle>Note</DialogTitle>
-        <DialogContent>
-          <p>{selectedNote}</p>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal} color="primary">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <Dialog 
+      open={openModal} 
+      onClose={handleCloseModal} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        style: { 
+          borderRadius: "16px", 
+          padding: "20px",
+          backgroundColor: "#f5f5f5",
+        },
+      }}
+    >
+      <DialogTitle 
+        sx={{ 
+          textAlign: "center", 
+          fontWeight: "bold", 
+          fontSize: "1.5rem", 
+          color: "#3f51b5" 
+        }}
+      >
+          📝 Note
+      </DialogTitle>
+      <DialogContent 
+        dividers 
+        sx={{ 
+          textAlign: "center", 
+          margin: "20px 0", 
+          backgroundColor: "#ffffff",
+          borderRadius: "8px",
+        }}
+      >
+        <Typography variant="body1" sx={{ color: "#333", fontSize: "1.1rem" }}>
+          {selectedNote}
+        </Typography>
+      </DialogContent>
+      <DialogActions sx={{ justifyContent: "center" }}>
+        <Button 
+          onClick={handleCloseModal} 
+          variant="contained" 
+          color="primary" 
+          sx={{ 
+            textTransform: "none", 
+            borderRadius: "8px", 
+            fontWeight: "bold",
+          }}
+        >
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
 
       <Dialog open={openDeleteDialog} onClose={handleDeleteCancel}>
         <DialogTitle id="alert-dialog-title">{"Delete Time Entry"}</DialogTitle>

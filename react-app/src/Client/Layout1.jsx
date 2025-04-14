@@ -40,6 +40,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import { BugReport } from "@mui/icons-material";
+import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
 
 // import userAvatar from "../../public/user-avatar.png"; // Add the path to your avatar image here
 
@@ -78,10 +79,13 @@ export default function Layout1() {
       icon: <FormatListBulletedIcon />,
       path: "/task",
     },
+
     { text: "Issues", icon: <BugReport />, path: "/bug" },
-    { text: "Employees", icon: <GroupIcon />, path: "/employees" },
-    { text: "Profile", icon: <AccountCircleIcon />, path: "/profile" },
-    { text: "Feedback", icon: <ForumIcon />, path: "/feedback" },
+    {
+      text: "Contacts",
+      icon: <SupervisorAccountIcon />,
+      path: "/contacts",
+    },
   ];
   const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
 

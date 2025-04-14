@@ -127,36 +127,15 @@ function Project({ fun }) {
  console.log("employee",employeeState.data.users)
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    dispatch(fetchEmployees())
-  }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(fetchEmployees())
+  // }, [dispatch]);
 
 useEffect(() => {
+  
   if (state && state.data) {
     console.log("employeeState",employeeState.data)
-    // Assuming state.data is an object that contains the project info
-    // const projectData = state.data.data; // This should be an array
-
-    // console.log("Project Data:", projectData);
-
-    // if (projectData && Array.isArray(projectData) && projectData.length > 0) {
-    //   // Format the projects
-    //   const formattedProjects = projectData.map((project) => ({
-    //     id: project.ROWID,
-    //     name: project.Project_Name,
-    //     status: project.Status,
-    //     owner: project.Owner,
-    //     ownerID: project.Owner_ID,
-    //     startDate: project.Start_Date,
-    //     endDate: project.End_Date,
-    //     description: project.Description,
-    //     assignedTo: project.Assigned_To,
-    //     assignedToID: project.Assigned_To_Id,
-    //   }));
-
-      // console.log("Formatted Projects:", formattedProjects);
-      
-      // If you need to store formatted projects in state, you can set them here:
+    
       setProjects(state.data.data);
       const formattedAssignTo = employeeState.data.users
                 .filter(
@@ -1166,6 +1145,8 @@ useEffect(() => {
         </Alert>
       </Snackbar>
     </Box>
+
+
   );
 }
 

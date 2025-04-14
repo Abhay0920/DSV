@@ -389,17 +389,10 @@ function Dashboard() {
         setProjectLength(projects.data.data.length);
         const allProjects = projects.data.data;
         const allTasks = tasks.data.data;
-       // const completeCnt = allProjects.filter((project) => project.Status === "Close").length;
-       
-
-        // Filter projects based on the selected year
-        // const filteredProjects = allProjects.filter((project) => {
-        //   const startDate = new Date(project.Start_Date);
-        //   return startDate.getFullYear() === year;  // Only include projects that match the selected year
-        // });
+      
   
         setAllProjects(allProjects);
-        // setCmptProjectLength(completeCnt);
+      
         setCurrentUserProjects(allProjects);
   
         const interns = data.users.filter((user) => user.role_details.role_name === "Interns");
@@ -423,35 +416,7 @@ function Dashboard() {
         setProjectopenCount(projectOpenCount);
         setProjectworkingCount(projectWorkingCount);
   
-        // Prepare monthly data for the selected year
-        // const monthlyData = {
-        //   total: Array(12).fill(0),
-        //   open: Array(12).fill(0),
-        //   working: Array(12).fill(0),
-        //   closed: Array(12).fill(0),
-        // };
-  
-        // filteredProjects.forEach((project) => {
-        //   const startDate = new Date(project.Start_Date);
-        //   const month = startDate.getMonth();
-  
-        //   monthlyData.total[month]++;
-  
-        //   switch (project.Status) {
-        //     case "Open":
-        //       monthlyData.open[month]++;
-        //       break;
-        //     case "Work In Process":
-        //       monthlyData.working[month]++;
-        //       break;
-        //     case "Close":
-        //       monthlyData.closed[month]++;
-        //       break;
-        //   }
-        // });
-  
-        // setMonthlyProjectData(monthlyData);
-  
+       
         setEmployeeList(
           data.users.map((user) => ({
             name: `${user.first_name} ${user.last_name}`,
@@ -553,11 +518,7 @@ function Dashboard() {
 
  },[year])
 
-  // const theme = createTheme({
-  //   palette: {
-  //     mode: "light", // Set light mode by default
-  //   },
-  // });
+ 
 
    useEffect(() => {
       
@@ -1275,14 +1236,7 @@ function Dashboard() {
                               <EmailIcon sx={{ fontSize: 16 }} />
                               {intern.email}
                             </Typography>
-                            {/* <Typography sx={styles.internInfo}>
-                            <BusinessIcon sx={{ fontSize: 16 }} />
-                            {intern.department}
-                          </Typography>
-                          <Typography sx={styles.internInfo}>
-                            <CalendarTodayIcon sx={{ fontSize: 16 }} />
-                            Joined: {intern.joiningDate}
-                          </Typography> */}
+                          
                           </Box>
                         </Box>
                       }

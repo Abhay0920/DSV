@@ -14,7 +14,7 @@ export const fetchProjects = createAsyncThunk(
         const response = await axios.get(url, {
           withCredentials: true, // Same as credentials: 'include' in fetch
         });
-  
+         console.log("okkresponse",response.data);
         // Axios automatically parses the JSON, so we can directly return the response data
         return response.data;
   

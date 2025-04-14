@@ -22,15 +22,26 @@ import Emp from "./Employee/Employee";
 import EmpFeedback from "./Employee/Feedback";
 import axios from "axios";
 
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector } from "react-redux";
 import { fetchProjects } from "./redux/Project/ProjectSlice";
 import { fetchEmployees } from "./redux/Employee/EmployeeSlice";
 import { fetchTasks } from "./redux/Tasks/TaskSlice";
-import { fetchProfile, } from "./redux/Profile/Profile";
+import { fetchProfile } from "./redux/Profile/Profile";
 import { fetchFeedback } from "./redux/Feedback/Feedback";
 import Login from "./Admin/Login";
 import { fetchEmpProject } from "./redux/EmpProject/EmpProjectSlice";
 import { fetchEmpTask } from "./redux/EmpTask/EmpTaskSlice";
+import { EmpIssues } from "./Employee/EmpIssues";
+import { Issues } from "./Admin/Issue";
+
+import { ContactDashboard } from "./Client/Dashboard";
+import CustomerLayout from "./Client/Layout1";
+import ContactTask from "./Client/ContactTask";
+import ContactProjects from "./Client/Project";
+import ContactIssues from "./Client/Issue";
+import Contacts from "./Client/Contacts";
+import ContactProfile from "./Client/Profile";
+
 function App() {
   const [userRole, setUserRole] = useState(null);
   const [currUser, setCurrUser] = useState(null);
@@ -38,10 +49,10 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const dispatch = useDispatch();
 
-  useEffect(() => {   
+  useEffect(() => {
     //  const user = localStorage.getItem("currUser");
     //  const parsedUser = JSON.parse(user);
-     
+
     //  const id = parsedUser.userid;
     dispatch(fetchProjects());
     dispatch(fetchEmployees());
@@ -50,9 +61,8 @@ function App() {
     dispatch(fetchFeedback());
     // dispatch(fetchEmpProject());
     // dispatch(fetchEmpTask());
-   
   }, [dispatch]);
-   
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -85,6 +95,8 @@ function App() {
 
         if (userDetail) {
           setCurrUser(userDetail);
+
+          console.log("User Details:", userDetail.role);
           setUserRole(userDetail.role);
           setIsAuthenticated(true);
 
@@ -97,7 +109,6 @@ function App() {
 
           if (profileResponse.data.data) {
             localStorage.setItem("profileData", profileResponse.data.data);
-            
           } else {
             localStorage.setItem(
               "profileData",
@@ -125,11 +136,7 @@ function App() {
     checkAuth();
   }, []);
 
-  
-
   if (isCheckingAuth) {
-   
-   
     return (
       <div
         style={{
@@ -160,34 +167,52 @@ function App() {
     window.location.href = "/__catalyst/auth/login";
     return null;
   }
-  
-  return (
-  
-      <Routes>
-         <Route path="login" element={<Login/>} />
 
-        {userRole === "Super Admin" || userRole === "Admin" ? (
-          <Route path="/" element={<Layout1 />}>
-            <Route index element={<Dashboard />} />
-            <Route path="projects" element={<Project currUser={currUser} />} />
-            <Route path="task" element={<Task />} />
-            <Route path="employees" element={<Employees />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="feedback" element={<Feedback />} />
-          </Route>
-        ) : (
-          <Route path="/" element={<EmpLayout />}>
-            <Route index element={<EmpDashboard />} />
-            <Route path="projects" element={<EmpProject currUser={currUser} />} />
-            <Route path="task" element={<EmpTask />} />
-            <Route path="employees" element={<Emp />} />
-            <Route path="profile" element={<EmpProfile />} />
-            <Route path="feedback" element={<EmpFeedback />} />
-          </Route>
-        )}
-      </Routes>
-      
-  
+  return (
+    <Routes>
+      <Route path="login" element={<Login />} />
+
+      {userRole === "Super Admin" || userRole === "Admin" ? (
+        <Route path="/" element={<Layout1 />}>
+          <Route index element={<Dashboard />} />
+          <Route path="projects" element={<Project currUser={currUser} />} />
+          <Route path="task" element={<Task />} />
+          <Route path="employees" element={<Employees />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="bug" element={<Issues />} />
+          <Route path="feedback" element={<Feedback />} />
+        </Route>
+      ) : (
+        <>
+          {userRole === "Contacts" ? (
+            <Route path="/" element={<CustomerLayout />}>
+              <Route index element={<ContactDashboard />} />
+              <Route
+                path="projects"
+                element={<ContactProjects currUser={currUser} />}
+              />
+              <Route path="task" element={<ContactTask />} />
+              <Route path="bug" element={<ContactIssues />} />
+              <Route path="Contacts" element={<Contacts />} />
+              <Route path="profile" element={<ContactProfile />} />
+            </Route>
+          ) : (
+            <Route path="/" element={<EmpLayout />}>
+              <Route index element={<EmpDashboard />} />
+              <Route
+                path="projects"
+                element={<EmpProject currUser={currUser} />}
+              />
+              <Route path="task" element={<EmpTask />} />
+              <Route path="bug" element={<EmpIssues />} />
+              <Route path="employees" element={<Emp />} />
+              <Route path="profile" element={<EmpProfile />} />
+              <Route path="feedback" element={<EmpFeedback />} />
+            </Route>
+          )}
+        </>
+      )}
+    </Routes>
   );
 }
 

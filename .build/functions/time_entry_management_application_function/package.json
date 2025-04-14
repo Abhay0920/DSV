@@ -14,7 +14,7 @@
 		"fs": "^0.0.1-security",
 		"os": "^0.1.2",
 		"path": "^0.12.7",
-		"zcatalyst-sdk-node": "latest"
+		"zcatalyst-sdk-node": "^3.0.0-beta.5"
 	},
 	"devDependencies": {
 		"@babel/plugin-proposal-private-property-in-object": "^7.21.11",

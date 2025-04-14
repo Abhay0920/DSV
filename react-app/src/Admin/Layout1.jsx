@@ -35,11 +35,11 @@ import Button from "@mui/material/Button";
 import LogoutIcon from "@mui/icons-material/Logout";
 import Drawer from "@mui/material/Drawer";
 import { Modal } from "@mui/material";
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import MenuOpenIcon from '@mui/icons-material/MenuOpen';
-
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import MenuOpenIcon from "@mui/icons-material/MenuOpen";
+import { BugReport } from "@mui/icons-material";
 
 // import userAvatar from "../../public/user-avatar.png"; // Add the path to your avatar image here
 
@@ -78,6 +78,7 @@ export default function Layout1() {
       icon: <FormatListBulletedIcon />,
       path: "/task",
     },
+    { text: "Issues", icon: <BugReport />, path: "/bug" },
     { text: "Employees", icon: <GroupIcon />, path: "/employees" },
     { text: "Profile", icon: <AccountCircleIcon />, path: "/profile" },
     { text: "Feedback", icon: <ForumIcon />, path: "/feedback" },
@@ -94,12 +95,11 @@ export default function Layout1() {
     if (window && window.catalyst) {
       let redirectURL = "/__catalyst/auth/login";
       try {
-         
         await window.catalyst.auth.signOut(redirectURL);
         setTimeout(() => {
           navigate("login");
         }, 2000);
-         localStorage.clear();
+        localStorage.clear();
       } catch (error) {
         console.error("Error during logout:", error);
       }
@@ -142,8 +142,8 @@ export default function Layout1() {
                 color="inherit"
                 sx={{ mr: 2, fontSize: 32 }}
               >
-                 {open ? <MenuOpenIcon /> : <MenuIcon />}
-                 </IconButton>
+                {open ? <MenuOpenIcon /> : <MenuIcon />}
+              </IconButton>
             }
 
             <img
@@ -220,21 +220,20 @@ export default function Layout1() {
           </Toolbar>
         </AppBar>
 
-        <Box sx={{ display: "flex", overflow: "hidden",  }}>
+        <Box sx={{ display: "flex", overflow: "hidden" }}>
           {/* Sidebar */}
 
           {!isMobile && (
             <Box
-            sx={{
-              width: open ? "320px" : "64px",
-              bgcolor: theme.palette.background.paper, // Match sidebar color with content
-              color: "primary.main",
-              transition: "width 0.3s ease-in-out",
-              boxShadow: open ? "2px 20px 10px rgba(0,0,0,0.1)" : "none",
-              borderRight: `0.5px solid ${theme.palette.grey[300]}`, // Using the theme's grey color for the border
-            }}
-          >
-          
+              sx={{
+                width: open ? "270px" : "64px",
+                bgcolor: theme.palette.background.paper, // Match sidebar color with content
+                color: "primary.main",
+                transition: "width 0.3s ease-in-out",
+                boxShadow: open ? "2px 20px 10px rgba(0,0,0,0.1)" : "none",
+                borderRight: `0.5px solid ${theme.palette.grey[300]}`, // Using the theme's grey color for the border
+              }}
+            >
               <List>
                 {menuItems.map((item) => {
                   const isActive = location.pathname === item.path;
@@ -269,13 +268,13 @@ export default function Layout1() {
                           display: isMobile ? "none" : "inline-block", // Hide in mobile view
                           flexShrink: 0,
                           color: isActive
-                          ? theme.palette.mode === "dark" 
-                            ? "#1976d2"  // Blue for active state in dark mode
-                            : "#1976d2"  // Blue for active state in light mode
-                          : theme.palette.mode === "dark"
-                          ? "white" // White for inactive state in dark mode
-                          : "grey",
-                          
+                            ? theme.palette.mode === "dark"
+                              ? "#1976d2" // Blue for active state in dark mode
+                              : "#1976d2" // Blue for active state in light mode
+                            : theme.palette.mode === "dark"
+                              ? "white" // White for inactive state in dark mode
+                              : "grey",
+
                           fontSize: "1.5rem",
                           marginLeft: "10px",
                         },

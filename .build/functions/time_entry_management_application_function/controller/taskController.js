@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 
 const getAllTasks = async (req, res) => {
   const id = req.params.id;
-  //console.log("Id: ", req.params);
+
   if (!id) {
     try {
       const catalystApp = req.catalystApp;
@@ -37,7 +37,7 @@ const getAllTasks = async (req, res) => {
     } catch (error) {
       res.status(500).json({
         success: false,
-        message: "Failed to fetch projects",
+        message: "Failed to fetch tasks",
         error: error.message,
       });
     }
@@ -63,6 +63,7 @@ const getAllTasks = async (req, res) => {
     }
   }
 };
+
 const getTasksByEmployee = async (req, res) => {
   try {
     const userID = req.params.userid;
@@ -212,5 +213,5 @@ module.exports = {
   getTasksByEmployee,
   createTask,
   updateTask,
-  deleteTask
+  deleteTask,
 };

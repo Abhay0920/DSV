@@ -44,14 +44,15 @@ const getTimeEntryByTaskId = async (req, res) => {
     const zcql = catalystApp.zcql();
 
     // Fetch grouped data by entry date with the sum of total time, but filtered by Task_ID
-    const query = `SELECT Time_Entries.Entry_Date, SUM(Time_Entries.Total_time) 
+    const query = `SELECT Time_Entries.Entry_Date, SUM(Time_Entries.Total_time) as Total_time
                    FROM Time_Entries 
                    WHERE Time_Entries.Task_ID = '${taskId}' 
                    GROUP BY Time_Entries.Entry_Date 
                    ORDER BY Time_Entries.Entry_Date DESC`;
     const queryResp = await zcql.executeZCQLQuery(query);
-
     const response = [];
+
+    // console.log("hihi", queryResp);
 
     // Loop through each grouped entry and fetch detailed data
     for (const item of queryResp) {
@@ -67,11 +68,17 @@ const getTimeEntryByTaskId = async (req, res) => {
         return startTimeA.localeCompare(startTimeB);
       });
 
-      console.log("data at backend", queryRespAll);
+      // console.log(item.Time_Entries.Total_time);
+
+      // console.log("hiohi", {
+      //   entryDate: item.Time_Entries.Entry_Date,
+      //   totalTime: item.Time_Entries["SUM(Total_time)"],
+      //   details: queryRespAll,
+      // });
 
       response.push({
         entryDate: item.Time_Entries.Entry_Date,
-        totalTime: item.Time_Entries.Total_time,
+        totalTime: item.Time_Entries["SUM(Total_time)"],
         details: queryRespAll,
       });
     }
@@ -134,17 +141,21 @@ const createTimeEntry = async (req, res) => {
     console.log("new", newStart, newEnd);
 
     if (newEnd <= newStart || !checkTimeOverlap(newStart, newEnd, queryResp)) {
-      return res.status(400).json({ success: false, message: "Time slot overlaps or invalid" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Time slot overlaps or invalid" });
     }
 
     const createdRecord = await table.insertRow(taskData);
     res.status(200).json({ success: true, data: createdRecord });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to add task", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to add task",
+      error: error.message,
+    });
   }
 };
-
-
 
 const deleteTimeEntry = async (req, res) => {
   const ROWID = req.params.ROWID;
@@ -209,7 +220,6 @@ const updateTimeEntry = async (req, res) => {
     });
   }
 };
-
 
 const getTimeEntryByProjectId = async (req, res) => {
   const id = req.params.id;
