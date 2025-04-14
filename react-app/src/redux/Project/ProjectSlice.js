@@ -79,7 +79,7 @@ export const ProjectSlice = createSlice({
 
   initialState: {
     isLoading: false,
-    data: null,
+    data: [],
     isError: false,
   },
   reducers: {},

@@ -1171,7 +1171,7 @@ console.log("pagination",paginatedTasks)
         Add Task
       </Typography>
       
-      <Autocomplete
+      {/* <Autocomplete
   options={projects}
   getOptionLabel={(option) => option.Project_Name} // Show project name
   isOptionEqualToValue={(option, value) => option.ROWID === value?.ROWID} // Ensure correct selection
@@ -1194,7 +1194,41 @@ console.log("pagination",paginatedTasks)
   helperText={errors.projectId || ""}
 />
   )}
+/> */}
+
+
+
+<Autocomplete
+  options={projects}
+  getOptionLabel={(option) => option.Project_Name}
+  isOptionEqualToValue={(option, value) => option.ROWID === value.ROWID}
+  value={
+    projectName
+      ? projects.find((option) => option.Project_Name === projectName)
+      : projects.find((option) => option.ROWID === newTask.projectId) || null
+  }
+  onChange={(event, newValue) => {
+    if (!projectName) {
+      handleInputChange({
+        target: { name: "projectId", value: newValue ? newValue.ROWID : "" },
+      });
+    }
+  }}
+  renderInput={(params) => (
+    <TextField
+      {...params}
+      label="Add Project"
+      name="projectId"
+      fullWidth
+      variant="outlined"
+      sx={{ marginBottom: 2 }}
+      error={!!errors.projectId}
+      helperText={errors.projectId}
+    />
+  )}
+  disabled={!!projectName}
 />
+
 
 
       {/* <TextField

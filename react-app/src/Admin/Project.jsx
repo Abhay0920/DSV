@@ -46,6 +46,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProjects, addProject } from "../redux/Project/ProjectSlice";
 import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
+import { fetchClientData } from "../redux/Client/clientSlice";
 const statusConfig = {
   Open: {
     color: "#f0ad4e",
@@ -91,7 +92,7 @@ function Project({ fun }) {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const statusOptions = ["Open", "In Progress", "Completed"];
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [projectToDelete, setProjectToDelete] = useState(null)
 
   const [taskModelOpen, setTaskModelOpen] = useState(false);
 
@@ -128,9 +129,12 @@ function Project({ fun }) {
   const dispatch = useDispatch();
 
   // useEffect(() => {
-  //   dispatch(fetchEmployees())
+  //   dispatch(fetchProjects());
+  //   dispatch(fetchEmployees());
   // }, [dispatch]);
 
+  const { data } = useSelector((state) => state.clientReducer);
+  console.log("projectclient",data) 
   useEffect(() => {
     if (state && state.data) {
       // console.log("employeeState",employeeState.data)
@@ -151,6 +155,7 @@ function Project({ fun }) {
       ////console.log(formattedAssignTo);
       setAssignOptions(formattedAssignTo);
     }
+    dispatch(fetchClientData());
   }, [state]); // Dependency array ensures effect runs when 'state' changes
 
   // end
@@ -327,15 +332,15 @@ function Project({ fun }) {
         }));
       }
     } else if (name === "clientID") {
-      const selectedClient = assignOptions.find(
-        (option) => option.userID === value && option.role === "Client"
+      const selectedClient = data?.find(
+        (option) => option.ROWID === value
       );
-      console.log("selelelele", selectedClient);
+      
       if (selectedClient) {
         setNewProject((prev) => ({
           ...prev,
-          client_name: selectedClient.username,
-          clientID: selectedClient.userID,
+          client_name: selectedClient.Org_Name,
+          clientID: selectedClient.ROWID,
         }));
       }
     } else {
@@ -579,6 +584,8 @@ function Project({ fun }) {
   };
 
   const handleSubmit = () => {
+
+    console.log("new",newProject)
     if (validate()) {
       handleAddProject(newProject);
       toggleDrawer(false);
@@ -843,22 +850,22 @@ function Project({ fun }) {
           />
 
           <Autocomplete
-            options={assignOptions.filter((option) => option.role === "Client")} // Filter clients
-            getOptionLabel={(option) => option.username} // Display username in options
+            options={data}
+            getOptionLabel={(option) => option.Org_Name} // Display username in options
             isOptionEqualToValue={(option, value) =>
-              option.userID === value.userID
+              option.ROWID === value.ROWID
             } // Ensure correct selection
             onChange={(event, newValue) => {
               handleInputChange({
                 target: {
                   name: "client_name", // Update the client_name in the state
-                  value: newValue ? newValue.username : "", // Display username
+                  value: newValue ? newValue.Org_Name : "", // Display username
                 },
               });
               handleInputChange({
                 target: {
                   name: "clientID", // Assuming you need the client ID too
-                  value: newValue ? newValue.userID : "",
+                  value: newValue ? newValue.ROWID : "",
                 },
               });
             }}

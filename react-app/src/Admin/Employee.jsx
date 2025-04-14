@@ -20,7 +20,10 @@ import {
   Avatar,
   FormControlLabel,
   Switch,
+  Menu,
 } from "@mui/material";
+
+
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FormControl from "@mui/material/FormControl";
@@ -37,6 +40,10 @@ import BadgeIcon from "@mui/icons-material/Badge";
 import TaskIcon from "@mui/icons-material/Task";
 import FolderIcon from "@mui/icons-material/Folder";
 import { useSelector } from "react-redux";
+import "primereact/resources/themes/lara-light-cyan/theme.css";
+
+import { SelectButton } from 'primereact/selectbutton';
+
 function Employees() {
   const [employees, setEmployees] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,6 +70,14 @@ function Employees() {
     },
   });
 
+
+  const [value, setValue] = useState(null);
+  const items = [
+    { name: 'Admin', value: 1 },
+    { name: 'Client', value: 2 },
+    { name: 'Employees', value: 3 }
+  ];
+
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [relatedTasks, setRelatedTasks] = useState([]);
@@ -73,6 +88,7 @@ function Employees() {
   const [alerttype, setalerttype] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [roleFilter, setRoleFilter] = useState('');
 
   const [employeeData, setEmployeeData] = useState({
     first_name: "",
@@ -97,7 +113,7 @@ function Employees() {
       }, 2000); // Auto-hide after 2s
     }, 100); // Small delay ensures re-triggering
   };
-   const employee =  useSelector((state) => state.employeeReducer);
+  const employee = useSelector((state) => state.employeeReducer);
   useEffect(() => {
     const fetchData = async () => {
       // setLoading(true);
@@ -110,6 +126,7 @@ function Employees() {
         // const userResponse = employee;
 
         const userEmployee = userResponse.data.users;
+
 
         // Set all employees initially with placeholder profile images
         const employeesWithPlaceholders = userEmployee.map((employee) => ({
@@ -243,11 +260,34 @@ function Employees() {
   const handleProfileModalClose = () => {
     setProfileModalOpen(false);
   };
-  const filteredEmployees = employees.filter((employee) =>
+
+  const setFilter = (count) => {
+
+    var roleDetail = "";
+    if (count === 1) roleDetail = "Admin";
+    if (count === 2) roleDetail = "Client";
+    if (count === 3) roleDetail = "Employees";
+
+
+    if (roleDetail === roleFilter) {
+      setRoleFilter(''); // Reset the filter if the same role is clicked
+    } else {
+      setRoleFilter(roleDetail); // Set the role filter to the selected role
+    }
+  };
+
+
+
+  const roleFilteredEmployees = roleFilter
+    ? employees.filter(emp => emp.role_details.role_name === roleFilter)
+    : employees;
+
+  const filteredEmployees = roleFilteredEmployees.filter((employee) =>
     (employee.first_name?.toLowerCase() || "").includes(
       searchQuery.toLowerCase()
     )
   );
+
   const paginatedEmployees = filteredEmployees.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
@@ -352,13 +392,17 @@ function Employees() {
     Manager: 1380000001197466,
     Admin: 1380000001197451,
     "Team Lead": 1380000001197471,
+    Client: 1380000001278009,
+    "Business Analyst": 1380000001287027,
+
+
     // Add more roles as necessary
   };
-  
+
   const validateForm = () => {
     let tempErrors = {};
     if (!newEmployee.first_name.trim()) tempErrors.first_name = "First Name is required";
-    if (!newEmployee.last_name.trim()) tempErrors.last_name = "Last Name is required";
+    //  if (!newEmployee.last_name.trim()) tempErrors.last_name = "Last Name is required";
     if (!newEmployee.email_id.trim()) {
       tempErrors.email_id = "Email is required";
     } else if (!/^\S+@\S+\.\S+$/.test(newEmployee.email_id)) {
@@ -430,8 +474,8 @@ function Employees() {
         handleAlert(
           "error",
           error.response?.data?.message ||
-            error.message ||
-            "Something went wrong!"
+          error.message ||
+          "Something went wrong!"
         );
       }
     } else {
@@ -439,7 +483,7 @@ function Employees() {
     }
   };
 
- 
+
 
   const handleTaskInput = (index, event) => {
     const selectedEmployeeId = event.target.value;
@@ -529,6 +573,9 @@ function Employees() {
       toggleDrawer(false);
     }
   };
+
+
+
   return (
     <Box sx={{ padding: 3 }}>
       <Snackbar
@@ -554,22 +601,56 @@ function Employees() {
         <Typography variant="h4">Employees</Typography>
       </Box>
 
+
       <Card sx={{ mb: 3 }}>
         <CardContent
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap", // to prevent overflow on small screens
+            gap: 2, // spacing between elements
           }}
         >
+          {/* Search Field */}
           <TextField
             label="Search Employees"
             variant="outlined"
             size="small"
             value={searchQuery}
             onChange={handleSearch}
-            sx={{ width: "40%" }}
+            sx={{ width: { xs: '100%', sm: '35%' } }}
           />
+
+
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {/* {['Admin', 'Client', 'App User'].map((role) => (
+        <Button
+          key={role}
+          onClick={() => setFilter(role)}
+          variant="outlined"
+          sx={{
+            borderRadius: 2,
+            px: 3,
+            bgcolor: filter === role ? 'primary.main' : 'transparent',
+            color: filter === role ? 'white' : 'primary.main',
+            borderColor: 'primary.main',
+            '&:hover': {
+              bgcolor: 'primary.dark',
+              color: 'white',
+            },
+          }}
+        >
+          {role === 'App User' ? 'Employees' : role}
+        </Button>
+      ))} */}
+            <div className="card flex justify-content-center">
+
+              <SelectButton value={value} onChange={(e) => setFilter(e.value)} optionLabel="name" options={items} />
+            </div>
+          </Box>
+
+          {/* Add Button */}
           <Button
             variant="contained"
             color="primary"
@@ -579,6 +660,8 @@ function Employees() {
           </Button>
         </CardContent>
       </Card>
+
+
 
       {loading ? (
         <Grid container spacing={3}>
@@ -962,95 +1045,95 @@ function Employees() {
       </Modal>
 
       <Drawer anchor="right" open={drawerOpen} onClose={() => toggleDrawer(false)}>
-      <Box
-        sx={{
-          width: 400,
-          padding: 2,
-          position: "relative",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          marginTop: "70px",
-        }}
-      >
         <Box
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 2,
+            width: 400,
+            padding: 2,
+            position: "relative",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            marginTop: "70px",
           }}
         >
-          <Typography variant="h5">Add New Employee</Typography>
-          <IconButton onClick={() => toggleDrawer(false)}>
-            <CloseIcon />
-          </IconButton>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 2,
+            }}
+          >
+            <Typography variant="h5">Add New Employee</Typography>
+            <IconButton onClick={() => toggleDrawer(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          <TextField
+            label="First Name"
+            name="first_name"
+            fullWidth
+            variant="outlined"
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.first_name}
+            helperText={errors.first_name}
+          />
+
+          <TextField
+            label="Last Name"
+            name="last_name"
+            fullWidth
+            variant="outlined"
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+          // error={!!errors.last_name}
+          // helperText={errors.last_name}
+          />
+
+          <TextField
+            label="Email"
+            name="email_id"
+            fullWidth
+            variant="outlined"
+            type="email"
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.email_id}
+            helperText={errors.email_id}
+          />
+
+          <TextField
+            label="Role"
+            name="role"
+            fullWidth
+            variant="outlined"
+            select
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.role}
+            helperText={errors.role}
+          >
+            {Object.keys(roleMapping).map((role) => (
+              <MenuItem key={role} value={role}>
+                {role}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: 3,
+            }}
+          >
+            <Button variant="contained" color="primary" onClick={handleSubmit}>
+              Add
+            </Button>
+          </Box>
         </Box>
-
-        <TextField
-          label="First Name"
-          name="first_name"
-          fullWidth
-          variant="outlined"
-          onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
-          error={!!errors.first_name}
-          helperText={errors.first_name}
-        />
-
-        <TextField
-          label="Last Name"
-          name="last_name"
-          fullWidth
-          variant="outlined"
-          onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
-          error={!!errors.last_name}
-          helperText={errors.last_name}
-        />
-
-        <TextField
-          label="Email"
-          name="email_id"
-          fullWidth
-          variant="outlined"
-          type="email"
-          onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
-          error={!!errors.email_id}
-          helperText={errors.email_id}
-        />
-
-        <TextField
-          label="Role"
-          name="role"
-          fullWidth
-          variant="outlined"
-          select
-          onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
-          error={!!errors.role}
-          helperText={errors.role}
-        >
-          {Object.keys(roleMapping).map((role) => (
-            <MenuItem key={role} value={role}>
-              {role}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: 3,
-          }}
-        >
-          <Button variant="contained" color="primary" onClick={handleSubmit}>
-            Add
-          </Button>
-        </Box>
-      </Box>
-    </Drawer>
+      </Drawer>
 
       <Modal
         open={profileModalOpen}
@@ -1196,9 +1279,9 @@ function Employees() {
                     >
                       Full Name
                     </Typography>
-                    <Typography variant="body1"  sx={(theme) => ({
-                        color: theme.palette.text.secondary,
-                      })}>
+                    <Typography variant="body1" sx={(theme) => ({
+                      color: theme.palette.text.secondary,
+                    })}>
                       {selectedEmployee
                         ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
                         : ""}
@@ -1221,9 +1304,9 @@ function Employees() {
                     >
                       Email Address
                     </Typography>
-                    <Typography variant="body1"  sx={(theme) => ({
-                        color: theme.palette.text.secondary,
-                      })} >
+                    <Typography variant="body1" sx={(theme) => ({
+                      color: theme.palette.text.secondary,
+                    })} >
                       {selectedEmployee?.email_id || ""}
                     </Typography>
                   </Box>
@@ -1245,8 +1328,8 @@ function Employees() {
                       Role
                     </Typography>
                     <Typography variant="body1" sx={(theme) => ({
-                        color: theme.palette.text.secondary,
-                      })}>
+                      color: theme.palette.text.secondary,
+                    })}>
                       {selectedEmployee?.role_details?.role_name || ""}
                     </Typography>
                   </Box>
