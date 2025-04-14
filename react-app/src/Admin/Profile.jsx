@@ -25,13 +25,21 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import Slide from "@mui/material/Slide";
+
 import CloudDownloadSharpIcon from "@mui/icons-material/CloudDownloadSharp";
 import CloudUploadSharpIcon from "@mui/icons-material/CloudUploadSharp";
 import axios from "axios";
-
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchProfile } from "../redux/Profile/Profile";
 function Profile() {
+  const state = useSelector((state) => state.projectReducer);
+  console.log("profile", state?.data);
+
   const [userInfo, setUserInfo] = useState({});
   const [skills, setSkills] = useState(
     userInfo.skills || [
@@ -70,18 +78,34 @@ function Profile() {
     message: "",
     severity: "success",
   });
+      const dispatch = useDispatch();
+    const profileData = useSelector((state) => state.profileReducer);
+    console.log("profilesection",profileData);
+
+    // useEffect(() => {
+    //   const user = JSON.parse(localStorage.getItem("currUser"));
+    //   console.log("user", user);
+    //   setCurrUser(user);
+    
+    //   if (user?.userid) {
+    //     dispatch(fetchProfile());
+    //   }
+    // }, [dispatch]);
 
   useEffect(() => {
     const getUserDetail = async () => {
       const user = JSON.parse(localStorage.getItem("currUser"));
+      console.log("user",user);
       setCurrUser(user);
-      if (!user?.userid) return;
+      if (!profileData) return;
 
       try {
         const response = await axios.get(
           `/server/time_entry_management_application_function/profile/data/${user.userid}`
         );
 
+        // const response = profileData;
+        
         const data = response.data.data;
         console.log("data", data);
 
@@ -179,6 +203,16 @@ function Profile() {
     return imageURL.url;
   };
 
+   const handleCloseSnackbar = (event, reason) => {
+      if (reason === "clickaway") {
+        return;
+      }
+      setSnackbar((prev) => ({ ...prev, open: false }));
+    };
+    function SlideTransition(props) {
+        return <Slide {...props} direction="down" />;
+      }
+
   const handleAlert = (severity, message) => {
     setSnackbar({
       open: true,
@@ -186,6 +220,36 @@ function Profile() {
       severity,
     });
   };
+
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    let newErrors = {}; // Create a new errors object
+  
+    // Mobile Number Validation (10 digits, starts with 6-9)
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!editedInfo.phone || !mobileRegex.test(editedInfo.phone)) {
+      newErrors.mobile = "Invalid mobile number. It should be 10 digits and start with 6-9.";
+    }
+  
+    // About Me Validation (Optional, but must be 5-200 characters)
+    if (editedInfo.AboutME && (editedInfo.AboutME.length < 5 || editedInfo.AboutME.length > 200)) {
+      newErrors.aboutMe = "About Me should be between 5 to 200 characters.";
+    }
+  
+    // Address Validation (Must be at least 10 characters)
+    if (!editedInfo.address || editedInfo.address.length < 10) {
+      newErrors.address = "Address must be at least 10 characters long.";
+    }
+  
+    setErrors(newErrors); // Update state with errors
+  
+    return Object.keys(newErrors).length === 0; // Return true if no errors
+  };
+  
+  
+  
+  
 
   const handleSave = async () => {
     try {
@@ -195,6 +259,7 @@ function Profile() {
         handleAlert("error", "User not found. Please log in again.");
         return;
       }
+
 
       let profileUpdateSuccess = true;
       let coverUpdateSuccess = true;
@@ -338,11 +403,11 @@ function Profile() {
       setLoading(false);
 
       console.log(response);
-
+      handleCloseCvModal();
       if (response.ok) {
-        alert("Resume Uploaded successfully!");
+        handleAlert("success","Resume Uploaded successfully!");
       } else {
-        alert("Resume Upload Failed.");
+        handleAlert("error","Resume Upload Failed.");
       }
     } catch (error) {
       setLoading(false);
@@ -400,7 +465,16 @@ function Profile() {
   const handleRemoveSkill = (skillToRemove) => {
     setSkills(skills.filter((skill) => skill !== skillToRemove));
   };
+  const handleSubmit= (e)=>{
+    e.preventDefault();
+    if(validateForm()){
+      handleSave();
+    }else {
+      console.log("Validation failed:", errors); // Debugging
+    }
+  }
 
+ 
   return (
     <Box sx={{ padding: 3 }}>
       <Box
@@ -461,7 +535,7 @@ function Profile() {
             </>
           ) : (
             <>
-              <Typography variant="h4">{userInfo.name}</Typography>
+              <Typography variant="h4"> {userInfo.name ? userInfo.name : `${currUser.firstName} ${currUser.lastName}`}</Typography>
               <Typography variant="body1" color="textSecondary">
                 {userInfo.role}
               </Typography>
@@ -641,16 +715,17 @@ function Profile() {
       </Grid>
 
       {/* Edit Dialog */}
-      <Dialog open={isEditing} onClose={handleCancel} fullWidth maxWidth="sm">
+      <Dialog open={isEditing} onClose={handleCancel} fullWidth maxWidth="sm" >
         <DialogTitle>Edit Profile</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{overflow:"visible"}}>
           <TextField
             label="Name"
             name="name"
             fullWidth
             value={editedInfo.name}
             onChange={handleInputChange}
-            sx={{ marginBottom: 2 }}
+            sx={{ marginBottom: 2,}}
+            disabled
           />
           <TextField
             label="Email"
@@ -659,6 +734,7 @@ function Profile() {
             value={editedInfo.email}
             // onChange={handleInputChange}
             sx={{ marginBottom: 2 }}
+            disabled
           />
           <TextField
             label="Phone"
@@ -666,6 +742,8 @@ function Profile() {
             fullWidth
             value={editedInfo.phone}
             onChange={handleInputChange}
+            error = {errors.mobile}
+            helperText={errors.mobile}
             sx={{ marginBottom: 2 }}
           />
           <TextField
@@ -674,6 +752,8 @@ function Profile() {
             fullWidth
             value={editedInfo.address}
             onChange={handleInputChange}
+            error = {errors.address}
+            helperText={errors.address}
             sx={{ marginBottom: 2 }}
           />
           <TextField
@@ -684,6 +764,8 @@ function Profile() {
             rows={4}
             value={editedInfo.AboutME}
             onChange={handleInputChange}
+            error = {errors.aboutMe}
+            helperText={errors.aboutMe}
             sx={{ marginBottom: 2 }}
           />
           <Box sx={{ marginBottom: 2 }}>
@@ -759,7 +841,7 @@ function Profile() {
           <Button onClick={handleCancel} color="error" variant="outlined">
             Cancel
           </Button>
-          <Button onClick={handleSave} color="primary" variant="contained">
+          <Button onClick={handleSubmit} color="primary" variant="contained">
             Save
           </Button>
         </DialogActions>
@@ -811,6 +893,36 @@ function Profile() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={3000}
+                    onClose={handleCloseSnackbar}
+                    anchorOrigin={{ vertical: "top", horizontal: "center" }}
+                    TransitionComponent={SlideTransition}
+                  >
+                    <Alert
+                      onClose={handleCloseSnackbar}
+                      severity={snackbar.severity}
+                      variant="filled"
+                      sx={{
+                        width: "100%",
+                        "&.MuiAlert-standardSuccess": {
+                          backgroundColor: "#4caf50",
+                          color: "#fff",
+                        },
+                        "&.MuiAlert-standardError": {
+                          backgroundColor: "#f44336",
+                          color: "#fff",
+                        },
+                        "& .MuiAlert-icon": {
+                          color: "#fff",
+                        },
+                      }}
+                    >
+                      {snackbar.message}
+                    </Alert>
+                  </Snackbar>
     </Box>
   );
 }

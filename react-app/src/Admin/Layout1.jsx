@@ -44,7 +44,7 @@ import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 // import userAvatar from "../../public/user-avatar.png"; // Add the path to your avatar image here
 
 export default function Layout1() {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(true);
   const [darkMode, setDarkMode] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState(null); // State to manage dropdown menu anchor
   const [userProfile, setUserProfile] = useState();
@@ -91,13 +91,15 @@ export default function Layout1() {
   });
 
   const handleLogout = async () => {
-
     if (window && window.catalyst) {
       let redirectURL = "/__catalyst/auth/login";
       try {
          
         await window.catalyst.auth.signOut(redirectURL);
-        localStorage.clear();
+        setTimeout(() => {
+          navigate("login");
+        }, 2000);
+         localStorage.clear();
       } catch (error) {
         console.error("Error during logout:", error);
       }

@@ -30,6 +30,8 @@ import Skeleton from "@mui/material/Skeleton";
 import { FaProjectDiagram } from "react-icons/fa";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from 'react-redux';
+ import { fetchEmpProject } from "../redux/EmpProject/EmpProjectSlice";
 const statusConfig = {
   Open: {
     color: "#f0ad4e",
@@ -71,6 +73,11 @@ function Project() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+
+  const state = useSelector((state) => state.empProjectReducer);
+    //const employeeState = useSelector((state) => state.employeeReducer);
+  
+    const dispatch = useDispatch();
   // Drawer State
   const [newProject, setNewProject] = useState({
     id: "",
@@ -98,13 +105,12 @@ function Project() {
         return;
       }
       try {
-        const ProjectResponse = await axios.get(
-          `/server/time_entry_management_application_function/projects/${userid}`
-        );
-        //console.log("dasdasdasd", ProjectResponse);
+       
+        const ProjectResponse = state;
+        console.log("dasdasdasd", ProjectResponse);
 
-        if (ProjectResponse.data.data.length)
-          if (ProjectResponse.status === 200) {
+     
+      
             //console.log("dssdsada", ProjectResponse.data.data);
 
             const formattedProjects = ProjectResponse.data.data.map(
@@ -119,7 +125,7 @@ function Project() {
               })
             );
             setProjects(formattedProjects);
-          }
+          
       } catch (error) {
         console.error("Error fetching projects:", error);
       } finally {
@@ -184,7 +190,7 @@ function Project() {
   const handlefiltetActive = (project)=>{
     console.log("Project = ", project.id)
 
-    navigate("/task", { state: { projectId: project.id } });
+    navigate("/task", { state: { projectId: project.id , projectName:project.name} });
     const pathname = "/tasks"
   }
   return (
@@ -273,6 +279,15 @@ function Project() {
                     }}
                   >
                     Action
+                  </TableCell>
+
+                  <TableCell
+                    sx={{
+                      color: theme.palette.primary.contrastText,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Tasks
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -418,6 +433,9 @@ function Project() {
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
                       End Date
                     </TableCell>
+                    <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                     Tasks
+                    </TableCell>
                   </TableRow>
                 </TableHead>
 
@@ -502,7 +520,7 @@ function Project() {
                 ) : (
                   <TableBody>
                     {paginatedProjects.map((project) => (
-                      <TableRow key={project.id} onClick={()=> handlefiltetActive(project)}>
+                      <TableRow key={project.id} >
                         <TableCell>
                           {"P" + project.id.substr(project.id.length - 4)}
                         </TableCell>
@@ -531,6 +549,16 @@ function Project() {
                         <TableCell>{project.owner}</TableCell>
                         <TableCell>{project.startDate}</TableCell>
                         <TableCell>{project.endDate}</TableCell>
+                        <TableCell>
+                          <Button
+                           variant="outlined"
+                           size="small"
+                          color="primary"
+                          onClick={() => handlefiltetActive(project)}
+                           >
+                           Tasks
+                           </Button>
+                          </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

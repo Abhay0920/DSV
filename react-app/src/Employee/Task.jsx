@@ -30,7 +30,10 @@ import CircularProgress from "@mui/material/CircularProgress";
 import axios from "axios";
 import { TimeEntry } from "./TimeEntry";
 import { FaTasks } from "react-icons/fa";
+import { useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from 'react-redux';
 
+import { fetchEmpTask } from "../redux/EmpTask/EmpTaskSlice";
 const statusOptions = ["Open", "In Progress", "Completed"];
 
 const statusConfig = {
@@ -63,6 +66,11 @@ const statusConfig = {
 
 function Task() {
   const theme = useTheme();
+  
+  const location = useLocation();
+    const { projectId } = location.state || {}; 
+    const { projectName } = location.state || {}; // Access projectId from state
+     console.log("= ",projectName);
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,7 +83,8 @@ function Task() {
   const [viewTask, setViewTask] = useState(null);
   const [assignOptions, setAssignOptions] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const [TaskName, setTaskName] = useState("");
+  
   const [newTask, setNewTask] = useState({
     projectId: "",
     project_name: "",
@@ -89,6 +98,10 @@ function Task() {
   });
   const [currUser, setCurrUser] = useState({});
 
+    const Task = useSelector((state) => state.empTaskReducer);
+      const dispatch = useDispatch();
+  
+    console.log("task",Task);
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -96,15 +109,17 @@ function Task() {
         const user = JSON.parse(localStorage.getItem("currUser"));
         setCurrUser(user);
         const userid = user.userid;
-        const TaskResponse = await axios.get(
-          `/server/time_entry_management_application_function/tasks/employee/${user.userid}`
-        );
+       
+        const TaskResponse = Task;
+        
 
-        //console.log(`TaskResponse`, TaskResponse.data.data);
+    
         const ProjectResponse = await axios.get(
           "/server/time_entry_management_application_function/projects"
         );
-        const tasksFromResponse = TaskResponse.data.data.map((item) => ({
+        const tasksFromResponse = TaskResponse.data.data
+        .filter((item) => (projectId ? item.Project_ID === projectId : true))
+        .map((item) => ({
           id: item.ROWID,
           taskid: item.ROWID,
           name: item.Task_Name,
@@ -117,6 +132,11 @@ function Task() {
           endDate: item.End_Date,
           description: item.Description,
         }));
+        if (projectId ) {
+          setTaskName(projectName);
+        } else {
+          setTaskName("Tasks");
+        }
         setTasks(tasksFromResponse);
         const filteredProjects = ProjectResponse.data.data.filter(
           (project) => project.Assigned_To_Id === userid
@@ -263,7 +283,7 @@ function Task() {
           marginBottom: 3,
         }}
       >
-        <Typography variant="h4">Tasks</Typography>
+        <Typography variant="h4">{TaskName}</Typography>
       </Box>
 
       <Grid container spacing={3}>

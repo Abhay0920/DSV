@@ -21,6 +21,7 @@ import {
   IconButton,
   Modal,
   DialogContentText,
+  CircularProgress,
  
 } from "@mui/material";
 import { IoTimeSharp } from "react-icons/io5";
@@ -44,6 +45,7 @@ export const TimeEntry = ({
   handleCloseViewModal,
 }) => {
   const endTimeRef = useRef(null); // Create a ref for the TextField component
+  const [loading, setLoading] = useState(false);
 
  
 
@@ -62,6 +64,7 @@ export const TimeEntry = ({
   const [errors, setErrors] = useState({});
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState(null);
+  const [todayTimeEntry,setTodayTimeEntry] = useState([]);
 
   const validateForm = () => {
     let tempErrors = {};
@@ -154,6 +157,7 @@ export const TimeEntry = ({
     note: "",
     totalTime: "",
   });
+  console.log("sdahfjsd",newTimesheetEntry.date);
   const handleAlert = (type, label) => {
     setalerttype(type);
     setAlertLabel(label);
@@ -177,26 +181,96 @@ export const TimeEntry = ({
     let mins = minutes % 60;
     return `${hrs} hr ${mins} min`;
   }
+
+
+
+//   const checkValidTimeSlot = (newStartTime, newEndTime, selectedDate) => {
+//     const timeEntries = timeEntry.find((item) => selectedDate === item?.entryDate);
+
+//     // Function to parse time including AM/PM format
+//     const parseTime = (timeStr) => {
+//         let [time, modifier] = timeStr.split(" ");
+//         let [hours, minutes] = time.split(":").map(Number);
+
+//         if (modifier === "PM" && hours !== 12) hours += 12;
+//         if (modifier === "AM" && hours === 12) hours = 0;
+
+//         return hours * 60 + minutes; // Convert time to minutes
+//     };
+
+//     const newStart = parseTime(newStartTime);
+//     const newEnd = parseTime(newEndTime);
+
+//     if (newEnd <= newStart) return false; // Invalid time range
+
+//     if (!timeEntries?.details) return true; // No existing entries, valid time slot
+
+//     for (const entry of timeEntries?.details) {
+//         const timeEntry = entry.Time_Entries; // Fixing nested structure
+
+//         if (timeEntry.Entry_Date === selectedDate) {
+//             const existingStart = parseTime(timeEntry.Start_time);
+//             const existingEnd = parseTime(timeEntry.End_time);
+
+//             if (
+//                 (newStart >= existingStart && newStart < existingEnd) || // Overlapping start
+//                 (newEnd > existingStart && newEnd <= existingEnd) || // Overlapping end
+//                 (newStart <= existingStart && newEnd >= existingEnd) // Complete overlap
+//             ) {
+//                 return false; // Overlapping time slot
+//             }
+//         }
+//     }
+//     return true; // Valid time slot
+// };
+
+// Test Cases
+//console.log("1",checkValidTimeSlot("08:00 AM", "11:46 AM", "2025-02-25")); // true
+// console.log(checkValidTimeSlot("01:32 PM", "02:00 PM", "2025-02-25")); // false
+// console.log(checkValidTimeSlot("02:30 PM", "01:00 PM", "2025-03-24")); // false (invalid range)
+// console.log("2",checkValidTimeSlot("06:30 PM", "07:00 PM", "2025-02-25")); // false (invalid range)
+
+
+
   const handleTimesheetInputChange = (event) => {
     const { name, value } = event.target;
+    console.log("[name]", name ,value);
+    
     setNewTimesheetEntry((prev) => ({ ...prev, [name]: value }));
   };
   const handleAddTimesheetEntry = async () => {
-    //console.log("user", currUser);
-    //console.log("timeEntry", newTimesheetEntry);
     if (!viewTask) return;
-
+  
     const start = new Date(`1970-01-01T${newTimesheetEntry.startTime}`);
     const end = new Date(`1970-01-01T${newTimesheetEntry.endTime}`);
     const diffMs = (end - start) / (1000 * 60); // Total time in minutes
-
+  
     if (diffMs <= 0) {
       handleAlert("Error", "End time must be greater than Start Time");
       return;
     }
-
+  
+    setLoading(true);
     setIsLoading(true);
+  
     try {
+      // Check if the time slot is valid before proceeding
+      // const validTimeSlot = checkValidTimeSlot(
+      //   formatTimeToAMPM(start),
+      //   formatTimeToAMPM(end),
+      //   newTimesheetEntry.date
+      // );
+  
+      // if (!validTimeSlot) {
+      //   handleAlert("error", "Already have a Time Entry for this time slot");
+        // Fetch the previous data (even if the time entry is invalid)
+      //   const TimeEntryResponse = await axios.get(
+      //     `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
+      //   );
+      //   setTimeEntry(TimeEntryResponse.data.data);
+      //   return; // Don't proceed with posting if the time is invalid
+      // }
+  
       // Post the new timesheet entry to the server
       const response = await axios.post(
         "/server/time_entry_management_application_function/timeentry",
@@ -214,13 +288,19 @@ export const TimeEntry = ({
           Project_Name: viewTask.project_name,
         }
       );
+  
+      // After successfully posting, fetch the updated data
       const TimeEntryResponse = await axios.get(
         `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
       );
-      setTimeEntry(TimeEntryResponse.data.data);
-      setIsLoading(false);
-      handleAlert("success", "Time Entry has been successfully submitted");
 
+      
+  
+      // Update the state with the new data
+      setTimeEntry(TimeEntryResponse.data.data);
+      handleAlert("success", "Time Entry has been successfully submitted");
+  
+      // Reset the new timesheet entry fields
       setNewTimesheetEntry({
         user: "",
         date: "",
@@ -229,11 +309,81 @@ export const TimeEntry = ({
         note: "",
         totalTime: "",
       });
+  
     } catch (error) {
-      console.error("Error adding timesheet entry:", error);
-      handleAlert("Error", "Failed to add timesheet entry. Please try again.");
+      
+     
+      handleAlert("error", "Time Entry is Already Added ");
+    } finally {
+      setLoading(false);
+      setIsLoading(false); // Ensure isLoading is set back to false after completion
     }
   };
+  
+
+ 
+  // const handleAddTimesheetEntry = async () => {
+  //   if (!viewTask) return;
+  
+  //   const start = new Date(`1970-01-01T${newTimesheetEntry.startTime}`);
+  //   const end = new Date(`1970-01-01T${newTimesheetEntry.endTime}`);
+  //   const diffMs = (end - start) / (1000 * 60); // Total time in minutes
+  
+  //   if (diffMs <= 0) {
+  //     handleAlert("Error", "End time must be greater than Start Time");
+  //     return;
+  //   }
+  //   setLoading(true);
+  //   setIsLoading(true);
+  //   try {
+  //     // Post the new timesheet entry to the server
+  //     const response = await axios.post(
+  //       "/server/time_entry_management_application_function/timeentry",
+  //       {
+  //         Username: currUser.firstName + currUser.lastName,
+  //         User_ID: currUser.userid,
+  //         Entry_Date: newTimesheetEntry.date,
+  //         Note: newTimesheetEntry.note,
+  //         Start_time: formatTimeToAMPM(start),
+  //         End_time: formatTimeToAMPM(end),
+  //         Total_time: diffMs,
+  //         Task_ID: viewTask.id,
+  //         Task_Name: viewTask.name,
+  //         Project_ID: viewTask.projectId,
+  //         Project_Name: viewTask.project_name,
+  //       }
+  //     );
+  
+  //     // Handle success
+  //     const TimeEntryResponse = await axios.get(
+  //       `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
+  //     );
+  //     setTimeEntry(TimeEntryResponse.data.data);
+  //     setIsLoading(false);
+  //     handleAlert("success", "Time Entry has been successfully submitted");
+  
+  //     setNewTimesheetEntry({
+  //       user: "",
+  //       date: "",
+  //       startTime: "",
+  //       endTime: "",
+  //       note: "",
+  //       totalTime: "",
+  //     });
+  
+  //   } catch (error) {
+  //     if (error.response && error.response.status === 400) {
+  //       // Show alert if the time entry overlaps
+  //       handleAlert("Error", error.response.data.message);
+  //     } else {
+  //       console.error("Error adding timesheet entry:", error);
+  //       handleAlert("Error", "Failed to add timesheet entry. Please try again.");
+  //     }
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  
   const handleDeleteTimeEntry = async (ROWID) => {
     try {
       //console.log("id=>", ROWID);
@@ -573,8 +723,9 @@ export const TimeEntry = ({
         </Grid>
 
         <Grid item xs={12}>
-          <Button variant="contained" color="primary" onClick={handleSubmit}>
-            Add
+          <Button variant="contained" color="primary" onClick={handleSubmit} disabled={loading}>
+          {loading ? <CircularProgress size={24} color="inherit" /> : "Add"}
+
           </Button>
         </Grid>
       </Grid>

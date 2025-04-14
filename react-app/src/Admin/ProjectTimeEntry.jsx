@@ -68,7 +68,7 @@ export const ProjectTimeEntry = ({
         // Fetch time entry data
         setIsLoading(true);
         const TimeEntryResponse = await axios.get(
-          `/server/time_entry_management_application_function/time_entry/project/${viewproject.id}`
+          `/server/time_entry_management_application_function/time_entry/project/${viewproject.ROWID}`
         );
 
         console.log("timeentry project", TimeEntryResponse.data.data);

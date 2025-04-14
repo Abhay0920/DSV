@@ -42,6 +42,10 @@ import { ProjectTimeEntry } from "./ProjectTimeEntry";
 import { useDemoRouter } from "@toolpad/core/internal";
 import Task from "./Task";
 import { useNavigate } from "react-router-dom";
+
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchProjects, addProject } from "../redux/Project/ProjectSlice";
+import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 const statusConfig = {
   Open: {
     color: "#f0ad4e",
@@ -71,6 +75,9 @@ const statusConfig = {
 };
 
 function Project({ fun }) {
+
+  
+
   const navigate = useNavigate();
   const theme = useTheme();
   const router = useDemoRouter();
@@ -97,8 +104,8 @@ function Project({ fun }) {
     id: "",
     name: "",
     status: "",
-    owner: "",
-    ownerID: "",
+    owner: currUser.firstName + " " + currUser.lastName,
+    ownerID: currUser.userid,
     startDate: "",
     endDate: "",
     description: "",
@@ -114,59 +121,116 @@ function Project({ fun }) {
 
   const [errors, setErrors] = useState({});
 
+  // start
+  const state = useSelector((state) => state.projectReducer);
+  const employeeState = useSelector((state) => state.employeeReducer);
+ console.log("employee",employeeState.data.users)
+  const dispatch = useDispatch();
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const ProjectResponse = await axios.get(
-          "/server/time_entry_management_application_function/projects"
-        );
+    dispatch(fetchEmployees())
+  }, [dispatch]);
 
-        const EmployeeResponse = await axios.get(
-          "/server/time_entry_management_application_function/employee"
-        );
-        // ////console.log("employess => ", EmployeeResponse.data.users);
-        // ////console.log("project => ", ProjectResponse.data.data);
+useEffect(() => {
+  if (state && state.data) {
+    console.log("employeeState",employeeState.data)
+    // Assuming state.data is an object that contains the project info
+    // const projectData = state.data.data; // This should be an array
 
-        if (EmployeeResponse.status === 200) {
-          const formattedAssignTo = EmployeeResponse.data.users
-            .filter(
-              (employee) =>
-                // employee.role_details.role_name !== "Admin" &&
-                employee.role_details.role_name !== "Super Admin"
-            )
-            .map((employee) => ({
-              username: `${employee.first_name} ${employee.last_name}`,
-              userID: employee.user_id,
-            }));
+    // console.log("Project Data:", projectData);
 
-          ////console.log(formattedAssignTo);
-          setAssignOptions(formattedAssignTo);
-        }
+    // if (projectData && Array.isArray(projectData) && projectData.length > 0) {
+    //   // Format the projects
+    //   const formattedProjects = projectData.map((project) => ({
+    //     id: project.ROWID,
+    //     name: project.Project_Name,
+    //     status: project.Status,
+    //     owner: project.Owner,
+    //     ownerID: project.Owner_ID,
+    //     startDate: project.Start_Date,
+    //     endDate: project.End_Date,
+    //     description: project.Description,
+    //     assignedTo: project.Assigned_To,
+    //     assignedToID: project.Assigned_To_Id,
+    //   }));
 
-        if (ProjectResponse.status === 200) {
-          const formattedProjects = ProjectResponse.data.data.map(
-            (project, index) => ({
-              id: project.ROWID,
-              name: project.Project_Name,
-              status: project.Status,
-              owner: project.Owner,
-              ownerID: project.Owner_ID,
-              startDate: project.Start_Date,
-              endDate: project.End_Date,
-              description: project.Description,
-              assignedTo: project.Assigned_To,
-              assignedToID: project.Assigned_To_Id,
-            })
-          );
-          setProjects(formattedProjects);
-        }
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      }
-    };
+      // console.log("Formatted Projects:", formattedProjects);
+      
+      // If you need to store formatted projects in state, you can set them here:
+      setProjects(state.data.data);
+      const formattedAssignTo = employeeState.data.users
+                .filter(
+                  (employee) =>
+                    // employee.role_details.role_name !== "Admin" &&
+                    employee.role_details.role_name !== "Super Admin"
+                )
+                .map((employee) => ({
+                  username: `${employee.first_name} ${employee.last_name}`,
+                  userID: employee.user_id,
+                }));
+    
+              ////console.log(formattedAssignTo);
+              setAssignOptions(formattedAssignTo);
 
-    fetchData();
-  }, []);
+  }
+
+}, [state]);  // Dependency array ensures effect runs when 'state' changes
+
+  // end
+
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const ProjectResponse = await axios.get(
+  //         "/server/time_entry_management_application_function/projects"
+  //       );
+
+  //       const EmployeeResponse = await axios.get(
+  //         "/server/time_entry_management_application_function/employee"
+  //       );
+  //       // ////console.log("employess => ", EmployeeResponse.data.users);
+  //       // ////console.log("project => ", ProjectResponse.data.data);
+
+  //       if (EmployeeResponse.status === 200) {
+  //         const formattedAssignTo = EmployeeResponse.data.users
+  //           .filter(
+  //             (employee) =>
+  //               // employee.role_details.role_name !== "Admin" &&
+  //               employee.role_details.role_name !== "Super Admin"
+  //           )
+  //           .map((employee) => ({
+  //             username: `${employee.first_name} ${employee.last_name}`,
+  //             userID: employee.user_id,
+  //           }));
+
+  //         ////console.log(formattedAssignTo);
+  //         setAssignOptions(formattedAssignTo);
+  //       }
+
+  //       if (ProjectResponse.status === 200) {
+  //         const formattedProjects = ProjectResponse.data.data.map(
+  //           (project, index) => ({
+  //             id: project.ROWID,
+  //             name: project.Project_Name,
+  //             status: project.Status,
+  //             owner: project.Owner,
+  //             ownerID: project.Owner_ID,
+  //             startDate: project.Start_Date,
+  //             endDate: project.End_Date,
+  //             description: project.Description,
+  //             assignedTo: project.Assigned_To,
+  //             assignedToID: project.Assigned_To_Id,
+  //           })
+  //         );
+  //         setProjects(formattedProjects);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching projects:", error);
+  //     }
+  //   };
+
+  //   fetchData();
+  // }, []);
 
   const handleSearch = (event) => {
     setSearchQuery(event.target.value);
@@ -222,15 +286,23 @@ function Project({ fun }) {
   };
 
   const filteredProjects = projects.filter(
-    (project) =>
-      project.name &&
-      project.name.toLowerCase().includes(searchQuery.toLowerCase())
+    (project) =>(
+      
+      // return(
+      project.Project_Name &&
+      project.Project_Name.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    )
   );
 
   const paginatedProjects = filteredProjects.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+  
+  // console.log("paginatedProjects",paginatedProjects);
+  // console.log("filteredProjects",filteredProjects);
+  
 
   // Drawer Handlers
   const toggleDrawer = (open) => {
@@ -283,61 +355,85 @@ function Project({ fun }) {
   };
 
   const handleAddProject = async () => {
+    // try {
+    //   console.log("abhay singh", newProject);
+
+    //   const response = await axios.post(
+    //     "/server/time_entry_management_application_function/projects",
+    //     {
+    //       Project_Name: newProject.name,
+    //       Description: newProject.description,
+    //       Start_Date: newProject.startDate,
+    //       End_Date: newProject.endDate,
+    //       Status: newProject.status,
+    //       Owner: currUser.firstName + " " + currUser.lastName,
+    //       Owner_Id: currUser.userid,
+    //       Assigned_To: newProject.assignedTo,
+    //       Assigned_To_Id: newProject.assignedToID,
+    //     }
+    //   );
+
+    //   const result = response.data;
+    //   ////console.log(response.data.data);
+
+    //   if (result.success) {
+    //     // Update the local state with the new project
+    //     const newProjectData = {
+    //       ...newProject,
+    //       owner: result.data.Owner,
+    //       ownerID: result.data.ownerID,
+    //       id: result.data.ROWID,
+    //       rowid: result.data.ROWID,
+    //     };
+
+    //     ////console.log("wqe", newProjectData);
+    //     setProjects((prev) => [...prev, newProjectData]);
+
+    //     // Reset the form
+    //     setNewProject({
+    //       id: "",
+    //       name: "",
+    //       status: "",
+    //       owner: "",
+    //       ownerID: "",
+    //       startDate: "",
+    //       endDate: "",
+    //       description: "",
+    //       assignedTo: "",
+    //       assignedToID: "",
+    //     });
+    //     toggleDrawer(false);
+    //     handleAlert("success", "Project added successfully");
+    //   } else {
+    //     handleAlert("error", result.message || "Failed to add project");
+    //   }
+    // } catch (error) {
+    //   handleAlert("error", error.message || "Error adding project");
+    // }
+
     try {
-      console.log("abhay singh", newProject);
+      console.log('Adding new project:', newProject);
+      console.log("abhayproject")
 
-      const response = await axios.post(
-        "/server/time_entry_management_application_function/projects",
-        {
-          Project_Name: newProject.name,
-          Description: newProject.description,
-          Start_Date: newProject.startDate,
-          End_Date: newProject.endDate,
-          Status: newProject.status,
-          Owner: currUser.firstName + " " + currUser.lastName,
-          Owner_Id: currUser.userid,
-          Assigned_To: newProject.assignedTo,
-          Assigned_To_Id: newProject.assignedToID,
-        }
-      );
-
-      const result = response.data;
-      ////console.log(response.data.data);
-
-      if (result.success) {
-        // Update the local state with the new project
-        const newProjectData = {
-          ...newProject,
-          owner: result.data.Owner,
-          ownerID: result.data.ownerID,
-          id: result.data.ROWID,
-          rowid: result.data.ROWID,
-        };
-
-        ////console.log("wqe", newProjectData);
-        setProjects((prev) => [...prev, newProjectData]);
-
-        // Reset the form
-        setNewProject({
-          id: "",
-          name: "",
-          status: "",
-          owner: "",
-          ownerID: "",
-          startDate: "",
-          endDate: "",
-          description: "",
-          assignedTo: "",
-          assignedToID: "",
-        });
-        toggleDrawer(false);
-        handleAlert("success", "Project added successfully");
-      } else {
-        handleAlert("error", result.message || "Failed to add project");
-      }
+      // Dispatch the AddProject action to add a new project
+      await dispatch(addProject(newProject));
+      // Reset new project form after adding
+      setNewProject({
+        name: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+        status: '',
+        assignedTo: '',
+      });
+       await dispatch(fetchProjects());
     } catch (error) {
-      handleAlert("error", error.message || "Error adding project");
+      console.error('Failed to add project:', error);
+      
     }
+
+    
+
   };
 
   const handleCancel = () => {
@@ -355,6 +451,7 @@ function Project({ fun }) {
   const handleEditChange = (event) => {
     const { name, value } = event.target;
     ////console.log("Value changed:", name, value);
+    console.log("heelo",name,value);
     setCurrentEditProject((prev) => ({ ...prev, [name]: value }));
 
     if (name === "assignedTo") {
@@ -368,8 +465,8 @@ function Project({ fun }) {
         // Update the state with username and userID
         setCurrentEditProject((prev) => ({
           ...prev,
-          assignedTo: selectedOption.username,
-          assignedToID: selectedOption.userID,
+          Assigned_To: selectedOption.username,
+          Assigned_To_Id: selectedOption.userID,
         }));
       }
     } else {
@@ -378,29 +475,29 @@ function Project({ fun }) {
   };
 
   const handleUpdateProject = async (rowid) => {
-    //console.log("projects", currentEditProject);
+    console.log("projects", currentEditProject);
     //console.log("currUser", currUser);
 
     try {
       const response = await axios.post(
         `/server/time_entry_management_application_function/projects/${rowid}`,
         {
-          Project_Name: currentEditProject.name,
-          Description: currentEditProject.description,
-          Start_Date: currentEditProject.startDate,
-          End_Date: currentEditProject.endDate,
-          Status: currentEditProject.status,
+          Project_Name: currentEditProject.Project_Name,
+          Description: currentEditProject.Description,
+          Start_Date: currentEditProject.Start_Date,
+          End_Date: currentEditProject.End_Date,
+          Status: currentEditProject.Status,
           Owner: currUser.firstName + " " + currUser.lastName,
           Owner_Id: currUser.user_id,
-          Assigned_To: currentEditProject.assignedTo,
-          Assigned_To_Id: currentEditProject.assignedToID,
+          Assigned_To: currentEditProject.Assigned_To,
+          Assigned_To_Id: currentEditProject.Assigned_To_Id,
         }
       );
       if (response.status === 200) {
         const updateProject = response.data;
         setProjects((prev) =>
           prev.map((project) =>
-            project.id === currentEditProject.id ? currentEditProject : project
+            project.ROWID === currentEditProject.ROWID ? currentEditProject : project
           )
         );
         handleAlert("success", "Project updated successfully");
@@ -464,9 +561,9 @@ function Project({ fun }) {
   };
 
   const handlefiltetActive = (project) => {
-    console.log("Project = ", project.id);
+    console.log("Project = ", project);
 
-    navigate("/task", { state: { projectId: project.id } });
+    navigate("/task", { state: { projectId: project.ROWID, projectName: project.Project_Name } });
     const pathname = "/tasks";
 
     setViewproject(project);
@@ -610,20 +707,20 @@ function Project({ fun }) {
                   {paginatedProjects.map((project) => (
                     <TableRow key={project.id}>
                       <TableCell>
-                        {"P" + project.id.substr(project.id.length - 4)}
-                      </TableCell>
-                      <TableCell>{project.name}</TableCell>
+                        {"P" + project.ROWID.substr(project.ROWID.length - 4)}
+                      </TableCell> 
+                      <TableCell>{project.Project_Name}</TableCell>
                       <TableCell>
                         <Chip
-                          label={project.status}
+                          label={project.Status}
                           size="small"
                           sx={{
                             backgroundColor:
-                              statusConfig[project.status]?.backgroundColor ||
+                              statusConfig[project.Status]?.backgroundColor ||
                               "#f5f5f5",
                             color:
-                              statusConfig[project.status]?.color || "#757575",
-                            border: `1px solid ${statusConfig[project.status]?.borderColor || "#e0e0e0"}`,
+                              statusConfig[project.Status]?.color || "#757575",
+                            border: `1px solid ${statusConfig[project.Status]?.borderColor || "#e0e0e0"}`,
                             fontWeight: 500,
                             fontSize: "0.75rem",
                             height: "24px",
@@ -632,11 +729,12 @@ function Project({ fun }) {
                             },
                           }}
                         />
+                        
                       </TableCell>
-                      <TableCell>{project.owner}</TableCell>
-                      <TableCell>{project.assignedTo}</TableCell>
-                      <TableCell>{project.startDate}</TableCell>
-                      <TableCell>{project.endDate}</TableCell>
+                      <TableCell>{project.Owner}</TableCell>
+                      <TableCell>{project.Assigned_To}</TableCell>
+                      <TableCell>{project.Start_Date}</TableCell>
+                      <TableCell>{project.End_Date}</TableCell>
                       <TableCell>
                         <IconButton
                           color="primary"
@@ -854,20 +952,22 @@ function Project({ fun }) {
           </Typography>
           <TextField
             label="Project Name"
-            name="name"
+            name="Project_Name"
             fullWidth
             variant="outlined"
-            value={currentEditProject?.name || ""}
+            value={currentEditProject?.
+              Project_Name
+               || ""}
             onChange={handleEditChange}
             sx={{ marginBottom: 2 }}
           />
           <TextField
             label="Status"
-            name="status"
+            name="Status"
             fullWidth
             variant="outlined"
             select
-            value={currentEditProject?.status || ""}
+            value={currentEditProject?.Status || ""}
             onChange={handleEditChange}
             sx={{ marginBottom: 2 }}
           >
@@ -877,50 +977,64 @@ function Project({ fun }) {
           </TextField>
           <TextField
             label="Start Date"
-            name="startDate"
+            name="Start_Date"
             fullWidth
             variant="outlined"
             type="date"
-            value={currentEditProject?.startDate || ""}
+            value={currentEditProject?.Start_Date || ""}
             onChange={handleEditChange}
             InputLabelProps={{ shrink: true }}
             sx={{ marginBottom: 2 }}
           />
           <TextField
             label="End Date"
-            name="endDate"
+            name="End_Date"
             fullWidth
             variant="outlined"
             type="date"
-            value={currentEditProject?.endDate || ""}
+            value={currentEditProject?.End_Date || ""}
             onChange={handleEditChange}
             InputLabelProps={{ shrink: true }}
             sx={{ marginBottom: 2 }}
           />
-          <TextField
-            label="Assign To"
-            name="assignedTo"
-            fullWidth
-            variant="outlined"
-            select
-            value={currentEditProject?.assignedToID || ""}
-            onChange={handleEditChange}
-            sx={{ marginBottom: 2 }}
-          >
-            {assignOptions.map((option) => (
-              <MenuItem key={option.userID} value={option.userID}>
-                {option.username}
-              </MenuItem>
-            ))}
-          </TextField>
+
+          
+<Autocomplete
+  value={
+    assignOptions.find(option => option.userID === currentEditProject?.Assigned_To_Id) || null
+  }
+  onChange={(event, newValue) => {
+    // Handle the change correctly, and ensure the newValue is not null
+    handleEditChange({ 
+      target: { 
+        name: 'assignedTo', 
+        value: newValue?.userID || ''  // Handle the case where newValue might be null
+      } 
+    });
+  }}
+  options={assignOptions}
+  getOptionLabel={(option) => option.username} // This will display the username in the autocomplete dropdown
+  isOptionEqualToValue={(option, value) => option.userID === value?.userID} // Avoid comparing undefined values
+  renderInput={(params) => (
+    <TextField
+      {...params}
+      label="Assign To"
+      name="assignedTo"
+      fullWidth
+      variant="outlined"
+      sx={{ marginBottom: 2 }}
+    />
+  )}
+/>
+
           <TextField
             label="Description"
-            name="description"
+            name="Description"
             fullWidth
             variant="outlined"
             multiline
             rows={4}
-            value={currentEditProject?.description || ""}
+            value={currentEditProject?.Description || ""}
             onChange={handleEditChange}
             sx={{ marginBottom: 2 }}
           />
@@ -934,7 +1048,7 @@ function Project({ fun }) {
             <Button
               variant="contained"
               color="primary"
-              onClick={() => handleUpdateProject(currentEditProject.id)}
+              onClick={() => handleUpdateProject(currentEditProject.ROWID)}
             >
               Submit
             </Button>
@@ -972,7 +1086,11 @@ function Project({ fun }) {
         <div></div>
       )} */}
       {viewproject ? (
-        <Task projectId={filterActive ? viewproject.id : undefined} />
+        <Task 
+        projectId={filterActive ? viewproject.ROWID : undefined} 
+       projectName={filterActive ? viewproject.Project_Name : undefined} 
+      />
+        
       ) : (
         <div></div>
       )}

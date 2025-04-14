@@ -36,7 +36,7 @@ import WorkIcon from "@mui/icons-material/Work";
 import BadgeIcon from "@mui/icons-material/Badge";
 import TaskIcon from "@mui/icons-material/Task";
 import FolderIcon from "@mui/icons-material/Folder";
-
+import { useSelector } from "react-redux";
 function Employees() {
   const [employees, setEmployees] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,15 +97,17 @@ function Employees() {
       }, 2000); // Auto-hide after 2s
     }, 100); // Small delay ensures re-triggering
   };
-
+   const employee =  useSelector((state) => state.employeeReducer);
   useEffect(() => {
     const fetchData = async () => {
       // setLoading(true);
       try {
-        // Fetch the list of employees
+        //Fetch the list of employees
         const userResponse = await axios.get(
           "/server/time_entry_management_application_function/employee"
         );
+
+        // const userResponse = employee;
 
         const userEmployee = userResponse.data.users;
 

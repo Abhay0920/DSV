@@ -29,6 +29,7 @@ const Feedback = () => {
     message: "",
     severity: "success",
   });
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetch = async () => {
@@ -64,11 +65,13 @@ const Feedback = () => {
     });
   };
 
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!message.trim()) {
-      alert("Please enter a message");
+      setError("Message cannot be empty.");
       return;
     }
     console.log("Feedback submitted:", { name, email, message, userid });
@@ -85,6 +88,7 @@ const Feedback = () => {
       );
 
       console.log("Response:", response.data.data);
+      
       setFeedback([response.data.data, ...feedback]);
 
       if (response.status === 200) {
@@ -141,6 +145,8 @@ const Feedback = () => {
           rows={4}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          error={!!error}
+          helperText={error}
         />
         <Button variant="contained" color="primary" type="submit">
           Submit
@@ -199,16 +205,19 @@ const Feedback = () => {
                                 component={Paper}
                                 elevation={4}
                                 sx={{
+                                
                                   borderRadius: 3,
-                                  height: 230,
+                                  height: 220,
                                   display: "flex",
                                   flexDirection: "column",
                                   justifyContent: "space-between",
                                   transition: "transform 0.3s ease-in-out",
                                   "&:hover": { transform: "scale(1.05)" },
+                                  padding:"5px",
                                 }}
                               >
-                                <CardContent sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                                <CardContent sx={{ display: "flex", flexDirection: "column", height: "100%", padding: 1,
+                justifyContent: 'space-between'}}>
                                   <Box
                                     sx={{
                                      
@@ -233,15 +242,15 @@ const Feedback = () => {
                                       variant="body1"
                                       sx={{
                                         marginBottom: 1,
-                                        maxHeight: '6em', // Adjust this as needed
                                         overflowY: 'auto', // Enables vertical scrolling
+                                        maxHeight: '6em', // Adjust this as needed
                                         display: '-webkit-box',
                                         WebkitLineClamp: 4, // Limit to 4 lines
                                         WebkitBoxOrient: 'vertical', // Necessary for line clamp
                                         flexGrow: 1, // Allows this area to take up available space
-                                        width: '100%', // Ensure it doesn't overflow horizontally
-                                        wordWrap: 'break-word', // Breaks long words that may overflow horizontally
-                                        overflowX: 'hidden'
+                                        // width: '100%', // Ensure it doesn't overflow horizontally
+                                        // wordWrap: 'break-word', // Breaks long words that may overflow horizontally
+                                        // overflowX: 'hidden'
                                       }}
                                     >
                                       {item.Message}
@@ -262,11 +271,13 @@ const Feedback = () => {
                                       variant="outlined"
                                     />
                                     <Chip
-                                      label={item.Status ? "Fixed" : "Will Fixed Soon"}
+                                     
+                                      label={item.Status==="true" ? "Fixed" : "Will Fixed Soon"}
                                       sx={{
-                                        backgroundColor: item.Status ? "lightgreen" : "",
+                                        backgroundColor: item.Status==="true"  ? "lightgreen" : "",
                                       }}
                                     />
+                                 
                                   </Box>
                                 </CardContent>
                               </Card>

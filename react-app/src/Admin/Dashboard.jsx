@@ -49,6 +49,8 @@ import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import EventIcon from "@mui/icons-material/Event";
 import BusinessIcon from "@mui/icons-material/Business";
 
+import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
+import { useSelector } from "react-redux";
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -327,6 +329,7 @@ const styles = {
         : "rgba(0, 0, 0, 0.03)",
   },
 };
+const years = [2022, 2023, 2024, 2025];
 
 function Dashboard() {
   const [totalEmployees, setTotalEmployees] = useState(0);
@@ -347,7 +350,10 @@ function Dashboard() {
   });
   const [year, setYear] = useState(new Date().getFullYear());
   const [allProjects, setAllProjects] = useState([]);
+    const [taskYear,setTaskYear] = useState(new Date().getFullYear());
+  
 
+  const [monthlyProjectDataForYear, setMonthlyProjectDataForYear] = useState({});
 
   const [currentUserProjects, setCurrentUserProjects] = useState([]);
   const [employeeDrawerOpen, setEmployeeDrawerOpen] = useState(false);
@@ -361,6 +367,12 @@ function Dashboard() {
   const [internList, setInternList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const[projectLength,setProjectLength] = useState(0);
+  const [cmptProjectLen,setCmptProjectLength] = useState(0);
+  const state = useSelector((state) => state.projectReducer);
+  const employeeState = useSelector((state) => state.employeeReducer);
+  const taskState = useSelector((state) => state.taskReducer);
+  const [userTasksByYear, setUserTasksByYear] = useState({});
+  
 
   useEffect(() => {
     const fetchTotalEmployees = async () => {
@@ -368,39 +380,41 @@ function Dashboard() {
         setIsLoading(true);
   
         // Fetching the data from the server
-        const { data } = await axios.get("/server/time_entry_management_application_function/employee");
-        const projects = await axios.get("/server/time_entry_management_application_function/projects");
-        const tasks = await axios.get("/server/time_entry_management_application_function/tasks");
-  
+
+        const { data } = employeeState;
+        const projects = state;
+        const tasks = taskState;
+        
        
         setProjectLength(projects.data.data.length);
-
         const allProjects = projects.data.data;
         const allTasks = tasks.data.data;
-  
+       // const completeCnt = allProjects.filter((project) => project.Status === "Close").length;
+       
+
         // Filter projects based on the selected year
-        const filteredProjects = allProjects.filter((project) => {
-          const startDate = new Date(project.Start_Date);
-          return startDate.getFullYear() === year;  // Only include projects that match the selected year
-        });
+        // const filteredProjects = allProjects.filter((project) => {
+        //   const startDate = new Date(project.Start_Date);
+        //   return startDate.getFullYear() === year;  // Only include projects that match the selected year
+        // });
   
-        setAllProjects(filteredProjects);
-        setCurrentUserProjects(filteredProjects);
+        setAllProjects(allProjects);
+        // setCmptProjectLength(completeCnt);
+        setCurrentUserProjects(allProjects);
   
         const interns = data.users.filter((user) => user.role_details.role_name === "Interns");
-  
         setTotalEmployees(data.users.length);
         settotalIntern(interns.length);
         settTotalTask(allTasks.length);
-        settTotalProject(filteredProjects.length);
+        settTotalProject(allProjects.length);
   
         const closeCount = allTasks.filter((task) => task.Status === "Completed").length;
         const openCount = allTasks.filter((task) => task.Status === "Pending").length;
         const workingCount = allTasks.filter((task) => task.Status === "In Progress").length;
   
-        const projectCloseCount = filteredProjects.filter((project) => project.Status === "Close").length;
-        const projectOpenCount = filteredProjects.filter((project) => project.Status === "Open").length;
-        const projectWorkingCount = filteredProjects.filter((project) => project.Status === "Work In Process").length;
+        const projectCloseCount = allProjects.filter((project) => project.Status === "Close").length;
+        const projectOpenCount = allProjects.filter((project) => project.Status === "Open").length;
+        const projectWorkingCount = allProjects.filter((project) => project.Status === "Work In Process").length;
   
         setTotalClose(closeCount);
         setTotalopen(openCount);
@@ -410,33 +424,33 @@ function Dashboard() {
         setProjectworkingCount(projectWorkingCount);
   
         // Prepare monthly data for the selected year
-        const monthlyData = {
-          total: Array(12).fill(0),
-          open: Array(12).fill(0),
-          working: Array(12).fill(0),
-          closed: Array(12).fill(0),
-        };
+        // const monthlyData = {
+        //   total: Array(12).fill(0),
+        //   open: Array(12).fill(0),
+        //   working: Array(12).fill(0),
+        //   closed: Array(12).fill(0),
+        // };
   
-        filteredProjects.forEach((project) => {
-          const startDate = new Date(project.Start_Date);
-          const month = startDate.getMonth();
+        // filteredProjects.forEach((project) => {
+        //   const startDate = new Date(project.Start_Date);
+        //   const month = startDate.getMonth();
   
-          monthlyData.total[month]++;
+        //   monthlyData.total[month]++;
   
-          switch (project.Status) {
-            case "Open":
-              monthlyData.open[month]++;
-              break;
-            case "Work In Process":
-              monthlyData.working[month]++;
-              break;
-            case "Close":
-              monthlyData.closed[month]++;
-              break;
-          }
-        });
+        //   switch (project.Status) {
+        //     case "Open":
+        //       monthlyData.open[month]++;
+        //       break;
+        //     case "Work In Process":
+        //       monthlyData.working[month]++;
+        //       break;
+        //     case "Close":
+        //       monthlyData.closed[month]++;
+        //       break;
+        //   }
+        // });
   
-        setMonthlyProjectData(monthlyData);
+        // setMonthlyProjectData(monthlyData);
   
         setEmployeeList(
           data.users.map((user) => ({
@@ -446,7 +460,7 @@ function Dashboard() {
           }))
         );
   
-        const formattedProjects = filteredProjects.map((project) => ({
+        const formattedProjects = allProjects.map((project) => ({
           name: project.Project_Name,
           status: project.Status,
           startDate: new Date(project.Start_Date).toLocaleDateString(),
@@ -457,7 +471,7 @@ function Dashboard() {
   
         setProjectList(formattedProjects);
   
-        const completedProjectsList = filteredProjects
+        const completedProjectsList = allProjects
           .filter((project) => project.Status === "Close")
           .map((project) => ({
             name: project.Project_Name,
@@ -491,15 +505,118 @@ function Dashboard() {
   
     fetchTotalEmployees();
   
-  }, [year]);  // Refetch data whenever the year changes
+  }, []);  // Refetch data whenever the year changes
   
- 
+ useEffect(()=>{
+  const projects = state;
+  const allProjects = projects.data.data;
+  const filteredProjects = allProjects.filter((project) => {
+    const startDate = new Date(project.Start_Date);
+    return startDate.getFullYear() === year;  // Only include projects that match the selected year
+  });
+
+  const projectCloseCount = filteredProjects.filter((project) => project.Status === "Close").length;
+  const projectOpenCount = filteredProjects.filter((project) => project.Status === "Open").length;
+  const projectWorkingCount = filteredProjects.filter((project) => project.Status === "Work In Process").length;
+
+
+  const monthlyData = {
+    total: Array(12).fill(0),
+    open: Array(12).fill(0),
+    working: Array(12).fill(0),
+    closed: Array(12).fill(0),
+  };
+
+  filteredProjects.forEach((project) => {
+    const startDate = new Date(project.Start_Date);
+    const month = startDate.getMonth();
+
+    monthlyData.total[month]++;
+
+    switch (project.Status) {
+      case "Open":
+        monthlyData.open[month]++;
+        break;
+      case "Work In Process":
+        monthlyData.working[month]++;
+        break;
+      case "Close":
+        monthlyData.closed[month]++;
+        break;
+    }
+  });
+
+  setMonthlyProjectData(monthlyData);
+
+
+
+
+ },[year])
 
   // const theme = createTheme({
   //   palette: {
   //     mode: "light", // Set light mode by default
   //   },
   // });
+
+   useEffect(() => {
+      
+        try {
+          if (!taskState?.data?.data) return;
+      
+          const tasks = taskState.data.data;
+      
+          // Filter tasks assigned to the current user
+         
+      
+          // Group tasks by year
+          const groupedTasks = {};
+          tasks.forEach((task) => {
+            // if (!task.Due_Date) return; // Skip if Due_Date is missing
+      
+            const taskYear = new Date(task.End_Date).getFullYear();
+           console.log("bbe",taskYear);
+            // if (isNaN(taskYear)) {
+            //   console.error("Invalid Due_Date found:", task.Due_Date, "in task:", task);
+            //   return; // Skip invalid dates
+            // }
+      
+            if (!groupedTasks[taskYear]) {
+              groupedTasks[taskYear] = { close: 0, open: 0, working: 0, total: 0 };
+            }
+      
+            if (task.Status === "Completed") groupedTasks[taskYear].close++;
+            else if (task.Status === "Pending") groupedTasks[taskYear].open++;
+            else if (task.Status === "In Progress") groupedTasks[taskYear].working++;
+      
+            groupedTasks[taskYear].total++;
+          });
+      
+          console.log("Available Years in userTasksByYear:", Object.keys(groupedTasks).map(Number));
+          setUserTasksByYear(groupedTasks);
+        } catch (error) {
+          console.log("Error found", error);
+        }
+      }, [taskState]);
+       // Runs when `taskState` changes
+      
+      useEffect(() => {
+        console.log("Selected Year:", taskYear, typeof taskYear);
+        console.log("Available Years:", Object.keys(userTasksByYear).map(Number)); // Convert to numbers
+        console.log("Data for Selected Year:", userTasksByYear[taskYear]);
+      
+        if (userTasksByYear[taskYear]) {
+          setTotalClose(userTasksByYear[taskYear].close || 0);
+          setTotalopen(userTasksByYear[taskYear].open || 0);
+          setTotalWorking(userTasksByYear[taskYear].working || 0);
+          settTotalTask(userTasksByYear[taskYear].total || 0);
+        } else {
+          setTotalClose(0);
+          setTotalopen(0);
+          settTotalTask(0);
+          
+        }
+      }, [taskYear, userTasksByYear]);
 
   const cardData = [
     {
@@ -518,7 +635,7 @@ function Dashboard() {
     },
     {
       title: "Total Projects",
-      value: projectLength,
+      value: totalProject,
       description: "",
       icon: <AssignmentIcon fontSize="large" sx={{ color: "gold" }} />,
     },
@@ -738,7 +855,9 @@ function Dashboard() {
   {/* Task Report Pie Chart */}
   <Grid item xs={12} md={4}>
     <Card sx={styles.chartCard}>
+      
       <CardContent>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
         <Typography
           variant="h6"
           gutterBottom
@@ -746,6 +865,24 @@ function Dashboard() {
         >
           Task Report Status
         </Typography>
+         <FormControl size="small" sx={{ minWidth: 100 }}>
+                      <InputLabel>Year</InputLabel>
+                      <Select
+                        value={taskYear}
+                        onChange={(e) => {
+                          console.log("Selected Year:", e.target.value); // Debug log
+                          setTaskYear(Number(e.target.value))
+                        }}
+                        label="Year"
+                      >
+                        {years.map((year) => (
+                          <MenuItem key={year} value={year}>
+                            {year}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    </Box>
         <Divider sx={{ mb: 2 }} />
         <Box sx={styles.pieChartContainer} style={{ position: "relative", height: 280 }}>
           {isLoading ? (
@@ -780,7 +917,7 @@ function Dashboard() {
                 left: 20,
                 right: 20,
                 top: 20,
-                bottom: 40,
+                bottom: 55,
               }}
             />
           )}
@@ -907,7 +1044,7 @@ function Dashboard() {
                     Project List
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Total Projects: {projectList.length}
+                    Total Projects: {state.data.data.length}
                   </Typography>
                 </Box>
                 <IconButton
@@ -919,7 +1056,6 @@ function Dashboard() {
                 </IconButton>
               </Box>
             </Box>
-
             <Box sx={styles.drawerContent}>
               <List sx={styles.drawerList}>
                 {projectList.map((project, index) => (

@@ -60,7 +60,10 @@ import { BarChart } from "@mui/x-charts/BarChart";
 import { PieChart } from "@mui/x-charts/PieChart";
 import CloseIcon from "@mui/icons-material/Close";
 import { BackHand, ColorLens } from "@mui/icons-material";
-
+import { useDispatch, useSelector } from "react-redux";
+import { fetchEmpProject } from "../redux/EmpProject/EmpProjectSlice";
+import { fetchEmpTask } from "../redux/EmpTask/EmpTaskSlice";
+import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -438,7 +441,10 @@ function Dashboard() {
   const [currentUserProjects, setCurrentUserProjects] = useState([]);
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [taskYear,setTaskYear] = useState(new Date().getFullYear());
     const [allProjects, setAllProjects] = useState([]);
+    const [userTasksByYear, setUserTasksByYear] = useState({});
+
 
   // Add loading state
   const [loading, setLoading] = useState(true);
@@ -455,29 +461,50 @@ function Dashboard() {
   const [completedProjectDrawerOpen, setCompletedProjectDrawerOpen] =
     useState(false);
 
-    
+    // const empProjectState = useSelector((state) => state.empProjectReducer);
+  
+  // const employeeState = useSelector((state) => state.employeeReducer);
+  // const taskState = useSelector((state) => state.taskReducer);
+  // console.log("Redux State:", taskState);
+  // console.log("Project  State:", empProjectState);
+   const dispatch = useDispatch();
 
+
+   useEffect(()=>{
+    const currentUserId = JSON.parse(localStorage.getItem("currUser"));
+    const id = currentUserId.userid
+     console.log("id ", id);
+    dispatch(fetchEmpProject());
+    dispatch(fetchEmpTask());
+    dispatch(fetchEmployees());
+    console.log("hellow world")
+   },[dispatch])
+   
+   const empProjectState = useSelector((state) => state.empProjectReducer);
+  
+   const employeeState = useSelector((state) => state.employeeReducer);
+   const taskState = useSelector((state) => state.taskReducer);
+   console.log("Redux State:", taskState);
+   console.log("Project  State:", empProjectState);
+  
     useEffect(() => {
+     
+
       const fetchTotalEmployees = async () => {
         const currentUserId = JSON.parse(localStorage.getItem("currUser"));
+          const id = currentUserId.userid
         try {
           setLoading(true);
-          const { data } = await axios.get(
-            "/server/time_entry_management_application_function/employee"
-          );
-          const projects = await axios.get(
-            `/server/time_entry_management_application_function/projects/${currentUserId.userid}`
-          );
+          
+           
+
+          const { data } = employeeState
+          const projects = empProjectState;
     
           console.log("projects", projects);
-          const tasks = await axios.get(
-            "/server/time_entry_management_application_function/tasks"
-          );
+          const tasks = taskState;
     
-          const userProjects = projects.data.data.filter((project) => {
-            const startDate = new Date(project.Projects.Start_Date);
-            return startDate.getFullYear() === selectedYear; // Filter by selected year
-          });
+          const userProjects = projects.data.data;
     
           const userTasks = tasks.data.data.filter((task) => {
             const assignedIds = task.Assign_To_ID.split(",").map((id) =>
@@ -548,11 +575,11 @@ function Dashboard() {
     
           setMonthlyProjectData(monthlyData);
     
-          const appUsers = data.users.filter(
+          const appUsers = data?.users?.filter(
             (user) => user.role_details.role_name !== "Super Admin"
           );
     
-          const interns = data.users.filter(
+          const interns = data?.users?.filter(
             (user) => user.role_details.role_name === "Interns"
           );
     
@@ -567,7 +594,114 @@ function Dashboard() {
       };
     
       fetchTotalEmployees();
-    }, [selectedYear]); // Re-run effect when selectedYear changes
+    }, [employeeState,taskState,empProjectState]); // Re-run effect when selectedYear changes
+    
+     console.log("Redux State:", empProjectState);
+    useEffect(()=>{
+      const userProject = empProjectState?.data?.data;
+      console.log("userProject",userProject)
+      const userProjects = userProject?.filter((project) => {
+        const startDate = new Date(project.Projects.Start_Date);
+        return startDate.getFullYear() === selectedYear; // Filter by selected year
+      });
+
+    
+
+      const monthlyData = {
+        total: Array(12).fill(0),
+        open: Array(12).fill(0),
+        working: Array(12).fill(0),
+        closed: Array(12).fill(0),
+      };
+
+      userProjects?.forEach((project) => {
+        const startDate = new Date(project.Projects.Start_Date);
+        const month = startDate.getMonth();
+
+        monthlyData.total[month]++;
+
+        switch (project.Projects.Status) {
+          case "Open":
+            monthlyData.open[month]++;
+            break;
+          case "Work In Process":
+            monthlyData.working[month]++;
+            break;
+          case "Close":
+            monthlyData.closed[month]++;
+            break;
+        }
+      });
+
+      setMonthlyProjectData(monthlyData);
+
+    },[selectedYear])
+
+    useEffect(() => {
+      const currentUserId = JSON.parse(localStorage.getItem("currUser"));
+    
+      try {
+        if (!taskState?.data?.data) return;
+    
+        const tasks = taskState.data.data;
+    
+        // Filter tasks assigned to the current user
+        const userTasks = tasks.filter((task) => {
+          const assignedIds = task.Assign_To_ID.split(",").map((id) => id.trim());
+          return assignedIds.includes(currentUserId.userid.toString());
+        });
+     
+    
+        // Group tasks by year
+        const groupedTasks = {};
+        userTasks.forEach((task) => {
+          // if (!task.Due_Date) return; // Skip if Due_Date is missing
+    
+          const taskYear = new Date(task.End_Date).getFullYear();
+         console.log("bbe",taskYear);
+          // if (isNaN(taskYear)) {
+          //   console.error("Invalid Due_Date found:", task.Due_Date, "in task:", task);
+          //   return; // Skip invalid dates
+          // }
+    
+          if (!groupedTasks[taskYear]) {
+            groupedTasks[taskYear] = { close: 0, open: 0, working: 0, total: 0 };
+          }
+    
+          if (task.Status === "Completed") groupedTasks[taskYear].close++;
+          else if (task.Status === "Pending") groupedTasks[taskYear].open++;
+          else if (task.Status === "In Progress") groupedTasks[taskYear].working++;
+    
+          groupedTasks[taskYear].total++;
+        });
+    
+        console.log("Available Years in userTasksByYear:", Object.keys(groupedTasks).map(Number));
+        setUserTasksByYear(groupedTasks);
+      } catch (error) {
+        console.log("Error found", error);
+      }
+    }, [taskState]);
+     // Runs when `taskState` changes
+    
+    useEffect(() => {
+      console.log("Selected Year:", taskYear, typeof taskYear);
+      console.log("Available Years:", Object.keys(userTasksByYear).map(Number)); // Convert to numbers
+      console.log("Data for Selected Year:", userTasksByYear[taskYear]);
+    
+      if (userTasksByYear[taskYear]) {
+        setTotalClose(userTasksByYear[taskYear].close || 0);
+        setTotalopen(userTasksByYear[taskYear].open || 0);
+        setTotalWorking(userTasksByYear[taskYear].working || 0);
+        settTotalTask(userTasksByYear[taskYear].total || 0);
+      } else {
+        setTotalClose(0);
+        setTotalopen(0);
+        settTotalTask(0);
+        
+      }
+    }, [taskYear, userTasksByYear]);
+    
+    
     
     
   // const theme = createTheme({
@@ -606,25 +740,11 @@ function Dashboard() {
 
   const PiechartValue = [
     { id: 0, value: Number(totaltask) || 0, label: "Total", color: "#2196f3" },
-    {
-      id: 1,
-      value: Number(totalClose) || 0,
-      label: "Completed",
-      color: "#4caf50",
-    },
-    {
-      id: 2,
-      value: Number(totalopen) || 0,
-      label: "Pending",
-      color: "#ff9800",
-    },
-    {
-      id: 3,
-      value: Number(totalworking) || 0,
-      label: "In Progress",
-      color: "#f44336",
-    },
+    { id: 1, value: Number(totalClose) || 0, label: "Completed", color: "#4caf50" },
+    { id: 2, value: Number(totalopen) || 0, label: "Pending", color: "#ff9800" },
+    { id: 3, value: Number(totalworking) || 0, label: "In Progress", color: "#f44336" },
   ];
+  
 
   const theme = createTheme();
 
@@ -711,7 +831,7 @@ function Dashboard() {
         <CardContent>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
-              My Project Analytics
+              My Project Analytics ({selectedYear})
             </Typography>
             <FormControl size="small" sx={{ minWidth: 100 }}>
               <InputLabel>Year</InputLabel>
@@ -760,13 +880,29 @@ function Dashboard() {
         <Grid item xs={12} md={4}>
           <Card sx={styles.chartCard}>
             <CardContent>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+              My Task Report 
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel>Year</InputLabel>
+              <Select
+                value={taskYear}
+                onChange={(e) => {
+                  console.log("Selected Year:", e.target.value); // Debug log
+                  setTaskYear(Number(e.target.value))
+                }}
+                label="Year"
               >
-                My Task Report Status
-              </Typography>
+                {years.map((year) => (
+                  <MenuItem key={year} value={year}>
+                    {year}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+              
               <Divider sx={{ mb: 2 }} />
               {loading ? (
                 <Box sx={styles.pieChartContainer}>
@@ -809,11 +945,12 @@ function Dashboard() {
                           vertical: "bottom",
                           horizontal: "middle",
                         },
-                        padding: { xs: 10, sm: 20 },
+                        padding: { xs: 10, sm: 20 , top: 20},
                         itemMarkWidth: 10,
                         itemMarkHeight: 10,
                         markGap: 5,
                         itemGap: 10,
+                        
                       },
                     }}
                     height={280}
@@ -821,7 +958,7 @@ function Dashboard() {
                       left: 20,
                       right: 20,
                       top: 20,
-                      bottom: 40,
+                      bottom: 55,
                     }}
                   />
                   {/* Centered Text for Total Tasks */}
@@ -864,7 +1001,7 @@ function Dashboard() {
       <Box sx={styles.drawerHeaderContent}>
         <Box sx={styles.drawerTitle}>
           <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
-            My Project Details
+            My Project Details 
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Total Projects: {currentUserProjects.length}
