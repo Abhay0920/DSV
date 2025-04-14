@@ -80,6 +80,20 @@ const {
   getAllClientIssues,
 } = require("./controller/issueController");
 
+const {
+  getClientProjects,
+  getOrgContact,
+  updateClient,
+  createClient,
+  getClientOrg,
+  addContact,
+  getContact,
+  getClientTasks,
+  getClientData,
+  deleteORG,
+  deleteClient,
+} = require("./controller/clientController");
+
 // Project Api..---------------------------------------------------------------------------------------------
 app.get("/projects", getAllProjects);
 app.get("/projects/:userid", getProjectsByUserId);
@@ -133,6 +147,19 @@ app.get("/clientissue/:userID", getAllClientIssues);
 app.post("/issue", createIssue);
 app.post("/issue/:ROWID", updateIssue);
 app.delete("/issue/:ROWID", deleteIssue);
+
+//Client Api..---------------------------------------------------------------------------------------------
+app.get("/contactData/:userID", getClientData);
+app.post("/addContact", addContact);
+app.get("/contact", getContact);
+app.get("/contact/:id", getOrgContact);
+app.get("/clientOrg", getClientOrg);
+app.get("/clientProject/:id", getClientProjects);
+app.get("/contact/tasks/:id", getClientTasks);
+app.post("/createClient", createClient);
+app.post("/updateClient/:ROWID", updateClient);
+app.delete("/contact", deleteClient);
+app.delete("/org", deleteORG);
 
 app.use((req, res) => {
   res.status(404).send("The page you are looking for does not exist.");
