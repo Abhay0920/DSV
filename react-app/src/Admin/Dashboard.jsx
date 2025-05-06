@@ -50,7 +50,9 @@ import EventIcon from "@mui/icons-material/Event";
 import BusinessIcon from "@mui/icons-material/Business";
 
 import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProjects } from "../redux/Project/ProjectSlice";
+import { fetchTasks } from "../redux/Tasks/TaskSlice";
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -368,216 +370,236 @@ function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const[projectLength,setProjectLength] = useState(0);
   const [cmptProjectLen,setCmptProjectLength] = useState(0);
-  const state = useSelector((state) => state.projectReducer);
-  const employeeState = useSelector((state) => state.employeeReducer);
-  const taskState = useSelector((state) => state.taskReducer);
+
+
+  const {data : projectsData} = useSelector((state) => state.projectReducer);
+  const {data:employeeData} = useSelector((state) => state.employeeReducer);
+  const {data:taksData} = useSelector((state) => state.taskReducer);
+
+
   const [userTasksByYear, setUserTasksByYear] = useState({});
   
+  console.log("projectstate",projectsData);
+  console.log("taskState",taksData);
+  console.log("employeestate",employeeData);
+  
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchTotalEmployees = async () => {
-      try {
-        setIsLoading(true);
-  
-        // Fetching the data from the server
+    if (!projectsData || projectsData.length === 0) {
+      dispatch(fetchProjects());
+    }
+    if (!taksData || taksData.length === 0) {
+      dispatch(fetchTasks());
+    }
+    if (!employeeData || employeeData.length === 0) {
+      dispatch(fetchEmployees());
+    }
+  }, [dispatch]);
 
-        const { data } = employeeState;
-        const projects = state;
-        const tasks = taskState;
+//   useEffect(() => {
+//     const fetchTotalEmployees = async () => {
+//       try {
+//         setIsLoading(true);
+       
+       
+//         const { data } = employeeData;
+//         const projects = projectsData;
+//         const tasks = taksData;
         
        
-        setProjectLength(projects.data.data.length);
-        const allProjects = projects.data.data;
-        const allTasks = tasks.data.data;
+//         setProjectLength(projects.data.data.length);
+//         const allProjects = projects.data.data;
+//         const allTasks = tasks.data.data;
       
   
-        setAllProjects(allProjects);
+//         setAllProjects(allProjects);
       
-        setCurrentUserProjects(allProjects);
+//         setCurrentUserProjects(allProjects);
   
-        const interns = data.users.filter((user) => user.role_details.role_name === "Interns");
-        setTotalEmployees(data.users.length);
-        settotalIntern(interns.length);
-        settTotalTask(allTasks.length);
-        settTotalProject(allProjects.length);
+//         const interns = data.users.filter((user) => user.role_details.role_name === "Interns");
+//         setTotalEmployees(data.users.length);
+//         settotalIntern(interns.length);
+//         settTotalTask(allTasks.length);
+//         settTotalProject(allProjects.length);
   
-        const closeCount = allTasks.filter((task) => task.Status === "Completed").length;
-        const openCount = allTasks.filter((task) => task.Status === "Pending").length;
-        const workingCount = allTasks.filter((task) => task.Status === "In Progress").length;
+//         const closeCount = allTasks.filter((task) => task.Status === "Completed").length;
+//         const openCount = allTasks.filter((task) => task.Status === "Pending").length;
+//         const workingCount = allTasks.filter((task) => task.Status === "In Progress").length;
   
-        const projectCloseCount = allProjects.filter((project) => project.Status === "Close").length;
-        const projectOpenCount = allProjects.filter((project) => project.Status === "Open").length;
-        const projectWorkingCount = allProjects.filter((project) => project.Status === "Work In Process").length;
+//         const projectCloseCount = allProjects.filter((project) => project.Status === "Close").length;
+//         const projectOpenCount = allProjects.filter((project) => project.Status === "Open").length;
+//         const projectWorkingCount = allProjects.filter((project) => project.Status === "Work In Process").length;
   
-        setTotalClose(closeCount);
-        setTotalopen(openCount);
-        setTotalWorking(workingCount);
-        setProjectcloseCount(projectCloseCount);
-        setProjectopenCount(projectOpenCount);
-        setProjectworkingCount(projectWorkingCount);
+//         setTotalClose(closeCount);
+//         setTotalopen(openCount);
+//         setTotalWorking(workingCount);
+//         setProjectcloseCount(projectCloseCount);
+//         setProjectopenCount(projectOpenCount);
+//         setProjectworkingCount(projectWorkingCount);
   
        
-        setEmployeeList(
-          data.users.map((user) => ({
-            name: `${user.first_name} ${user.last_name}`,
-            role: user.role_details.role_name,
-            email: user.email_id,
-          }))
-        );
+//         setEmployeeList(
+//           data.users.map((user) => ({
+//             name: `${user.first_name} ${user.last_name}`,
+//             role: user.role_details.role_name,
+//             email: user.email_id,
+//           }))
+//         );
   
-        const formattedProjects = allProjects.map((project) => ({
-          name: project.Project_Name,
-          status: project.Status,
-          startDate: new Date(project.Start_Date).toLocaleDateString(),
-          endDate: new Date(project.End_Date).toLocaleDateString(),
-          owner: project.Owner,
-          description: project.Description || "No description available",
-        }));
+//         const formattedProjects = allProjects.map((project) => ({
+//           name: project.Project_Name,
+//           status: project.Status,
+//           startDate: new Date(project.Start_Date).toLocaleDateString(),
+//           endDate: new Date(project.End_Date).toLocaleDateString(),
+//           owner: project.Owner,
+//           description: project.Description || "No description available",
+//         }));
   
-        setProjectList(formattedProjects);
+//         setProjectList(formattedProjects);
   
-        const completedProjectsList = allProjects
-          .filter((project) => project.Status === "Close")
-          .map((project) => ({
-            name: project.Project_Name,
-            status: project.Status,
-            startDate: new Date(project.Start_Date).toLocaleDateString(),
-            endDate: new Date(project.End_Date).toLocaleDateString(),
-            owner: project.Owner,
-            description: project.Description || "No description available",
-            completedDate: new Date(project.End_Date).toLocaleDateString(),
-          }));
+//         const completedProjectsList = allProjects
+//           .filter((project) => project.Status === "Close")
+//           .map((project) => ({
+//             name: project.Project_Name,
+//             status: project.Status,
+//             startDate: new Date(project.Start_Date).toLocaleDateString(),
+//             endDate: new Date(project.End_Date).toLocaleDateString(),
+//             owner: project.Owner,
+//             description: project.Description || "No description available",
+//             completedDate: new Date(project.End_Date).toLocaleDateString(),
+//           }));
   
-        setCompletedProjects(completedProjectsList);
+//         setCompletedProjects(completedProjectsList);
   
-        const internsList = data.users
-          .filter((user) => user.role_details.role_name === "Interns")
-          .map((user) => ({
-            name: `${user.first_name} ${user.last_name}`,
-            email: user.email_id,
-            department: user.department || "Not Assigned",
-            joiningDate: new Date(user.created_at).toLocaleDateString(),
-          }));
+//         const internsList = data.users
+//           .filter((user) => user.role_details.role_name === "Interns")
+//           .map((user) => ({
+//             name: `${user.first_name} ${user.last_name}`,
+//             email: user.email_id,
+//             department: user.department || "Not Assigned",
+//             joiningDate: new Date(user.created_at).toLocaleDateString(),
+//           }));
   
-        setInternList(internsList);
+//         setInternList(internsList);
   
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+//       } catch (error) {
+//         console.error("Error fetching data:", error);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
   
-    fetchTotalEmployees();
+//     fetchTotalEmployees();
   
-  }, []);  // Refetch data whenever the year changes
+//   }, [dispatch]);  // Refetch data whenever the year changes
   
- useEffect(()=>{
-  const projects = state;
-  const allProjects = projects.data.data;
-  const filteredProjects = allProjects.filter((project) => {
-    const startDate = new Date(project.Start_Date);
-    return startDate.getFullYear() === year;  // Only include projects that match the selected year
-  });
+//  useEffect(()=>{
+//   const projects = state;
+//   const allProjects = projects.data.data;
+//   const filteredProjects = allProjects.filter((project) => {
+//     const startDate = new Date(project.Start_Date);
+//     return startDate.getFullYear() === year;  // Only include projects that match the selected year
+//   });
 
-  const projectCloseCount = filteredProjects.filter((project) => project.Status === "Close").length;
-  const projectOpenCount = filteredProjects.filter((project) => project.Status === "Open").length;
-  const projectWorkingCount = filteredProjects.filter((project) => project.Status === "Work In Process").length;
-
-
-  const monthlyData = {
-    total: Array(12).fill(0),
-    open: Array(12).fill(0),
-    working: Array(12).fill(0),
-    closed: Array(12).fill(0),
-  };
-
-  filteredProjects.forEach((project) => {
-    const startDate = new Date(project.Start_Date);
-    const month = startDate.getMonth();
-
-    monthlyData.total[month]++;
-
-    switch (project.Status) {
-      case "Open":
-        monthlyData.open[month]++;
-        break;
-      case "Work In Process":
-        monthlyData.working[month]++;
-        break;
-      case "Close":
-        monthlyData.closed[month]++;
-        break;
-    }
-  });
-
-  setMonthlyProjectData(monthlyData);
+//   const projectCloseCount = filteredProjects.filter((project) => project.Status === "Close").length;
+//   const projectOpenCount = filteredProjects.filter((project) => project.Status === "Open").length;
+//   const projectWorkingCount = filteredProjects.filter((project) => project.Status === "Work In Process").length;
 
 
+//   const monthlyData = {
+//     total: Array(12).fill(0),
+//     open: Array(12).fill(0),
+//     working: Array(12).fill(0),
+//     closed: Array(12).fill(0),
+//   };
+
+//   filteredProjects.forEach((project) => {
+//     const startDate = new Date(project.Start_Date);
+//     const month = startDate.getMonth();
+
+//     monthlyData.total[month]++;
+
+//     switch (project.Status) {
+//       case "Open":
+//         monthlyData.open[month]++;
+//         break;
+//       case "Work In Process":
+//         monthlyData.working[month]++;
+//         break;
+//       case "Close":
+//         monthlyData.closed[month]++;
+//         break;
+//     }
+//   });
+
+//   setMonthlyProjectData(monthlyData);
 
 
- },[year])
+
+
+//  },[year])
 
  
 
-   useEffect(() => {
+//    useEffect(() => {
       
-        try {
-          if (!taskState?.data?.data) return;
+//         try {
+//           if (!taskState?.data?.data) return;
       
-          const tasks = taskState.data.data;
+//           const tasks = taskState.data.data;
       
-          // Filter tasks assigned to the current user
+//           // Filter tasks assigned to the current user
          
       
-          // Group tasks by year
-          const groupedTasks = {};
-          tasks.forEach((task) => {
-            // if (!task.Due_Date) return; // Skip if Due_Date is missing
+//           // Group tasks by year
+//           const groupedTasks = {};
+//           tasks.forEach((task) => {
+//             // if (!task.Due_Date) return; // Skip if Due_Date is missing
       
-            const taskYear = new Date(task.End_Date).getFullYear();
-           console.log("bbe",taskYear);
-            // if (isNaN(taskYear)) {
-            //   console.error("Invalid Due_Date found:", task.Due_Date, "in task:", task);
-            //   return; // Skip invalid dates
-            // }
+//             const taskYear = new Date(task.End_Date).getFullYear();
+//            console.log("bbe",taskYear);
+//             // if (isNaN(taskYear)) {
+//             //   console.error("Invalid Due_Date found:", task.Due_Date, "in task:", task);
+//             //   return; // Skip invalid dates
+//             // }
       
-            if (!groupedTasks[taskYear]) {
-              groupedTasks[taskYear] = { close: 0, open: 0, working: 0, total: 0 };
-            }
+//             if (!groupedTasks[taskYear]) {
+//               groupedTasks[taskYear] = { close: 0, open: 0, working: 0, total: 0 };
+//             }
       
-            if (task.Status === "Completed") groupedTasks[taskYear].close++;
-            else if (task.Status === "Pending") groupedTasks[taskYear].open++;
-            else if (task.Status === "In Progress") groupedTasks[taskYear].working++;
+//             if (task.Status === "Completed") groupedTasks[taskYear].close++;
+//             else if (task.Status === "Pending") groupedTasks[taskYear].open++;
+//             else if (task.Status === "In Progress") groupedTasks[taskYear].working++;
       
-            groupedTasks[taskYear].total++;
-          });
+//             groupedTasks[taskYear].total++;
+//           });
       
-          console.log("Available Years in userTasksByYear:", Object.keys(groupedTasks).map(Number));
-          setUserTasksByYear(groupedTasks);
-        } catch (error) {
-          console.log("Error found", error);
-        }
-      }, [taskState]);
-       // Runs when `taskState` changes
+//           console.log("Available Years in userTasksByYear:", Object.keys(groupedTasks).map(Number));
+//           setUserTasksByYear(groupedTasks);
+//         } catch (error) {
+//           console.log("Error found", error);
+//         }
+//       }, [taskState]);
+//        // Runs when `taskState` changes
       
-      useEffect(() => {
-        console.log("Selected Year:", taskYear, typeof taskYear);
-        console.log("Available Years:", Object.keys(userTasksByYear).map(Number)); // Convert to numbers
-        console.log("Data for Selected Year:", userTasksByYear[taskYear]);
+//       useEffect(() => {
+//         console.log("Selected Year:", taskYear, typeof taskYear);
+//         console.log("Available Years:", Object.keys(userTasksByYear).map(Number)); // Convert to numbers
+//         console.log("Data for Selected Year:", userTasksByYear[taskYear]);
       
-        if (userTasksByYear[taskYear]) {
-          setTotalClose(userTasksByYear[taskYear].close || 0);
-          setTotalopen(userTasksByYear[taskYear].open || 0);
-          setTotalWorking(userTasksByYear[taskYear].working || 0);
-          settTotalTask(userTasksByYear[taskYear].total || 0);
-        } else {
-          setTotalClose(0);
-          setTotalopen(0);
-          settTotalTask(0);
+//         if (userTasksByYear[taskYear]) {
+//           setTotalClose(userTasksByYear[taskYear].close || 0);
+//           setTotalopen(userTasksByYear[taskYear].open || 0);
+//           setTotalWorking(userTasksByYear[taskYear].working || 0);
+//           settTotalTask(userTasksByYear[taskYear].total || 0);
+//         } else {
+//           setTotalClose(0);
+//           setTotalopen(0);
+//           settTotalTask(0);
           
-        }
-      }, [taskYear, userTasksByYear]);
+//         }
+//       }, [taskYear, userTasksByYear]);
 
   const cardData = [
     {
@@ -1005,7 +1027,7 @@ function Dashboard() {
                     Project List
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Total Projects: {state.data.data.length}
+                    Total Projects: {projectsData.length}
                   </Typography>
                 </Box>
                 <IconButton
@@ -1253,3 +1275,5 @@ function Dashboard() {
 }
 
 export default Dashboard;
+
+

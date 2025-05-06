@@ -26,11 +26,12 @@ import Avatar from "@mui/material/Avatar";
 import Skeleton from "@mui/material/Skeleton";
 import { FaClock } from "react-icons/fa6";
 import { MdDateRange } from "react-icons/md";
+import { useDispatch,useSelector } from "react-redux";
 import DescriptionIcon from "@mui/icons-material/Description";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import axios from "axios";
-
+import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 export const ProjectTimeEntry = ({
   theme,
   viewModalOpen,
@@ -56,7 +57,9 @@ export const ProjectTimeEntry = ({
     note: "",
   });
   const [editModalOpen, setEditModalOpen] = useState(false);
-
+    const dispatch = useDispatch();
+      const { data: employeeData } = useSelector((state) => state.employeeReducer);
+  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,6 +68,9 @@ export const ProjectTimeEntry = ({
 
         const user = await JSON.parse(localStorage.getItem("currUser"));
         setCurrUser(user);
+         if (!Array.isArray(employeeData) || employeeData.length === 0) {
+                await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
+              }
         // Fetch time entry data
         setIsLoading(true);
         const TimeEntryResponse = await axios.get(
@@ -72,20 +78,35 @@ export const ProjectTimeEntry = ({
         );
 
         console.log("timeentry project", TimeEntryResponse.data.data);
-        const userProfile = {};
 
+        setTimeEntry(TimeEntryResponse.data.data);
+        setIsLoading(false);
+
+
+        const userProfile = {};
         // Use for...of loop to properly await async actions
         for (const timeEntry of TimeEntryResponse.data.data) {
+          console.log("time entries ",timeEntry);
           for (const item of timeEntry.details) {
             if (!userProfile.hasOwnProperty(item.Time_Entries.User_ID)) {
-              const response = await axios.get(
-                `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
-              );
+              // const response = await axios.get(
+              //   `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
+              // );
 
-              console.log("profile response", response.data.data);
+              const userID=item.Time_Entries.User_ID;
 
-              if (response.data.data != null) {
-                userProfile[item.Time_Entries.User_ID] = response.data.data;
+              
+
+              const user=employeeData.filter(employee => employee.user_id===userID);
+              console.log("keadr",user);
+              console.log("user kedar",user[0].profile_pic);
+              const profileLink=user[0].profile_pic;
+             
+
+              // console.log("profile response", response.data.data);
+
+              if (profileLink!= null) {
+                userProfile[item.Time_Entries.User_ID] = profileLink
               } else {
                 userProfile[item.Time_Entries.User_ID] =
                   "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
@@ -94,10 +115,8 @@ export const ProjectTimeEntry = ({
           }
         }
 
-        console.log("userProfile", userProfile);
         setuserImage(userProfile);
-        setTimeEntry(TimeEntryResponse.data.data);
-        setIsLoading(false);
+        
       } catch (error) {
         console.error("Error fetching data:", error);
       }

@@ -18,7 +18,7 @@ export const fetchProfile = createAsyncThunk(
         });
        
         // Axios automatically parses the JSON, so we can directly return the response data
-        return response.data;
+        return response.data.data;
   
       } catch (error) {
         // Handling errors from the axios request

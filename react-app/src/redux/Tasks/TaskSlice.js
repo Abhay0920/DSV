@@ -15,7 +15,7 @@ export const fetchTasks = createAsyncThunk(
         });
        
         // Axios automatically parses the JSON, so we can directly return the response data
-        return response.data;
+        return response.data.data;
   
       } catch (error) {
         // Handling errors from the axios request
@@ -35,10 +35,45 @@ export const fetchTasks = createAsyncThunk(
   
     initialState: {
       isLoading: false,
-      data: null,
+      data: [],
       isError: false,
     },
-    reducers: {},
+    reducers: {
+      addTaskData: (state, action) => {
+        // Log the state before and after the update
+        // Directly mutate the state.data array without checking type (Immer will handle this)
+        state.data.push(action.payload);
+  
+      },
+
+      updateTaskData: (state, action) => {
+        const updatedTask = action.payload;
+        console.log("updatedProject",updatedTask)
+        const index = state.data.findIndex(client => client.ROWID === updatedTask.ROWID);
+      
+        if (index !== -1) {
+          state.data[index] = { ...state.data[index], ...updatedTask };
+         
+        } else {
+          
+        }
+
+
+      },
+
+      deleteTasktData: (state, action) => {
+        const rowIdToDelete = action.payload;
+        console.log("Deleting client with ROWID:", rowIdToDelete);
+        state.data = state.data.filter(client => client.ROWID !== rowIdToDelete);
+        console.log("After deletion:", state.data);
+      },
+
+      // setTasksData: (state, action) => {
+      //   state.data = action.payload;
+      //   state.isLoading = false;
+      //   state.isError = false;
+      // },
+    },
     extraReducers: (builder) => {
   
       builder.addCase(fetchTasks.pending, (state) => {
@@ -54,3 +89,4 @@ export const fetchTasks = createAsyncThunk(
   });
 
   export default TaskSlice.reducer;
+   export const  TaskActions  = TaskSlice.actions;

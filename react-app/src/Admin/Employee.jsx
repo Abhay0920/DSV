@@ -11,18 +11,19 @@ import {
   TablePagination,
   Modal,
   MenuItem,
+  Paper,
+  alpha,
+  useTheme,
+  Avatar,
   Drawer,
   Select,
   InputLabel,
   Chip,
   Tooltip,
   Skeleton,
-  Avatar,
   FormControlLabel,
   Switch,
-  Menu,
 } from "@mui/material";
-
 
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -39,12 +40,16 @@ import WorkIcon from "@mui/icons-material/Work";
 import BadgeIcon from "@mui/icons-material/Badge";
 import TaskIcon from "@mui/icons-material/Task";
 import FolderIcon from "@mui/icons-material/Folder";
-import { useSelector } from "react-redux";
+import {useDispatch, useSelector } from "react-redux";
+import PeopleIcon from "@mui/icons-material/People";
 import "primereact/resources/themes/lara-light-cyan/theme.css";
+import { fetchEmployees, setEmployeeProfilePics, } from "../redux/Employee/EmployeeSlice";
 
-import { SelectButton } from 'primereact/selectbutton';
+import { SelectButton } from "primereact/selectbutton";
 
 function Employees() {
+  const theme = useTheme();
+  const dispatch = useDispatch();
   const [employees, setEmployees] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -70,12 +75,11 @@ function Employees() {
     },
   });
 
-
   const [value, setValue] = useState(null);
   const items = [
-    { name: 'Admin', value: 1 },
-    { name: 'Client', value: 2 },
-    { name: 'Employees', value: 3 }
+    { name: "Admin", value: 1 },
+    { name: "Client", value: 2 },
+    { name: "Employees", value: 3 },
   ];
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -88,7 +92,7 @@ function Employees() {
   const [alerttype, setalerttype] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState("");
 
   const [employeeData, setEmployeeData] = useState({
     first_name: "",
@@ -113,52 +117,74 @@ function Employees() {
       }, 2000); // Auto-hide after 2s
     }, 100); // Small delay ensures re-triggering
   };
-  const employee = useSelector((state) => state.employeeReducer);
+    const { data: employeesData, profilePics } = useSelector((state) => state.employeeReducer);
+    const placeholderURL =
+    "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
+  
   useEffect(() => {
     const fetchData = async () => {
       // setLoading(true);
       try {
         //Fetch the list of employees
-        const userResponse = await axios.get(
-          "/server/time_entry_management_application_function/employee"
-        );
+        if (!Array.isArray(employeesData) || employeesData.length === 0) {
+               await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
+              }
 
         // const userResponse = employee;
 
-        const userEmployee = userResponse.data.users;
-
+        const userEmployee = employeesData;
+        const filteredEmployees = userEmployee.filter(
+          (employee) => employee.role_details?.role_name !== "Contacts"
+        );
+  
 
         // Set all employees initially with placeholder profile images
-        const employeesWithPlaceholders = userEmployee.map((employee) => ({
+        const employeesWithPlaceholders = filteredEmployees.map((employee) => ({
           ...employee,
-          profile_pic:
-            "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541", // Placeholder
+          profile_pic: placeholderURL,
         }));
-
-        // Immediately set the state to show the list with placeholder images
         setEmployees(employeesWithPlaceholders);
         setLoading(false);
 
         // Fetch profile pictures for each employee
-        const updatedEmployees = await Promise.all(
-          userEmployee.map(async (employee) => {
-            try {
-              const response = await axios.get(
-                `/server/time_entry_management_application_function/userprofile/${employee.user_id}`
-              );
-              console.log("response", response.data.data);
-              if (response.data.data != null) {
-                employee.profile_pic = response.data.data;
-              }
-            } catch (error) {
-              console.error(
-                `Error fetching profile for user ${employee.user_id}:`,
-                error
-              );
-            }
-            return employee; // Return the updated employee object
-          })
-        );
+        // const updatedEmployees = await Promise.all(
+        //   filteredEmployees.map(async (employee) => {
+        //     const cachedPic = profilePics[employee.user_id];
+        //     if (cachedPic) {
+        //       return { ...employee, profile_pic: cachedPic };
+        //     }
+  
+        //     try {
+        //       const response = await axios.get(
+        //         `/server/time_entry_management_application_function/userprofile/${employee.user_id}`
+        //       );
+        //       const pic = response.data.data || placeholderURL;
+  
+        //       // Cache the image in Redux
+        //       // dispatch(
+        //       //   setEmployeeProfilePics({
+        //       //     userId: employee.user_id,
+        //       //     profile_pic: pic,
+        //       //   })
+        //       // );
+  
+        //       return {
+        //         ...employee,
+        //         profile_pic: pic,
+        //       };
+        //     } catch (error) {
+        //       console.error(
+        //         `Error fetching profile for user ${employee.user_id}:`,
+        //         error
+        //       );
+        //       return {
+        //         ...employee,
+        //         profile_pic: placeholderURL,
+        //       };
+        //     }
+        //   })
+        // );
+        const updatedEmployees = filteredEmployees;
 
         // After all profiles are fetched, update the state with the full list of employees
         setEmployees(updatedEmployees);
@@ -169,7 +195,7 @@ function Employees() {
     };
 
     fetchData();
-  }, []);
+  }, [employeesData,dispatch])
 
   useEffect(() => {
     const fetchEmployeeData = async () => {
@@ -261,25 +287,8 @@ function Employees() {
     setProfileModalOpen(false);
   };
 
-  const setFilter = (count) => {
-
-    var roleDetail = "";
-    if (count === 1) roleDetail = "Admin";
-    if (count === 2) roleDetail = "Client";
-    if (count === 3) roleDetail = "Employees";
-
-
-    if (roleDetail === roleFilter) {
-      setRoleFilter(''); // Reset the filter if the same role is clicked
-    } else {
-      setRoleFilter(roleDetail); // Set the role filter to the selected role
-    }
-  };
-
-
-
   const roleFilteredEmployees = roleFilter
-    ? employees.filter(emp => emp.role_details.role_name === roleFilter)
+    ? employees.filter((emp) => emp.role_details.role_name === roleFilter)
     : employees;
 
   const filteredEmployees = roleFilteredEmployees.filter((employee) =>
@@ -293,7 +302,7 @@ function Employees() {
     page * rowsPerPage + rowsPerPage
   );
   const toggleUserActive = async (userID, active) => {
-    ////console.log(userID, active);
+    console.log(userID, active);
     try {
       const response = await axios.post(
         `/server/time_entry_management_application_function/employee/${active}/${userID}`
@@ -395,20 +404,21 @@ function Employees() {
     Client: 1380000001278009,
     "Business Analyst": 1380000001287027,
 
-
     // Add more roles as necessary
   };
 
   const validateForm = () => {
     let tempErrors = {};
-    if (!newEmployee.first_name.trim()) tempErrors.first_name = "First Name is required";
+    if (!newEmployee.first_name.trim())
+      tempErrors.first_name = "First Name is required";
     //  if (!newEmployee.last_name.trim()) tempErrors.last_name = "Last Name is required";
     if (!newEmployee.email_id.trim()) {
       tempErrors.email_id = "Email is required";
     } else if (!/^\S+@\S+\.\S+$/.test(newEmployee.email_id)) {
       tempErrors.email_id = "Enter a valid email";
     }
-    if (!newEmployee.role_details.role_name) tempErrors.role = "Role is required";
+    if (!newEmployee.role_details.role_name)
+      tempErrors.role = "Role is required";
 
     setErrors(tempErrors);
     return Object.keys(tempErrors).length === 0;
@@ -474,16 +484,14 @@ function Employees() {
         handleAlert(
           "error",
           error.response?.data?.message ||
-          error.message ||
-          "Something went wrong!"
+            error.message ||
+            "Something went wrong!"
         );
       }
     } else {
       handleAlert("error", "Please fill all fields");
     }
   };
-
-
 
   const handleTaskInput = (index, event) => {
     const selectedEmployeeId = event.target.value;
@@ -566,15 +574,12 @@ function Employees() {
     },
   };
 
-
   const handleSubmit = () => {
     if (validateForm()) {
       handleAddEmployee(newEmployee);
       toggleDrawer(false);
     }
   };
-
-
 
   return (
     <Box sx={{ padding: 3 }}>
@@ -590,78 +595,89 @@ function Employees() {
         </Alert>
       </Snackbar>
 
-      <Box
+      <Paper
+        elevation={0}
         sx={{
+          mb: 4,
+          p: { xs: 2, sm: 3 },
+          borderRadius: 3,
+          background: `linear-gradient(135deg, ${alpha(
+            theme.palette.primary.main,
+            0.08
+          )} 0%, ${alpha(theme.palette.primary.light, 0.15)} 100%)`,
+          boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
           display: "flex",
-          justifyContent: "space-between",
+          flexDirection: { xs: "column", md: "row" },
           alignItems: "center",
-          marginBottom: 3,
+          justifyContent: "space-between",
+          gap: 2,
         }}
       >
-        <Typography variant="h4">Employees</Typography>
-      </Box>
-
-
-      <Card sx={{ mb: 3 }}>
-        <CardContent
+        {/* Left Side: Avatar + Typography */}
+        <Box
           sx={{
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            flexWrap: "wrap", // to prevent overflow on small screens
-            gap: 2, // spacing between elements
+            gap: 2,
+            width: { xs: "100%", md: "auto" },
           }}
         >
-          {/* Search Field */}
+          <Avatar
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <PeopleIcon sx={{ color: "#fff" }} fontSize="large" />
+          </Avatar>
+
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              color: "transparent",
+              fontSize: { xs: "1.5rem", sm: "2rem" },
+            }}
+          >
+            Employees
+          </Typography>
+        </Box>
+
+        {/* Right Side: Search Bar + Button */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            width: { xs: "100%", md: "auto" },
+            flexDirection: { xs: "column", sm: "row" },
+          }}
+        >
           <TextField
             label="Search Employees"
             variant="outlined"
             size="small"
             value={searchQuery}
             onChange={handleSearch}
-            sx={{ width: { xs: '100%', sm: '35%' } }}
+            sx={{
+              width: { xs: "100%", sm: "60%", md: "250px" },
+            }}
           />
 
-
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {/* {['Admin', 'Client', 'App User'].map((role) => (
-        <Button
-          key={role}
-          onClick={() => setFilter(role)}
-          variant="outlined"
-          sx={{
-            borderRadius: 2,
-            px: 3,
-            bgcolor: filter === role ? 'primary.main' : 'transparent',
-            color: filter === role ? 'white' : 'primary.main',
-            borderColor: 'primary.main',
-            '&:hover': {
-              bgcolor: 'primary.dark',
-              color: 'white',
-            },
-          }}
-        >
-          {role === 'App User' ? 'Employees' : role}
-        </Button>
-      ))} */}
-            <div className="card flex justify-content-center">
-
-              <SelectButton value={value} onChange={(e) => setFilter(e.value)} optionLabel="name" options={items} />
-            </div>
-          </Box>
-
-          {/* Add Button */}
           <Button
             variant="contained"
             color="primary"
             onClick={() => toggleDrawer(true)}
+            sx={{ width: { xs: "100%", sm: "auto" } }}
           >
             Add Employee
           </Button>
-        </CardContent>
-      </Card>
-
-
+        </Box>
+      </Paper>
 
       {loading ? (
         <Grid container spacing={3}>
@@ -1044,7 +1060,11 @@ function Employees() {
         </Box>
       </Modal>
 
-      <Drawer anchor="right" open={drawerOpen} onClose={() => toggleDrawer(false)}>
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => toggleDrawer(false)}
+      >
         <Box
           sx={{
             width: 400,
@@ -1087,8 +1107,8 @@ function Employees() {
             variant="outlined"
             onChange={handleInputChange}
             sx={{ marginBottom: 2 }}
-          // error={!!errors.last_name}
-          // helperText={errors.last_name}
+            // error={!!errors.last_name}
+            // helperText={errors.last_name}
           />
 
           <TextField
@@ -1279,9 +1299,12 @@ function Employees() {
                     >
                       Full Name
                     </Typography>
-                    <Typography variant="body1" sx={(theme) => ({
-                      color: theme.palette.text.secondary,
-                    })}>
+                    <Typography
+                      variant="body1"
+                      sx={(theme) => ({
+                        color: theme.palette.text.secondary,
+                      })}
+                    >
                       {selectedEmployee
                         ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
                         : ""}
@@ -1304,9 +1327,12 @@ function Employees() {
                     >
                       Email Address
                     </Typography>
-                    <Typography variant="body1" sx={(theme) => ({
-                      color: theme.palette.text.secondary,
-                    })} >
+                    <Typography
+                      variant="body1"
+                      sx={(theme) => ({
+                        color: theme.palette.text.secondary,
+                      })}
+                    >
                       {selectedEmployee?.email_id || ""}
                     </Typography>
                   </Box>
@@ -1327,9 +1353,12 @@ function Employees() {
                     >
                       Role
                     </Typography>
-                    <Typography variant="body1" sx={(theme) => ({
-                      color: theme.palette.text.secondary,
-                    })}>
+                    <Typography
+                      variant="body1"
+                      sx={(theme) => ({
+                        color: theme.palette.text.secondary,
+                      })}
+                    >
                       {selectedEmployee?.role_details?.role_name || ""}
                     </Typography>
                   </Box>

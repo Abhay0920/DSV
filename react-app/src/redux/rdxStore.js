@@ -9,6 +9,13 @@ import empTaskReducer from "./EmpTask/EmpTaskSlice"
 import clientReducer from "./Client/clientSlice"
 import clientContactReducer from "./Client/contacts";
 import issueReducer from "./Client/issueSlice"
+import timeEntryReducer from "./TimeEntry/TimeEntrySlice";
+import contactReducer from "./contacts/contactSlice";
+import contactProjectReducer from "./contacts/contactProjectSlice";
+import contactTaskReducer from "./contacts/contactTaskSlice";
+import contactIssueReducer from "./contacts/contactIssueSlice";
+import contactsReducer from "./contacts/contactsSlice";
+import empIssuesReducer from "./EmpTask/EmpIssueSlice";
 export const rdxStore = configureStore({
     reducer: {
         projectReducer: projectReducer,
@@ -21,6 +28,12 @@ export const rdxStore = configureStore({
         clientReducer:clientReducer.reducer,
         clientContactReducer:clientContactReducer.reducer,
         issueReducer:issueReducer.reducer,
-
+        timeEntryReducer:timeEntryReducer.reducer,
+        contactReducer:contactReducer,
+        contactProjectReducer: contactProjectReducer,
+        contactTaskReducer:contactTaskReducer,
+        contactIssueReducer:contactIssueReducer,
+        contactsReducer:contactsReducer,
+        empIssuesReducer:empIssuesReducer.reducer,
     }
 });

@@ -20,6 +20,9 @@ import {
   Paper,
   IconButton,
   Modal,
+  TableFooter,
+  TablePagination,
+
 } from "@mui/material";
 import { IoTimeSharp } from "react-icons/io5";
 import Avatar from "@mui/material/Avatar";
@@ -34,8 +37,10 @@ import Snackbar from "@mui/material/Snackbar";
 import axios from "axios";
 import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-
-
+import { useDispatch } from "react-redux";
+import { fetchTimeEntry } from "../redux/TimeEntry/TimeEntrySlice";
+import { useSelector } from "react-redux";
+import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 export const TimeEntry = ({
   theme,
   viewModalOpen,
@@ -73,6 +78,16 @@ export const TimeEntry = ({
   const [editModalOpen, setEditModalOpen] = useState(false);
 
   const MAX_NOTE_LENGTH = 60;
+  const dispatch = useDispatch();
+
+  const { data } = useSelector((state) => state.timeEntryReducer);
+  console.log("datatatatatime",data);
+  const { data: employeeData } = useSelector((state) => state.employeeReducer);
+  
+  console.log("TIme Entry is :",timeEntry);
+  // useEffect(()=>{
+  //   dispatch(fetchTimeEntry(viewTask.ROWID));
+  // },[dispatch]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,11 +96,16 @@ export const TimeEntry = ({
 
         const user = await JSON.parse(localStorage.getItem("currUser"));
         setCurrUser(user);
-        // Fetch time entry data
+        if (!Array.isArray(employeeData) || employeeData.length === 0) {
+                        await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
+                      }
         setIsLoading(true);
         const TimeEntryResponse = await axios.get(
-          `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
+          `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
         );
+
+        setTimeEntry(TimeEntryResponse.data.data);
+        setIsLoading(false);
 
         const userProfile = {};
 
@@ -93,12 +113,14 @@ export const TimeEntry = ({
         for (const timeEntry of TimeEntryResponse.data.data) {
           for (const item of timeEntry.details) {
             if (!userProfile.hasOwnProperty(item.Time_Entries.User_ID)) {
-              const response = await axios.get(
-                `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
-              );
-
-              if (response.data.data != null) {
-                userProfile[item.Time_Entries.User_ID] = response.data.data;
+              // const response = await axios.get(
+              //   `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
+              // );
+              const userID=item.Time_Entries.User_ID;
+              const user=employeeData.filter(employee => employee.user_id===userID);
+              const profileLink=user[0].profile_pic;
+              if (profileLink != null) {
+                userProfile[item.Time_Entries.User_ID] = profileLink;
               } else {
                 userProfile[item.Time_Entries.User_ID] =
                   "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
@@ -107,8 +129,7 @@ export const TimeEntry = ({
           }
         }
         setuserImage(userProfile);
-        setTimeEntry(TimeEntryResponse.data.data);
-        setIsLoading(false);
+        
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -148,6 +169,18 @@ export const TimeEntry = ({
     let mins = minutes % 60;
     return `${hrs} hr ${mins} min`;
   }
+
+  
+  // const allTimeEntries = TimeEntriesArray.flatMap(item => 
+  //   item.details.map(detail => detail.Time_Entries)
+  // );
+  
+  // Pagination
+  // const paginatedTimeEntries = allTimeEntries.slice(
+  //   page * rowsPerPage,
+  //   page * rowsPerPage + rowsPerPage
+  // );
+  
   const handleTimesheetInputChange = (event) => {
     const { name, value } = event.target;
     setNewTimesheetEntry((prev) => ({ ...prev, [name]: value }));
@@ -186,7 +219,7 @@ export const TimeEntry = ({
         }
       );
       const TimeEntryResponse = await axios.get(
-        `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
+        `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
       );
       setTimeEntry(TimeEntryResponse.data.data);
       setIsLoading(false);
@@ -645,12 +678,28 @@ export const TimeEntry = ({
                   ))}
                 </TableBody>
               )}
+
+{/* <TableFooter>
+                <TableRow>
+                  <TablePagination
+                    rowsPerPageOptions={[5, 10, 20]}
+                    count={filteredProjects.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                  />
+                </TableRow>
+              </TableFooter> */}
             </Table>
           </TableContainer>
         </Box>
       )}
     </Box>
+    
         </Box>
+
+        
       </Modal>
       {/* edit time entry model */}
       <Modal open={editModalOpen} onClose={handleEditCancel}>
@@ -752,17 +801,60 @@ export const TimeEntry = ({
         </Box>
       </Modal>
 
-      <Dialog open={openModal} onClose={handleCloseModal}>
-        <DialogTitle>Note</DialogTitle>
-        <DialogContent>
-          <p>{selectedNote}</p>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal} color="primary">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <Dialog 
+  open={openModal} 
+  onClose={handleCloseModal} 
+  maxWidth="sm" 
+  fullWidth
+  PaperProps={{
+    style: { 
+      borderRadius: "16px", 
+      padding: "20px",
+      backgroundColor: "#f5f5f5",
+    },
+  }}
+>
+  <DialogTitle 
+    sx={{ 
+      textAlign: "center", 
+      fontWeight: "bold", 
+      fontSize: "1.5rem", 
+      color: "#3f51b5" 
+    }}
+  >
+    📝 Note
+  </DialogTitle>
+
+  <DialogContent 
+    dividers 
+    sx={{ 
+      textAlign: "center", 
+      margin: "20px 0", 
+      backgroundColor: "#ffffff",
+      borderRadius: "8px",
+    }}
+  >
+    <Typography variant="body1" sx={{ color: "#333", fontSize: "1.1rem" }}>
+      {selectedNote}
+    </Typography>
+  </DialogContent>
+
+  <DialogActions sx={{ justifyContent: "center" }}>
+    <Button 
+      onClick={handleCloseModal} 
+      variant="contained" 
+      color="primary" 
+      sx={{ 
+        textTransform: "none", 
+        borderRadius: "8px", 
+        fontWeight: "bold",
+      }}
+    >
+      Close
+    </Button>
+  </DialogActions>
+</Dialog>
+
     </div>
   );
 };

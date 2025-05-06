@@ -20,6 +20,8 @@ import {
   Drawer,
   MenuItem,
   Modal,
+  Avatar,
+  alpha,
   useTheme,
   Chip,
   Dialog,
@@ -30,6 +32,11 @@ import {
   Snackbar,
   Alert,
   Autocomplete,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -42,11 +49,26 @@ import { ProjectTimeEntry } from "./ProjectTimeEntry";
 import { useDemoRouter } from "@toolpad/core/internal";
 import Task from "./Task";
 import { useNavigate } from "react-router-dom";
+import { FaProjectDiagram } from "react-icons/fa";
+import InfoIcon from "@mui/icons-material/Info";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import PersonIcon from "@mui/icons-material/Person";
+import BusinessIcon from "@mui/icons-material/Business";
+import EventIcon from "@mui/icons-material/Event";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import TrackChangesIcon from "@mui/icons-material/TrackChanges";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import DescriptionIcon from '@mui/icons-material/Description';
 
+import TaskIcon from "@mui/icons-material/Task";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProjects, addProject } from "../redux/Project/ProjectSlice";
 import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 import { fetchClientData } from "../redux/Client/clientSlice";
+import { projectActions } from "../redux/Project/ProjectSlice";
+import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
+
 const statusConfig = {
   Open: {
     color: "#f0ad4e",
@@ -75,7 +97,20 @@ const statusConfig = {
   },
 };
 
-function Project({ fun }) {
+const getStatusColor = (status) => {
+  switch (status) {
+    case "Close":
+      return "success";
+    case "Work In Process":
+      return "warning";
+    case "Open":
+      return "error";
+    default:
+      return "default";
+  }
+};
+
+function Project() {
   const navigate = useNavigate();
   const theme = useTheme();
   const router = useDemoRouter();
@@ -92,8 +127,8 @@ function Project({ fun }) {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const statusOptions = ["Open", "In Progress", "Completed"];
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState(null)
-
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [open, setOpen] = useState(false);
   const [taskModelOpen, setTaskModelOpen] = useState(false);
 
   const [filterActive, setFilterActive] = useState(false);
@@ -118,32 +153,34 @@ function Project({ fun }) {
     message: "",
     severity: "success",
   });
-
+  const [projectDetail, setprojectdetail] = useState(null);
   const [errors, setErrors] = useState({});
 
   // start
-  const state = useSelector((state) => state.projectReducer);
-
-  const employeeState = useSelector((state) => state.employeeReducer);
-  //  console.log("employee",employeeState.data.users)
   const dispatch = useDispatch();
+  const { data, isLoading } = useSelector((state) => state.projectReducer);
+  const { data: employeedata } = useSelector((state) => state.employeeReducer);
+  const { data: client } = useSelector((state) => state.clientReducer);
 
-  // useEffect(() => {
-  //   dispatch(fetchProjects());
-  //   dispatch(fetchEmployees());
-  // }, [dispatch]);
-
-  const { data } = useSelector((state) => state.clientReducer);
-  console.log("projectclient",data) 
   useEffect(() => {
-    if (state && state.data) {
-      // console.log("employeeState",employeeState.data)
+    if (!Array.isArray(data) || data.length === 0) {
+      dispatch(fetchProjects());
+    }
+    if (!Array.isArray(client) || client.length === 0) {
+      dispatch(fetchClientData());
+    }
+    if (!Array.isArray(employeedata) || employeedata.length === 0) {
+      dispatch(fetchEmployees());
+    }
+  }, []);
 
-      setProjects(state.data.data);
-      const formattedAssignTo = employeeState.data.users
+  useEffect(() => {
+    if (employeedata) {
+      // Check if employeedata is available before filtering
+      const employee = employeedata
         .filter(
           (employee) =>
-            // employee.role_details.role_name !== "Admin" &&
+            employee.role_details.role_name !== "Contacts" &&
             employee.role_details.role_name !== "Super Admin"
         )
         .map((employee) => ({
@@ -151,80 +188,22 @@ function Project({ fun }) {
           userID: employee.user_id,
           role: employee.role_details.role_name,
         }));
-
-      ////console.log(formattedAssignTo);
-      setAssignOptions(formattedAssignTo);
+      console.log("employee", employee);
+      setAssignOptions(employee);
     }
-    dispatch(fetchClientData());
-  }, [state]); // Dependency array ensures effect runs when 'state' changes
-
-  // end
-
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       const ProjectResponse = await axios.get(
-  //         "/server/time_entry_management_application_function/projects"
-  //       );
-
-  //       const EmployeeResponse = await axios.get(
-  //         "/server/time_entry_management_application_function/employee"
-  //       );
-  //       // ////console.log("employess => ", EmployeeResponse.data.users);
-  //       // ////console.log("project => ", ProjectResponse.data.data);
-
-  //       if (EmployeeResponse.status === 200) {
-  //         const formattedAssignTo = EmployeeResponse.data.users
-  //           .filter(
-  //             (employee) =>
-  //               // employee.role_details.role_name !== "Admin" &&
-  //               employee.role_details.role_name !== "Super Admin"
-  //           )
-  //           .map((employee) => ({
-  //             username: `${employee.first_name} ${employee.last_name}`,
-  //             userID: employee.user_id,
-  //           }));
-
-  //         ////console.log(formattedAssignTo);
-  //         setAssignOptions(formattedAssignTo);
-  //       }
-
-  //       if (ProjectResponse.status === 200) {
-  //         const formattedProjects = ProjectResponse.data.data.map(
-  //           (project, index) => ({
-  //             id: project.ROWID,
-  //             name: project.Project_Name,
-  //             status: project.Status,
-  //             owner: project.Owner,
-  //             ownerID: project.Owner_ID,
-  //             startDate: project.Start_Date,
-  //             endDate: project.End_Date,
-  //             description: project.Description,
-  //             assignedTo: project.Assigned_To,
-  //             assignedToID: project.Assigned_To_Id,
-  //           })
-  //         );
-  //         setProjects(formattedProjects);
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching projects:", error);
-  //     }
-  //   };
-
-  //   fetchData();
-  // }, []);
+  }, [employeedata]);
 
   const handleSearch = (event) => {
     setSearchQuery(event.target.value);
   };
 
   const handleEdit = (project) => {
+    console.log("edit project", project);
     setCurrentEditProject({ ...project });
     setEditModalOpen(true);
   };
 
   const handleDeleteClick = (project) => {
-
     setProjectToDelete(project);
     setDeleteConfirmOpen(true);
   };
@@ -232,16 +211,14 @@ function Project({ fun }) {
   const handleDeleteConfirm = async () => {
     if (projectToDelete) {
       try {
-        console.log("project",projectToDelete);
+        console.log("project", projectToDelete);
         const response = await axios.delete(
           `/server/time_entry_management_application_function/delete/${projectToDelete.ROWID}`
         );
+        console.log("deleted project", response);
         if (response.status === 200) {
           // Remove the project from the local state
-        
-          setProjects((prevProjects) =>
-            prevProjects.filter((project) => project.ROWID !== projectToDelete.ROWID)
-          );
+          dispatch(projectActions.deleteProjecttData(projectToDelete.ROWID));
           handleAlert("success", "Project deleted successfully");
         } else {
           handleAlert("error", "Failed to delete project");
@@ -270,7 +247,7 @@ function Project({ fun }) {
     setPage(0);
   };
 
-  const filteredProjects = projects.filter(
+  const filteredProjects = data?.filter(
     (project) =>
       // return(
       project.Project_Name &&
@@ -282,9 +259,6 @@ function Project({ fun }) {
     page * rowsPerPage + rowsPerPage
   );
 
-  // console.log("paginatedProjects",paginatedProjects);
-  // console.log("filteredProjects",filteredProjects);
-
   // Drawer Handlers
   const toggleDrawer = (open) => {
     setDrawerOpen(open);
@@ -294,8 +268,7 @@ function Project({ fun }) {
     let tempErrors = {};
     if (!newProject.name || newProject.name.length < 3)
       tempErrors.name = "Project Name must be at least 3 characters.";
-    if (!newProject.client_name)
-      tempErrors.client_name = "Client name is Requird";
+
     if (!newProject.status) tempErrors.status = "Status is required.";
     if (!newProject.startDate) tempErrors.startDate = "Start Date is required.";
     if (!newProject.endDate) tempErrors.endDate = "End Date is required.";
@@ -316,7 +289,8 @@ function Project({ fun }) {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-
+    console.log("name", name);
+    console.log("value", value);
     if (name === "assignedToID") {
       // Find the selected option by matching userID
       const selectedOption = assignOptions.find(
@@ -332,10 +306,9 @@ function Project({ fun }) {
         }));
       }
     } else if (name === "clientID") {
-      const selectedClient = data?.find(
-        (option) => option.ROWID === value
-      );
-      
+      const selectedClient = client?.find((option) => option.ROWID === value);
+      console.log("selected client", selectedClient);
+
       if (selectedClient) {
         setNewProject((prev) => ({
           ...prev,
@@ -349,81 +322,62 @@ function Project({ fun }) {
   };
 
   const handleAddProject = async () => {
-    // try {
-    //   console.log("abhay singh", newProject);
-
-    //   const response = await axios.post(
-    //     "/server/time_entry_management_application_function/projects",
-    //     {
-    //       Project_Name: newProject.name,
-    //       Description: newProject.description,
-    //       Start_Date: newProject.startDate,
-    //       End_Date: newProject.endDate,
-    //       Status: newProject.status,
-    //       Owner: currUser.firstName + " " + currUser.lastName,
-    //       Owner_Id: currUser.userid,
-    //       Assigned_To: newProject.assignedTo,
-    //       Assigned_To_Id: newProject.assignedToID,
-    //     }
-    //   );
-
-    //   const result = response.data;
-    //   ////console.log(response.data.data);
-
-    //   if (result.success) {
-    //     // Update the local state with the new project
-    //     const newProjectData = {
-    //       ...newProject,
-    //       owner: result.data.Owner,
-    //       ownerID: result.data.ownerID,
-    //       id: result.data.ROWID,
-    //       rowid: result.data.ROWID,
-    //     };
-
-    //     ////console.log("wqe", newProjectData);
-    //     setProjects((prev) => [...prev, newProjectData]);
-
-    //     // Reset the form
-    //     setNewProject({
-    //       id: "",
-    //       name: "",
-    //       status: "",
-    //       owner: "",
-    //       ownerID: "",
-    //       startDate: "",
-    //       endDate: "",
-    //       description: "",
-    //       assignedTo: "",
-    //       assignedToID: "",
-    //     });
-    //     toggleDrawer(false);
-    //     handleAlert("success", "Project added successfully");
-    //   } else {
-    //     handleAlert("error", result.message || "Failed to add project");
-    //   }
-    // } catch (error) {
-    //   handleAlert("error", error.message || "Error adding project");
-    // }
-
     try {
-      console.log("Adding new project:", newProject);
-      console.log("abhayproject");
+      console.log("abhay singh", newProject);
 
-      // Dispatch the AddProject action to add a new project
-      await dispatch(addProject(newProject));
-      // Reset new project form after adding
-      setNewProject({
-        name: "",
-        description: "",
-        startDate: "",
-        endDate: "",
-        status: "",
-        assignedTo: "",
-        client_name: "",
-      });
-      await dispatch(fetchProjects());
+      const response = await axios.post(
+        "/server/time_entry_management_application_function/projects",
+        {
+          Project_Name: newProject.name,
+          Description: newProject.description,
+          Start_Date: newProject.startDate,
+          End_Date: newProject.endDate,
+          Status: newProject.status,
+          Owner: currUser.firstName + " " + currUser.lastName,
+          Owner_Id: currUser.userid,
+          Assigned_To: newProject.assignedTo,
+          Assigned_To_Id: newProject.assignedToID,
+          Client_ID: newProject.clientID,
+          Client_Name: newProject.client_name,
+        }
+      );
+
+      const result = response.data;
+      //console.log(response.data.data);
+
+      if (result.success) {
+        // Update the local state with the new project
+        const newProjectData = {
+          ...newProject,
+          owner: result.data.Owner,
+          ownerID: result.data.ownerID,
+          id: result.data.ROWID,
+          rowid: result.data.ROWID,
+        };
+
+        ////console.log("wqe", newProjectData);
+
+        dispatch(projectActions.addProjectData(response.data.data));
+        // Reset the form
+        setNewProject({
+          id: "",
+          name: "",
+          status: "",
+          owner: "",
+          ownerID: "",
+          startDate: "",
+          endDate: "",
+          description: "",
+          assignedTo: "",
+          assignedToID: "",
+        });
+        toggleDrawer(false);
+        handleAlert("success", "Project added successfully");
+      } else {
+        handleAlert("error", result.message || "Failed to add project");
+      }
     } catch (error) {
-      console.error("Failed to add project:", error);
+      handleAlert("error", error.message || "Error adding project");
     }
   };
 
@@ -460,14 +414,13 @@ function Project({ fun }) {
           Assigned_To_Id: selectedOption.userID,
         }));
       }
-    } 
-    else if (name === "Client_ID") {
+    } else if (name === "Client_ID") {
       console.log("jeee");
       const selectedClient = assignOptions.find(
         (option) => option.userID === value && option.role === "Client"
       );
-      console.log("selected cliend",selectedClient);
-      
+      console.log("selected cliend", selectedClient);
+
       if (selectedClient) {
         setCurrentEditProject((prev) => ({
           ...prev,
@@ -475,8 +428,7 @@ function Project({ fun }) {
           clientID: selectedClient.userID,
         }));
       }
-    }
-    else {
+    } else {
       setNewProject((prev) => ({ ...prev, [name]: value }));
     }
   };
@@ -498,19 +450,14 @@ function Project({ fun }) {
           Owner_Id: currUser.user_id,
           Assigned_To: currentEditProject.Assigned_To,
           Assigned_To_Id: currentEditProject.Assigned_To_Id,
-          Client_Name:currentEditProject.Client_Name,
-          Client_ID:currentEditProject.Client_ID
+          Client_Name: currentEditProject.Client_Name,
+          Client_ID: currentEditProject.Client_ID,
         }
       );
+      console.log(response);
       if (response.status === 200) {
         const updateProject = response.data;
-        setProjects((prev) =>
-          prev.map((project) =>
-            project.ROWID === currentEditProject.ROWID
-              ? currentEditProject
-              : project
-          )
-        );
+        dispatch(projectActions.updateProjectData(response.data.data));
         handleAlert("success", "Project updated successfully");
         setEditModalOpen(false);
         currentEditProject("");
@@ -528,7 +475,7 @@ function Project({ fun }) {
   };
 
   const handleViewproject = (project) => {
-    ////console.log("asd", project);
+    console.log("asd", project);
     setViewproject(project);
     setViewModalOpen(true);
   };
@@ -584,57 +531,135 @@ function Project({ fun }) {
   };
 
   const handleSubmit = () => {
-
-    console.log("new",newProject)
+    console.log("new", newProject);
     if (validate()) {
       handleAddProject(newProject);
       toggleDrawer(false);
     }
   };
 
+  const handleCloseDrawer = () => {
+    setOpen(false);
+  };
+
+  const fields = [
+    [
+      "Project ID",
+      "P" + projectDetail?.ROWID?.slice(-4),
+      <InfoIcon color="primary" />,
+    ],
+    [
+      "Project Name",
+      projectDetail?.Project_Name,
+      <AssignmentIcon color="primary" />,
+    ],
+    ["Assigned To", projectDetail?.Assigned_To, <PersonIcon color="primary" />],
+    [
+      "Client Name",
+      projectDetail?.Client_Name,
+      <BusinessIcon color="primary" />,
+    ],
+    ["Start Date", projectDetail?.Start_Date, <EventIcon color="primary" />],
+    ["End Date", projectDetail?.End_Date, <ScheduleIcon color="primary" />],
+    ["Status", projectDetail?.Status, <TrackChangesIcon color="primary" />],
+    ["Owner", projectDetail?.Owner, <EmojiEventsIcon color="primary" />],
+    ["Description", projectDetail?.Description, <DescriptionIcon color="primary" />]
+  ];
+
+  const handleDetailDrwaer = (e, project) => {
+    setOpen(true);
+    console.log("name of the project", project);
+    setprojectdetail(project);
+  };
+
   return (
     <Box sx={{ padding: 3 }}>
       {/* Header */}
-      <Box
+      <Paper
+        elevation={0}
         sx={{
+          mb: 4,
+          p: { xs: 2, sm: 3 },
+          borderRadius: 3,
+          background: `linear-gradient(135deg, ${alpha(
+            theme.palette.primary.main,
+            0.08
+          )} 0%, ${alpha(theme.palette.primary.light, 0.15)} 100%)`,
+          boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
           display: "flex",
-          justifyContent: "space-between",
+          flexDirection: { xs: "column", md: "row" },
           alignItems: "center",
-          marginBottom: 3,
+          justifyContent: "space-between",
+          gap: 2,
         }}
       >
-        <Typography variant="h4">Projects</Typography>
-      </Box>
+        {/* Left Side: Avatar + Typography */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            width: { xs: "100%", md: "auto" },
+          }}
+        >
+          <Avatar
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <AssignmentIcon sx={{ color: "#fff" }} fontSize="large" />
+          </Avatar>
+
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              color: "transparent",
+              fontSize: { xs: "1.5rem", sm: "2rem" },
+            }}
+          >
+            Projects
+          </Typography>
+        </Box>
+
+        {/* Right Side: Search Bar + Button */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            width: { xs: "100%", md: "auto" },
+            flexDirection: { xs: "column", sm: "row" },
+          }}
+        >
+          <TextField
+            label="Search Projects"
+            variant="outlined"
+            size="small"
+            value={searchQuery}
+            onChange={handleSearch}
+            sx={{
+              width: { xs: "100%", sm: "60%", md: "250px" },
+            }}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => toggleDrawer(true)}
+            sx={{ width: { xs: "100%", sm: "auto" } }}
+          >
+            New Project
+          </Button>
+        </Box>
+      </Paper>
 
       <Grid container spacing={3}>
         {/* Header with Search and New Project Button */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <TextField
-                label="Search Projects"
-                variant="outlined"
-                size="small"
-                value={searchQuery}
-                onChange={handleSearch}
-                sx={{ width: "40%" }}
-              />
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => toggleDrawer(true)}
-              >
-                New Project
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
 
         {/* Table */}
         <Grid item xs={12}>
@@ -650,15 +675,6 @@ function Project({ fun }) {
                   </TableCell>
                   <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
                     Status
-                  </TableCell>
-                  <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
-                    Owner
-                  </TableCell>
-                  <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
-                    Client Name
-                  </TableCell>
-                  <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
-                    AssignedTo
                   </TableCell>
                   <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
                     Start Date
@@ -678,7 +694,7 @@ function Project({ fun }) {
                 </TableRow>
               </TableHead>
 
-              {paginatedProjects.length === 0 ? (
+              {isLoading ? (
                 <TableBody>
                   <TableRow>
                     <TableCell colSpan={10} sx={{ p: 0 }}>
@@ -720,10 +736,43 @@ function Project({ fun }) {
                     </TableCell>
                   </TableRow>
                 </TableBody>
+              ) : paginatedProjects.length === 0 ? (
+                <TableBody>
+                  <TableRow>
+                    <TableCell colSpan={15}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          textAlign: "center",
+                          minHeight: "200px",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: 2,
+                        }}
+                      >
+                        <FaProjectDiagram
+                          size={50}
+                          color={theme.palette.text.secondary}
+                        />
+                        <Typography variant="h5" color="text.secondary">
+                          No Project Found
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                          There are no Project to display.
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
               ) : (
                 <TableBody>
                   {paginatedProjects.map((project) => (
-                    <TableRow key={project.id}>
+                    <TableRow
+                      key={project.id}
+                      onClick={(e) => handleDetailDrwaer(e, project)}
+                    >
                       <TableCell>
                         {"P" + project.ROWID.substr(project.ROWID.length - 4)}
                       </TableCell>
@@ -748,44 +797,56 @@ function Project({ fun }) {
                           }}
                         />
                       </TableCell>
-                      <TableCell>{project.Owner}</TableCell>
-                      <TableCell>{project.Client_Name}</TableCell>
-                      <TableCell>{project.Assigned_To}</TableCell>
                       <TableCell>{project.Start_Date}</TableCell>
                       <TableCell>{project.End_Date}</TableCell>
                       <TableCell>
                         <IconButton
                           color="primary"
-                          onClick={() => handleEdit(project)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(project);
+                          }}
                         >
                           <EditIcon />
                         </IconButton>
                         <IconButton
                           color="error"
-                          onClick={() => handleDeleteClick(project)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(project);
+                          }}
                         >
                           <DeleteIcon />
                         </IconButton>
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          color="primary"
-                          onClick={() => handlefiltetActive(project)}
-                        >
-                          Tasks
-                        </Button>
+                      <TableCell align="center">
+                        <TaskIcon
+                          fontSize="large"
+                          sx={{
+                            color: theme.palette.primary.main,
+                            fontSize: 30,
+                            cursor: "pointer",
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlefiltetActive(project);
+                          }}
+                        />
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          color="primary"
-                          onClick={() => handleViewproject(project)}
-                        >
-                          View
-                        </Button>
+
+                      <TableCell align="center">
+                        <AccessTimeIcon
+                          fontSize="large" // Use 'small', 'medium', 'large', or set via style
+                          style={{
+                            color: theme.palette.primary.main,
+                            fontSize: 30, // You can increase this number as needed (e.g., 36, 40)
+                            cursor: "pointer",
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewproject(project);
+                          }}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -824,19 +885,28 @@ function Project({ fun }) {
             marginTop: "70px",
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 2,
-            }}
-          >
-            <Typography variant="h5">Add New Project</Typography>
-            <IconButton onClick={() => toggleDrawer(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
+            <Box
+    sx={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      // backgroundColor: "#f0f4ff",
+      padding: 2,
+      borderRadius: "8px 8px 0 0",
+      marginBottom: 2,
+      boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+    }}
+  >
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+      <WorkOutlineIcon color="primary" />
+      <Typography variant="h6" fontWeight="bold">
+        Add New Project
+      </Typography>
+    </Box>
+    <IconButton onClick={() => toggleDrawer(false)}>
+      <CloseIcon />
+    </IconButton>
+  </Box>
           <TextField
             label="Project Name"
             name="name"
@@ -850,7 +920,7 @@ function Project({ fun }) {
           />
 
           <Autocomplete
-            options={data}
+            options={client}
             getOptionLabel={(option) => option.Org_Name} // Display username in options
             isOptionEqualToValue={(option, value) =>
               option.ROWID === value.ROWID
@@ -876,8 +946,6 @@ function Project({ fun }) {
                 name="client_name"
                 fullWidth
                 variant="outlined"
-                error={!!errors.client_name}
-                helperText={errors.client_name}
                 sx={{ marginBottom: 2 }}
               />
             )}
@@ -1029,32 +1097,31 @@ function Project({ fun }) {
             <MenuItem value="Close">Close</MenuItem>
           </TextField>
 
-          {console.log("current project", currentEditProject)}
           <Autocomplete
             value={
-              assignOptions.find(
-                (option) => option.userID === currentEditProject?.Client_ID
+              client.find(
+                (option) => option.ROWID === currentEditProject?.Client_ID
               ) || null
             }
             onChange={(event, newValue) => {
               handleEditChange({
                 target: {
-                  name: "Client_Name", // Update the client_name in the state
-                  value: newValue ? newValue.username : "", // Display username
+                  name: "Client_Name",
+                  value: newValue ? newValue.Org_Name : "",
                 },
               });
               handleEditChange({
                 target: {
-                  name: "Client_ID", // Assuming you need the client ID too
-                  value: newValue ? newValue.userID : "",
+                  name: "Client_ID",
+                  value: newValue ? newValue.ROWID : "",
                 },
               });
             }}
-            options={assignOptions.filter((option) => option.role === "Client")} // Filter only clients
-            getOptionLabel={(option) => option.username} // Display username in the dropdown
+            options={client}
+            getOptionLabel={(option) => option?.Org_Name || ""}
             isOptionEqualToValue={(option, value) =>
-              option.userID === value?.userID
-            } // Correct comparison
+              option.ROWID === value?.ROWID
+            }
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -1065,7 +1132,7 @@ function Project({ fun }) {
                 sx={{ marginBottom: 2 }}
               />
             )}
-            noOptionsText="No clients available" // Custom message when no options are found
+            noOptionsText="No clients available"
           />
 
           <TextField
@@ -1154,12 +1221,92 @@ function Project({ fun }) {
           </Box>
         </Box>
       </Modal>
+      <Drawer anchor="right" open={open} onClose={handleCloseDrawer}>
+        <Box
+          sx={{
+            width: 420,
+            mt: "65px",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            
+           
+          }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              borderRadius: 0,
+              height: "100%",
+              boxShadow: "none"
+            }}
+          >
+            <Box
+              sx={{
+                backgroundColor: "primary.main",
+                color: "#fff",
+                px: 3,
+                py: 2,
+                display: "flex",
+                justifyContent: "space-between",
+               
+                alignItems: "center",
+                position: "sticky", // Sticky position for header
+                top: 0, // Stick to the top
+                zIndex: 1, // Ensure it stays above content
+              }}
+            >
+              <Typography variant="h6">Project Details</Typography>
+              <IconButton onClick={handleCloseDrawer} sx={{ color: "#fff" }}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
 
+            {isLoading ? (
+              <Box px={3} py={2}>
+                <Typography>Loading project details...</Typography>
+              </Box>
+            ) : (
+              <List disablePadding>
+                {fields.map(([label, value, icon], index) => (
+                  <React.Fragment key={index}>
+                    <ListItem sx={{ px: 3, py: 1.5 }}>
+                      <ListItemIcon sx={{ color: "primary.main" }}>
+                        {icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {label}
+                          </Typography>
+                        }
+                        secondary={
+                          label === "Status" ? (
+                            <Chip
+                              label={value}
+                              color={getStatusColor(value)}
+                              size="small"
+                              sx={{ mt: 0.5 }}
+                            />
+                          ) : (
+                            <Typography color="text.secondary">
+                              {value}
+                            </Typography>
+                          )
+                        }
+                      />
+                    </ListItem>
+                    {index !== fields.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+          </Paper>
+        </Box>
+      </Drawer>
       {viewproject ? (
         <ProjectTimeEntry
           theme={theme}
           handleEditInputChange={handleInputChange}
-          projects={projects}
           statusOptions={statusOptions}
           handleUpdateproject={handleUpdateProject}
           viewModalOpen={viewModalOpen}

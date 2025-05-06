@@ -15,6 +15,9 @@ const { findPackageJSON } = require("module");
 app.use(bodyParser.json());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+const {
+  USER_STATUS,
+} = require("zcatalyst-sdk-node/lib/user-management/user-management");
 
 // Initialize Catalyst app
 app.use((req, res, next) => {
@@ -448,6 +451,62 @@ const deleteClient = async (req, res) => {
   }
 };
 
+
+const updateClientContactStatus = async (req, res) => {
+  try {
+    const { status,ROWID,USERID } = req.body;  // Extract status from the request body
+    console.log("Updating client contact status with ID:", status,ROWID,USERID);
+    if (!ROWID || !USERID || status === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID , ROWID and status are required",
+      });
+    }
+    const catalystApp = req.catalystApp;
+    const userManagement = catalystApp.userManagement();
+
+    const response = await userManagement.updateUserStatus(
+      USERID,
+      status ? "enable" : "disable"
+    );  
+
+    const datastore = catalystApp.datastore();
+    const table = datastore.table("Client_Contact"); 
+
+
+    // Update the status of the client contact
+    const updatedRow = await table.updateRow({
+      ROWID,
+      ...{status}, // If status is true, set it to 'true' (active); if false, set it to 'false' (inactive)
+    });
+
+    // Check if the record was updated
+    if (updatedRow) {
+      return res.status(200).json({
+        success: true,
+        message: "Client contact status updated successfully",
+        data: updatedRow,
+      });
+    } else {
+      return res.status(404).json({
+        success: false,
+        message: "Client contact not found",
+      });
+    }
+  } catch (error) {
+    console.error("Error updating client contact:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update client contact",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
 module.exports = {
   getClientData,
   getContact,
@@ -460,4 +519,5 @@ module.exports = {
   getClientTasks,
   deleteClient,
   deleteORG,
+  updateClientContactStatus,
 };

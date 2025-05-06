@@ -128,6 +128,49 @@ const getTasksByEmployee = async (req, res) => {
     });
   }
 };
+
+const tasksByProject = async (req, res) => {
+  const projectID = req.params.id;
+  if (!projectID) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Project ID is required" });
+  }
+  try {
+    const catalystApp = req.catalystApp;
+    const zcql = catalystApp.zcql();
+    const query = `SELECT * FROM Tasks WHERE ProjectID = '${projectID}'`;
+    const tasks = await zcql.executeZCQLQuery(query);
+    if (!tasks || tasks.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No tasks found for this project" });
+    }
+    const formattedTasks = tasks.map((task) => ({
+      ROWID: task.Tasks.ROWID,
+      Task_Name: task.Tasks.Task_Name,
+      Project_Name: task.Tasks.Project_Name,
+      ProjectID: task.Tasks.ProjectID,
+      Status: task.Tasks.Status,
+      Assign_To_ID: task.Tasks.Assign_To_ID,
+      Assign_To: task.Tasks.Assign_To,
+      Start_Date: task.Tasks.Start_Date,
+      End_Date: task.Tasks.End_Date,
+      Description: task.Tasks.Description,
+    }));
+    return res.status(200).json({
+      success: true,
+      data: formattedTasks,
+    });
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching tasks",
+      error: error.message,
+    });
+  }
+};
 const createTask = async (req, res) => {
   try {
     const catalystApp = req.catalystApp;
@@ -208,10 +251,64 @@ const deleteTask = async (req, res) => {
   }
 };
 
+
+const tasksByProjectAndUser = async (req, res) => {
+  const { projectID, userID } = req.query;
+
+  if (!projectID || !userID) {
+    return res.status(400).json({
+      success: false,
+      message: "Project ID and User ID are required",
+    });
+  }
+
+  try {
+    const catalystApp = req.catalystApp;
+    const zcql = catalystApp.zcql();
+
+    const query = `SELECT * FROM Tasks WHERE ProjectID = '${projectID}' AND Assign_To_ID = '${userID}'`;
+    const tasks = await zcql.executeZCQLQuery(query);
+
+    if (!tasks || tasks.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No tasks found for this project and user",
+      });
+    }
+
+    const formattedTasks = tasks.map((task) => ({
+      ROWID: task.Tasks.ROWID,
+      Task_Name: task.Tasks.Task_Name,
+      Project_Name: task.Tasks.Project_Name,
+      ProjectID: task.Tasks.ProjectID,
+      Status: task.Tasks.Status,
+      Assign_To_ID: task.Tasks.Assign_To_ID,
+      Assign_To: task.Tasks.Assign_To,
+      Start_Date: task.Tasks.Start_Date,
+      End_Date: task.Tasks.End_Date,
+      Description: task.Tasks.Description,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: formattedTasks,
+    });
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching tasks",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllTasks,
+  tasksByProject,
   getTasksByEmployee,
   createTask,
   updateTask,
   deleteTask,
+  tasksByProjectAndUser,
 };

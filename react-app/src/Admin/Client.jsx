@@ -15,6 +15,8 @@ import {
   Skeleton,
   Avatar,
   CardMedia,
+  Paper,
+  alpha,
   Snackbar,
   Alert,
   Dialog,
@@ -27,6 +29,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import Slide from "@mui/material/Slide";
 import DeleteIcon from "@mui/icons-material/Delete";
+import ApartmentIcon from "@mui/icons-material/Apartment";
 import EmailIcon from "@mui/icons-material/Email";
 import PersonIcon from "@mui/icons-material/Person";
 import BadgeIcon from "@mui/icons-material/Badge";
@@ -315,23 +318,66 @@ export const Client = () => {
   return (
     <>
       <Box sx={{ padding: 3 }}>
-        <Box
+        <Paper
+          elevation={0}
           sx={{
+            mb: 4,
+            p: { xs: 2, sm: 3 },
+            borderRadius: 3,
+            background: `linear-gradient(135deg, ${alpha(
+              theme.palette.primary.main,
+              0.08
+            )} 0%, ${alpha(theme.palette.primary.light, 0.15)} 100%)`,
+            boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
             display: "flex",
-            justifyContent: "space-between",
+            flexDirection: { xs: "column", md: "row" },
             alignItems: "center",
-            marginBottom: 3,
+            justifyContent: "space-between",
+            gap: 2,
           }}
         >
-          <Typography variant="h4">Client</Typography>
-        </Box>
-
-        <Card sx={{ mb: 3 }}>
-          <CardContent
+          {/* Left Side: Avatar + Typography */}
+          <Box
             sx={{
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
+              gap: 2,
+              width: { xs: "100%", md: "auto" },
+            }}
+          >
+            <Avatar
+              sx={{
+                bgcolor: theme.palette.primary.main,
+                width: 50,
+                height: 50,
+              }}
+            >
+              <ApartmentIcon sx={{ color: "#fff" }} fontSize="large" />
+            </Avatar>
+
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                color: "transparent",
+                fontSize: { xs: "1.5rem", sm: "2rem" },
+              }}
+            >
+              Client
+            </Typography>
+          </Box>
+
+          {/* Right Side: Search Bar + Button */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              width: { xs: "100%", md: "auto" },
+              flexDirection: { xs: "column", sm: "row" },
             }}
           >
             <TextField
@@ -340,17 +386,20 @@ export const Client = () => {
               size="small"
               value={searchQuery}
               onChange={handleSearch}
-              sx={{ width: "40%" }}
+              sx={{
+                width: { xs: "100%", sm: "60%", md: "250px" },
+              }}
             />
             <Button
               variant="contained"
               color="primary"
               onClick={() => toggleDrawer(true)}
+              sx={{ width: { xs: "100%", sm: "auto" } }}
             >
               Add Client
             </Button>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
 
         <Grid container spacing={3} justifyContent="center">
           {isLoading ? (
@@ -533,8 +582,6 @@ export const Client = () => {
                       alignItems: "center",
                     }}
                   >
-                   
-
                     <Box sx={{ ml: "auto" }}>
                       <IconButton
                         color="error"

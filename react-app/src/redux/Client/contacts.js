@@ -49,7 +49,7 @@ export const fetchClientContact = createAsyncThunk(
           // Log the state before and after the update
           console.log("addClientData Reducer - Before Update:", state.data);
           console.log("New Data to Add:", action.payload);
-          state.isLoading = true
+         
           // Directly mutate the state.data array without checking type (Immer will handle this)
           state.data.push(action.payload);
     
@@ -58,6 +58,15 @@ export const fetchClientContact = createAsyncThunk(
         setFilteredClientContact: (state, action) => {
           state.data = action.payload; // Update the state with filtered data
         },
+        updateClientContactStatusLocally: (state, action) => {
+          const { userID, status } = action.payload;
+          const contactIndex = state.data.findIndex(contact => contact.UserID === userID);
+          if (contactIndex !== -1) {
+            state.data[contactIndex].status = status;
+          }
+        },
+
+       
       },
 
 
@@ -77,5 +86,5 @@ export const fetchClientContact = createAsyncThunk(
   
     export const clientContactActions = clientContactSlice.actions;
     export const { setFilteredClientContact } = clientContactSlice.actions;
-
+    export const { updateClientContactStatusLocally } = clientContactSlice.actions;
 export default clientContactSlice;

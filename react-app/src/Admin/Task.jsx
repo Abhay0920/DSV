@@ -36,10 +36,13 @@ import {
   Snackbar,
   Alert,
   Autocomplete,
+  alpha,
+  Avatar,
 } from "@mui/material";
 import Skeleton from "@mui/material/Skeleton";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import {
   FaTasks,
   FaUsers,
@@ -48,44 +51,71 @@ import {
   FaPlayCircle,
 } from "react-icons/fa";
 import axios from "axios";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+
 import { TimeEntry } from "./TimeEntry";
 import Slide from "@mui/material/Slide";
 import Project from "../Employee/Project";
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector } from "react-redux";
 import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
-import { fetchTasks } from "../redux/Tasks/TaskSlice";
+import { fetchTasks, TaskActions } from "../redux/Tasks/TaskSlice";
 
 import { fetchProjects } from "../redux/Project/ProjectSlice";
 const statusOptions = ["Open", "In Progress", "Completed"];
+// const statusConfig = {
+//   Completed: {
+//     icon: FaCheckCircle,
+//     color: "#2e7d32",
+//     backgroundColor: "#e6f4ea",
+//     borderColor: "#a5d6a7",
+//   },
+//   "In Progress": {
+//     icon: FaPlayCircle,
+//     color: "#1976d2",
+//     backgroundColor: "#e8f0fe",
+//     borderColor: "#90caf9",
+//   },
+//   Pending: {
+//     icon: FaHourglassHalf,
+//     color: "#ed6c02",
+//     backgroundColor: "#fff8e6",
+//     borderColor: "#ffb74d",
+//   },
+// };
+
 const statusConfig = {
-  Completed: {
-    icon: FaCheckCircle,
-    color: "#2e7d32",
-    backgroundColor: "#e6f4ea",
-    borderColor: "#a5d6a7",
+  Pending: {
+    color: "#f0ad4e",
+    backgroundColor: "#fff3cd",
+    borderColor: "#ffeeba",
   },
   "In Progress": {
-    icon: FaPlayCircle,
-    color: "#1976d2",
-    backgroundColor: "#e8f0fe",
-    borderColor: "#90caf9",
+    color: "#0d6efd",
+    backgroundColor: "#cfe2ff",
+    borderColor: "#b6d4fe",
   },
-  Pending: {
-    icon: FaHourglassHalf,
-    color: "#ed6c02",
-    backgroundColor: "#fff8e6",
-    borderColor: "#ffb74d",
+  Completed: {
+    color: "#198754",
+    backgroundColor: "#d1e7dd",
+    borderColor: "#badbcc",
+  },
+  "Work In Process": {
+    color: "#0d6efd",
+    backgroundColor: "#cfe2ff",
+    borderColor: "#b6d4fe",
+  },
+  Close: {
+    color: "#dc3545",
+    backgroundColor: "#f8d7da",
+    borderColor: "#f5c2c7",
   },
 };
-
 function Task() {
-
   const location = useLocation();
   const dispatch = useDispatch();
-  
-  const { projectId } = location.state || {}; 
-  const { projectName } = location.state || {}; // Access projectId from state
-  
+
+  const { projectId } = location.state || {};
+  const { projectName } = location.state || {};
 
   const theme = useTheme();
   const [tasks, setTasks] = useState([]);
@@ -109,7 +139,7 @@ function Task() {
     message: "",
     severity: "success",
   });
-  console.log("projectname,",projectName);
+  console.log("projectname,", projectName, projectId);
   const [newTask, setNewTask] = useState({
     projectId: projectId || "",
     project_name: projectName || "",
@@ -125,122 +155,78 @@ function Task() {
   const [TaskName, setTaskName] = useState("");
   const [errors, setErrors] = useState({});
 
-  const state = useSelector((state) => state.projectReducer);
-  const employeeState = useSelector((state) => state.employeeReducer);
-  const taskState = useSelector((state) => state.taskReducer);
-
-  console.log("projects", employeeState);
-  console.log("tasks", taskState);
+  const { data } = useSelector((state) => state.projectReducer);
+  const { data: employeedata } = useSelector((state) => state.employeeReducer);
+  const { data: tasksData, isLoading } = useSelector(
+    (state) => state.taskReducer
+  );
+  console.log("projectss data", data);
+  console.log("employeeDatat", employeedata);
+  console.log("tasks", tasksData);
 
   useEffect(() => {
-    if (state && state.data && employeeState && employeeState.data && taskState && taskState.data) {
-      // Format assign options for employees excluding admins
-      const formattedAssignTo = employeeState.data.users
-        .filter(
+    const fetchTasksData = async () => {
+      try {
+        // Fetch tasks by projectId if it's available
+        if (projectId) {
+          const res = await axios.get(
+            `/server/time_entry_management_application_function/tasks/project/${projectId}`
+          );
+          console.log("taskres", res);
+          setTasks(res.data.data);
+        } else {
+          // If Task data is not already in Redux, fetch it
+          if (!Array.isArray(tasksData) || tasksData.length === 0) {
+            const response = await dispatch(fetchTasks()).unwrap();
+       
+            setTasks(response);
+          } else {
+            // Use existing Task data from Redux
+            setTasks(tasksData);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+      }
+    };
+  
+    // Check and fetch employee and project data only if needed
+    if (!Array.isArray(employeedata) || employeedata.length === 0) {
+      dispatch(fetchEmployees());
+    }
+  
+    if (!Array.isArray(data) || data.length === 0) {
+      dispatch(fetchProjects());
+    }
+  
+    fetchTasksData();
+  }, [projectId, dispatch, Task, data, employeedata]);
+
+  useEffect(() => {
+    if (employeedata) {
+      // Check if employeedata is available before filtering
+      const employee = employeedata
+        ?.filter(
           (employee) =>
-            employee.role_details?.role_name !== "Admin" &&
-            employee.role_details?.role_name !== "Super Admin"
+            employee.role_details.role_name !== "Contacts" &&
+            employee.role_details.role_name !== "Super Admin"
         )
         .map((employee) => ({
           username: `${employee.first_name} ${employee.last_name}`,
           userID: employee.user_id,
+          role: employee.role_details.role_name,
         }));
+      console.log("employee", employee);
+      setAssignOptions(employee);
 
-      console.log("Formatted Assign To:", formattedAssignTo);
-      setAssignOptions(formattedAssignTo);
-      // Filter and map tasks based on projectId (if provided)
-      const tasksFromResponse = taskState.data.data
-        .filter((item) => (projectId ? item.ProjectID === projectId : true)) // Filter tasks by projectId
-        .map((item) => ({
-          id: item.ROWID,
-          taskid: item.ROWID,
-          name: item.Task_Name,
-          projectId: item.ProjectID,
-          project_name: item.Project_Name,
-          assignTo: item.Assign_To,
-          assignToID: item.Assign_To_ID,
-          status: item.Status,
-          startDate: item.Start_Date,
-          endDate: item.End_Date,
-          description: item.Description,
-        }));
-
-      // If projectId is provided, set the task name to the first task's project name, else set default value
-      if (projectId ) {
+      if (projectId) {
         setTaskName(projectName);
       } else {
         setTaskName("Tasks");
+        setTasks(tasksData);
       }
-
-      setTasks(tasksFromResponse); // Update tasks in state
-      setProjects(state.data.data); // Set projects in state
     }
-  }, [projectId, state, employeeState, taskState]);
- 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     setLoading(true);
-  //     try {
-  //       const TaskResponse = await axios.get(
-  //         "/server/time_entry_management_application_function/tasks"
-  //       );
-  //       const ProjectResponse = await axios.get(
-  //         "/server/time_entry_management_application_function/projects"
-  //       );
-  //       const EmployeeResponse = await axios.get(
-  //         "/server/time_entry_management_application_function/employee"
-  //       );
-
-  //       if (EmployeeResponse.status === 200) {
-  //         const formattedAssignTo = EmployeeResponse.data.users
-  //           .filter(
-  //             (employee) =>
-  //               employee.role_details.role_name !== "Admin" &&
-  //               employee.role_details.role_name !== "Super Admin"
-  //           )
-  //           .map((employee) => ({
-  //             username: `${employee.first_name} ${employee.last_name}`,
-  //             userID: employee.user_id,
-  //           }));
-
-  //         setAssignOptions(formattedAssignTo);
-  //       }
-
-  //       // Filter tasks based on the provided projectId, if available
-  //       const tasksFromResponse = TaskResponse.data.data
-  //         .filter((item) => (projectId ? item.ProjectID === projectId : true)) // If projectId exists, filter tasks
-  //         .map((item) => ({
-  //           id: item.ROWID,
-  //           taskid: item.ROWID,
-  //           name: item.Task_Name,
-  //           projectId: item.ProjectID,
-  //           project_name: item.Project_Name,
-  //           assignTo: item.Assign_To,
-  //           assignToID: item.Assign_To_ID,
-  //           status: item.Status,
-  //           startDate: item.Start_Date,
-  //           endDate: item.End_Date,
-  //           description: item.Description,
-  //         }));
-
-  //         console.log("qwrewr",tasksFromResponse);
-  //         console.log("sdfgs",tasksFromResponse[0].project_name);
-  //         if (projectId) {
-  //           setTaskName(tasksFromResponse[0]?.project_name);
-  //         }
-  //         else setTaskName("Tasks");
-
-  //       setTasks(tasksFromResponse);
-  //       setProjects(ProjectResponse.data.data);
-  //     } catch (error) {
-  //       console.error("Error fetching data:", error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchData();
-  // }, [projectId]);
+  }, [employeedata, tasksData]);
 
   const handleSearch = (event) => {
     setSearchQuery(event.target.value);
@@ -255,16 +241,14 @@ function Task() {
     setPage(0);
   };
 
-  const filteredTasks = tasks.filter((task) =>
-    task.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTasks = tasks?.filter((task) =>
+    task?.Task_Name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const paginatedTasks = filteredTasks.slice(
+  const paginatedTasks = filteredTasks?.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
- 
-console.log("pagination",paginatedTasks)
 
   const toggleDrawer = (open) => {
     setDrawerOpen(open);
@@ -272,54 +256,59 @@ console.log("pagination",paginatedTasks)
 
   const validateForm = () => {
     let newErrors = {};
-    
+
     if (!newTask.projectId) newErrors.projectId = "Project is required";
     if (!newTask.name) newErrors.name = "Task name is required";
-    if (!newTask.assignToID) newErrors.assignToID = "At least one user must be assigned";
+    if (!newTask.assignToID)
+      newErrors.assignToID = "At least one user must be assigned";
     if (!newTask.status) newErrors.status = "Status is required";
     if (!newTask.startDate) newErrors.startDate = "Start date is required";
     if (!newTask.endDate) newErrors.endDate = "End date is required";
-    if (newTask.startDate && newTask.endDate && newTask.startDate > newTask.endDate)
+    if (
+      newTask.startDate &&
+      newTask.endDate &&
+      newTask.startDate > newTask.endDate
+    )
       newErrors.endDate = "End date cannot be before start date";
-  
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-
-    if (name === "projectId") {  
-        const selectedOption = projects.find((option) => option.ROWID === value);
-        if (selectedOption) {
-            setNewTask((prev) => ({
-                ...prev,
-                project_name: selectedOption.Project_Name,
-                projectId: selectedOption.ROWID,
-            }));
-        }
-    } else if (name === "assignToID") {  
-        //  Ensure value is always an array
-        const selectedValues = Array.isArray(value) ? value : value.split(",");
-
-        const selectedUsernames = selectedValues
-            .map((id) => {
-                const user = assignOptions.find((option) => option.userID === id);
-                return user ? user.username : "";
-            })
-            .filter(Boolean) // Remove empty names
-            .join(", ");
-
+    console.log("nameee", name);
+    console.log("bdsa", value);
+    if (name === "projectId") {
+      const selectedOption = data.find((option) => option.ROWID === value);
+      if (selectedOption) {
         setNewTask((prev) => ({
-            ...prev,
-            assignTo: selectedUsernames, // Store names
-            assignToID: selectedValues.join(","), //  Store IDs
+          ...prev,
+          project_name: selectedOption.Project_Name,
+          projectId: selectedOption.ROWID,
         }));
-    } else {
-        setNewTask((prev) => ({ ...prev, [name]: value }));
-    }
-};
+      }
+    } else if (name === "assignToID") {
+      //  Ensure value is always an array
+      const selectedValues = Array.isArray(value) ? value : value.split(",");
 
+      const selectedUsernames = selectedValues
+        ?.map((id) => {
+          const user = assignOptions.find((option) => option.userID === id);
+          return user ? user.username : "";
+        })
+        ?.filter(Boolean) // Remove empty names
+        .join(", ");
+
+      setNewTask((prev) => ({
+        ...prev,
+        assignTo: selectedUsernames, // Store names
+        assignToID: selectedValues.join(","), //  Store IDs
+      }));
+    } else {
+      setNewTask((prev) => ({ ...prev, [name]: value }));
+    }
+  };
 
   const handleAlert = (severity, message) => {
     setSnackbar({
@@ -363,27 +352,16 @@ console.log("pagination",paginatedTasks)
         }
       );
 
-      const updateData = {
-        id: response.data.data.ROWID,
-        taskid:
-          "TASK " +
-          response.data.data.ROWID.substr(response.data.data.ROWID.length - 4),
-        name: response.data.data.Task_Name,
-        projectId: response.data.data.ProjectID,
-        project_name: response.data.data.Project_Name,
-        assignTo: response.data.data.Assign_To,
-        assignToID: response.data.data.Assign_To_ID,
-        status: response.data.data.Status,
-        startDate: response.data.data.Start_Date,
-        endDate: response.data.data.End_Date,
-        description: response.data.data.Description,
-      };
+      console.log("sfhsdfds", response);
 
-      const newTaskData = [...tasks, updateData];
-      setTasks(newTaskData);
-      handleCancel();
-       handleAlert("success", "Task added successfully");
-       dispatch(fetchTasks());
+      if (response.status === 200) {
+        handleCancel();
+        handleAlert("success", "Task added successfully");
+        dispatch(TaskActions.addTaskData(response.data.data));
+        if (projectId && newTask.projectId === projectId) {
+          setTasks((prev) => [...prev, response.data.data]);
+        }
+      }
     } catch (error) {
       handleAlert("error", error.message || "Error adding task");
     }
@@ -391,19 +369,21 @@ console.log("pagination",paginatedTasks)
 
   const handleCancel = () => {
     setNewTask({
-      project: "",
-      name: "",
-      assignTo: "",
-      status: "",
-      startDate: "",
-      endDate: "",
-      description: "",
+    projectId: projectId || "",
+    project_name: projectName || "",
+    name: "",
+    assignTo: "",
+    assignToID: "",
+    status: "",
+    startDate: "",
+    endDate: "",
+    description: "",
     });
     toggleDrawer(false);
   };
 
   const handleEdit = (task) => {
-    console.log("aaaa",task)
+    console.log("task data",task);
     setCurrentTask(task);
     setEditModalOpen(true);
   };
@@ -413,48 +393,36 @@ console.log("pagination",paginatedTasks)
       `/server/time_entry_management_application_function/tasks/${ROWID}`
     );
 
-    const newTasksData = tasks.filter((item) => item.id !== ROWID);
+    const newTasksData = tasks?.filter((item) => item.id !== ROWID);
     setTasks(newTasksData);
   };
 
   const handleUpdateTask = async () => {
-    //console.log(currentTask);
+    console.log(currentTask);
     try {
-      const ROWID = currentTask.id;
+      const ROWID = currentTask.ROWID;
       // Ensure assignToID is properly formatted as a string
-      const assignToID = Array.isArray(currentTask.assignToID)
-        ? currentTask.assignToID.join(",")
-        : currentTask.assignToID;
+      const Assign_To_ID = Array.isArray(currentTask.Assign_To_ID)
+        ? currentTask.Assign_To_ID.join(",")
+        : currentTask.Assign_To_ID;
 
       const updateResponse = await axios.post(
         `/server/time_entry_management_application_function/tasks/${ROWID}`,
-        {
-          Status: currentTask.status,
-          Description: currentTask.description,
-          Assign_To: currentTask.assignTo, // Already comma-separated string of names
-          Assign_To_ID: assignToID, // Ensure it's a comma-separated string of IDs
-          ProjectID: currentTask.projectId,
-          Project_Name: currentTask.project_name,
-          Task_Name: currentTask.name,
-          Start_Date: currentTask.startDate,
-          End_Date: currentTask.endDate,
-        }
+        currentTask
       );
-
+      console.log("updated", updateResponse);
       if (updateResponse.status === 200) {
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.id === currentTask.id
-              ? {
-                  ...currentTask,
-                  assignToID: assignToID, // Ensure the updated task has the correct format
-                }
-              : task
-          )
-        );
+        dispatch(TaskActions.updateTaskData(updateResponse.data.data));
         setCurrentTask(null);
         setEditModalOpen(false);
         handleAlert("success", "Task updated successfully");
+        if (projectId && currentTask.ProjectID === projectId) {
+          const updatedTasksData = tasks?.map((item) =>
+            item.ROWID === ROWID? updateResponse.data.data : item
+          );
+          setTasks(updatedTasksData);
+        }
+  
       } else {
         handleAlert("error", "Failed to update task");
       }
@@ -466,31 +434,31 @@ console.log("pagination",paginatedTasks)
   const handleEditInputChange = (event) => {
     const { name, value } = event.target;
 
-    if (name === "project") {
-      const selectedOption = projects.find((option) => option.ROWID === value);
+    if (name === "Project_Name") {
+      const selectedOption = data.find((option) => option.ROWID === value);
 
       if (selectedOption) {
         setCurrentTask((prev) => ({
           ...prev,
-          project_name: selectedOption.Project_Name,
-          projectId: selectedOption.ROWID,
+          Project_Name: selectedOption.Project_Name,
+          ProjectID: selectedOption.ROWID,
         }));
       }
-    } else if (name === "associated") {
+    } else if (name === "Assign_To") {
       // Handle multiple selections
       const selectedValues = event.target.value;
       const selectedUsernames = selectedValues
-        .map((id) => {
-          const user = assignOptions.find((option) => option.userID === id);
+        ?.map((id) => {
+          const user = assignOptions?.find((option) => option.userID === id);
           return user ? user.username : "";
         })
-        .filter((name) => name)
+        ?.filter((name) => name)
         .join(", ");
 
       setCurrentTask((prev) => ({
         ...prev,
-        assignTo: selectedUsernames,
-        assignToID: selectedValues.join(","),
+        Assign_To: selectedUsernames,
+        Assign_To_ID: selectedValues.join(","),
       }));
     } else {
       setCurrentTask((prev) => ({ ...prev, [name]: value }));
@@ -528,15 +496,15 @@ console.log("pagination",paginatedTasks)
   const handleDeleteConfirm = async () => {
     if (taskToDelete) {
       try {
-        console.log("saasf",taskToDelete.id);
         const response = await axios.delete(
-          `/server/time_entry_management_application_function/tasks/${taskToDelete.id}`
+          `/server/time_entry_management_application_function/tasks/${taskToDelete.ROWID}`
         );
         if (response.status === 200) {
-          setTasks((prevTasks) =>
-            prevTasks.filter((task) => task.id !== taskToDelete.id)
-          );
+          dispatch(TaskActions.deleteTasktData(taskToDelete.ROWID));
           handleAlert("success", "Task deleted successfully");
+          setTasks((prev) =>
+            prev.filter((item) => item.ROWID!== taskToDelete.ROWID)
+          );
         } else {
           handleAlert("error", "Failed to delete task");
         }
@@ -555,7 +523,6 @@ console.log("pagination",paginatedTasks)
   };
 
   const handleSubmit = () => {
-    
     if (validateForm()) {
       handleAddTask();
     }
@@ -563,48 +530,92 @@ console.log("pagination",paginatedTasks)
 
   return (
     <Box sx={{ padding: 3 }}>
-      <Box
+      <Paper
+        elevation={0}
         sx={{
+          mb: 4,
+          p: { xs: 2, sm: 3 },
+          borderRadius: 3,
+          background: `linear-gradient(135deg, ${alpha(
+            theme.palette.primary.main,
+            0.08
+          )} 0%, ${alpha(theme.palette.primary.light, 0.15)} 100%)`,
+          boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
           display: "flex",
-          justifyContent: "space-between",
+          flexDirection: { xs: "column", md: "row" },
           alignItems: "center",
-          marginBottom: 3,
+          justifyContent: "space-between",
+          gap: 2,
         }}
       >
-        <Typography variant="h4">{TaskName}</Typography>
-      </Box>
+        {/* Left Side: Avatar + Typography */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            width: { xs: "100%", md: "auto" },
+          }}
+        >
+          <Avatar
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <AssignmentIcon sx={{ color: "#fff" }} fontSize="large" />
+          </Avatar>
+
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              color: "transparent",
+              fontSize: { xs: "1.5rem", sm: "2rem" },
+            }}
+          >
+            Tasks
+          </Typography>
+        </Box>
+
+        {/* Right Side: Search Bar + Button */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            width: { xs: "100%", md: "auto" },
+            flexDirection: { xs: "column", sm: "row" },
+          }}
+        >
+          <TextField
+            label="Search Tasks"
+            variant="outlined"
+            size="small"
+            value={searchQuery}
+            onChange={handleSearch}
+            sx={{
+              width: { xs: "100%", sm: "60%", md: "250px" },
+            }}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => toggleDrawer(true)}
+            sx={{ width: { xs: "100%", sm: "auto" } }}
+          >
+            Add Task
+          </Button>
+        </Box>
+      </Paper>
 
       <Grid container spacing={3}>
         <Grid item xs={12}>
-          <Card>
-            <CardContent
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <TextField
-                label="Search Tasks"
-                variant="outlined"
-                size="small"
-                value={searchQuery}
-                onChange={handleSearch}
-                sx={{ width: "40%" }}
-              />
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => toggleDrawer(true)}
-              >
-                Add Task
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12}>
-          {loading ? (
+          {isLoading ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -710,7 +721,7 @@ console.log("pagination",paginatedTasks)
                 </TableRow>
               </TableBody>
             </Table>
-          ) : tasks.length === 0 ? (
+          ) : paginatedTasks.length === 0 ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -942,7 +953,7 @@ console.log("pagination",paginatedTasks)
                       </TableCell>
                     </TableRow>
                   </TableBody>
-                ) : tasks.length === 0 ? (
+                ) : paginatedTasks.length === 0 ? (
                   <TableBody>
                     <TableRow>
                       <TableCell colSpan={9} sx={{ p: 0 }}>
@@ -993,26 +1004,24 @@ console.log("pagination",paginatedTasks)
                 ) : (
                   <TableBody>
                     {paginatedTasks.map((task) => (
-                      
                       <TableRow key={task.id}>
-                       
                         <TableCell>
-                          {"T" + task.id.substr(task.id.length - 4)}
+                          {"T" + task.ROWID.substr(task.ROWID.length - 4)}
                         </TableCell>
-                        <TableCell>{task.name}</TableCell>
-                        <TableCell>{task.project_name}</TableCell>
+                        <TableCell>{task.Task_Name}</TableCell>
+                        <TableCell>{task.Project_Name}</TableCell>
                         <TableCell>
                           <Tooltip title="View Assignees">
                             <IconButton
                               size="small"
                               onClick={(e) =>
-                                handleAssigneeClick(e, task.assignTo)
+                                handleAssigneeClick(e, task.Assign_To)
                               }
                               sx={{ color: theme.palette.primary.main }}
                             >
                               <FaUsers />
                               <Typography variant="body2" sx={{ ml: 1 }}>
-                                {task.assignTo.split(",").length}
+                                {task.Assign_To.split(",").length}
                               </Typography>
                             </IconButton>
                           </Tooltip>
@@ -1066,49 +1075,36 @@ console.log("pagination",paginatedTasks)
                         </TableCell>
                         <TableCell>
                           <Chip
-                            icon={
-                              <Box
-                                component={
-                                  statusConfig[task.status]?.icon ||
-                                  FaHourglassHalf
-                                }
-                                sx={{
-                                  fontSize: "1rem !important",
-                                  mr: "4px !important",
-                                  ml: "4px !important",
-                                  color:
-                                    statusConfig[task.status]?.color ||
-                                    "#757575",
-                                }}
-                              />
-                            }
-                            label={task.status}
+                            label={task.Status}
+                             size="small"
                             sx={{
                               backgroundColor:
-                                statusConfig[task.status]?.backgroundColor ||
+                                statusConfig[task.Status]?.backgroundColor ||
                                 "#f5f5f5",
                               color:
-                                statusConfig[task.status]?.color || "#757575",
-                              border: `1px solid ${statusConfig[task.status]?.borderColor || "#e0e0e0"}`,
+                                statusConfig[task.Status]?.color || "#757575",
+                              border: `1px solid ${statusConfig[task.Status]?.borderColor || "#e0e0e0"}`,
                               fontWeight: 500,
+                               fontSize: "0.75rem",
+                               height: "24px",
                               "& .MuiChip-label": {
                                 px: 1,
                               },
-                              minWidth: 110,
-                              height: 28,
-                              borderRadius: "14px",
-                              "&:hover": {
-                                backgroundColor:
-                                  statusConfig[task.status]?.backgroundColor ||
-                                  "#f5f5f5",
-                                opacity: 0.9,
-                              },
+                              // minWidth: 110,
+                              // height: 28,
+                              // borderRadius: "14px",
+                              // "&:hover": {
+                              //   backgroundColor:
+                              //     statusConfig[task.Status]?.backgroundColor ||
+                              //     "#f5f5f5",
+                              //   opacity: 0.9,
+                              // },
                             }}
-                            size="small"
+                           
                           />
                         </TableCell>
-                        <TableCell>{task.startDate}</TableCell>
-                        <TableCell>{task.endDate}</TableCell>
+                        <TableCell>{task.Start_Date}</TableCell>
+                        <TableCell>{task.End_Date}</TableCell>
                         <TableCell>
                           <IconButton
                             color="primary"
@@ -1124,14 +1120,17 @@ console.log("pagination",paginatedTasks)
                           </IconButton>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            color="primary"
+                        <AccessTimeIcon
+                          fontSize="large" // Use 'small', 'medium', 'large', or set via style
+                          style={{
+                            color: theme.palette.primary.main,
+                            fontSize: 30, // You can increase this number as needed (e.g., 36, 40)
+                            cursor: "pointer",
+                          }}
                             onClick={() => handleViewTask(task)}
-                          >
-                            View
-                          </Button>
+                          />
+                         
+                        
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1156,22 +1155,26 @@ console.log("pagination",paginatedTasks)
       </Grid>
 
       {/* Add Task Drawer */}
-      <Drawer anchor="right" open={drawerOpen} onClose={() => toggleDrawer(false)}>
-    <Box
-      sx={{
-        width: 400,
-        padding: 2,
-        position: "relative",
-        maxHeight: "90vh",
-        overflowY: "auto",
-        marginTop: "70px",
-      }}
-    >
-      <Typography variant="h5" sx={{ marginBottom: 3 }}>
-        Add Task
-      </Typography>
-      
-      {/* <Autocomplete
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => toggleDrawer(false)}
+      >
+        <Box
+          sx={{
+            width: 400,
+            padding: 2,
+            position: "relative",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            marginTop: "70px",
+          }}
+        >
+          <Typography variant="h5" sx={{ marginBottom: 3 }}>
+            Add Task
+          </Typography>
+
+          {/* <Autocomplete
   options={projects}
   getOptionLabel={(option) => option.Project_Name} // Show project name
   isOptionEqualToValue={(option, value) => option.ROWID === value?.ROWID} // Ensure correct selection
@@ -1196,42 +1199,44 @@ console.log("pagination",paginatedTasks)
   )}
 /> */}
 
+          <Autocomplete
+            options={data}
+            getOptionLabel={(option) => option.Project_Name}
+            isOptionEqualToValue={(option, value) =>
+              option.ROWID === value.ROWID
+            }
+            value={
+              projectName
+                ? data.find((option) => option.Project_Name === projectName)
+                : data.find((option) => option.ROWID === newTask.projectId) ||
+                  null
+            }
+            onChange={(event, newValue) => {
+              if (!projectName) {
+                handleInputChange({
+                  target: {
+                    name: "projectId",
+                    value: newValue ? newValue.ROWID : "",
+                  },
+                });
+              }
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Add Project"
+                name="projectId"
+                fullWidth
+                variant="outlined"
+                sx={{ marginBottom: 2 }}
+                error={!!errors.projectId}
+                helperText={errors.projectId}
+              />
+            )}
+            disabled={!!projectName}
+          />
 
-
-<Autocomplete
-  options={projects}
-  getOptionLabel={(option) => option.Project_Name}
-  isOptionEqualToValue={(option, value) => option.ROWID === value.ROWID}
-  value={
-    projectName
-      ? projects.find((option) => option.Project_Name === projectName)
-      : projects.find((option) => option.ROWID === newTask.projectId) || null
-  }
-  onChange={(event, newValue) => {
-    if (!projectName) {
-      handleInputChange({
-        target: { name: "projectId", value: newValue ? newValue.ROWID : "" },
-      });
-    }
-  }}
-  renderInput={(params) => (
-    <TextField
-      {...params}
-      label="Add Project"
-      name="projectId"
-      fullWidth
-      variant="outlined"
-      sx={{ marginBottom: 2 }}
-      error={!!errors.projectId}
-      helperText={errors.projectId}
-    />
-  )}
-  disabled={!!projectName}
-/>
-
-
-
-      {/* <TextField
+          {/* <TextField
         label="Add Project"
         name="project"
         fullWidth
@@ -1248,128 +1253,130 @@ console.log("pagination",paginatedTasks)
           </MenuItem>
         ))}
       </TextField> */}
-        
-      <TextField
-        label="Add Task"
-        name="name"
-        fullWidth
-        value={newTask.name}
-        onChange={handleInputChange}
-        sx={{ marginBottom: 2 }}
-        error={!!errors.name}
-        helperText={errors.name}
-      />
 
-<Autocomplete
-  multiple
-  options={assignOptions}
-  getOptionLabel={(option) => option.username}
-  value={assignOptions.filter((option) =>
-    Array.isArray(newTask.assignToID)
-      ? newTask.assignToID.includes(option.userID)
-      : typeof newTask.assignToID === "string"
-      ? newTask.assignToID.split(",").includes(option.userID)
-      : []
-  )}
-  onChange={(event, newValue) => {
-    const selectedValues = Array.isArray(newValue) ? newValue : [];
-    const selectedIDs = selectedValues.map((option) => option.userID);
+          <TextField
+            label="Add Task"
+            name="name"
+            fullWidth
+            value={newTask.name}
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.name}
+            helperText={errors.name}
+          />
 
-    handleInputChange({
-      target: {
-        name: "assignToID",
-        value: selectedIDs.length > 0 ? selectedIDs.join(",") : "", // Convert to a string
-      },
-    });
-  }}
-  renderInput={(params) => (
-    <TextField
-      {...params}
-      label="Associated"
-      name="assignToID"
-      fullWidth
-      error={!!errors.assignToID}
-      helperText={errors.assignToID}
-      sx={{ marginBottom: 2 }}
-    />
-  )}
-/>
-    
-      <TextField
-        select
-        fullWidth
-        label="Status"
-        name="status"
-        value={newTask.status}
-        onChange={handleInputChange}
-        sx={{ mb: 2 }}
-        error={!!errors.status}
-        helperText={errors.status}
-      >
-        {Object.keys(statusConfig).map((status) => (
-          <MenuItem
-            key={status}
-            value={status}
-            sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}
+          <Autocomplete
+            multiple
+            options={assignOptions}
+            getOptionLabel={(option) => option.username}
+            value={assignOptions.filter((option) =>
+              Array.isArray(newTask.assignToID)
+                ? newTask.assignToID.includes(option.userID)
+                : typeof newTask.assignToID === "string"
+                  ? newTask.assignToID.split(",").includes(option.userID)
+                  : []
+            )}
+            onChange={(event, newValue) => {
+              const selectedValues = Array.isArray(newValue) ? newValue : [];
+              const selectedIDs = selectedValues.map((option) => option.userID);
+
+              handleInputChange({
+                target: {
+                  name: "assignToID",
+                  value: selectedIDs.length > 0 ? selectedIDs.join(",") : "", // Convert to a string
+                },
+              });
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Associated"
+                name="assignToID"
+                fullWidth
+                error={!!errors.assignToID}
+                helperText={errors.assignToID}
+                sx={{ marginBottom: 2 }}
+              />
+            )}
+          />
+
+          <TextField
+            select
+            fullWidth
+            label="Status"
+            name="status"
+            value={newTask.status}
+            onChange={handleInputChange}
+            sx={{ mb: 2 }}
+            error={!!errors.status}
+            helperText={errors.status}
           >
-            <Box
-              component={statusConfig[status].icon}
-              sx={{ color: statusConfig[status].color, fontSize: "1.1rem" }}
-            />
-            <Typography sx={{ color: statusConfig[status].color, fontWeight: 500 }}>
-              {status}
-            </Typography>
-          </MenuItem>
-        ))}
-      </TextField>
+            {Object.keys(statusConfig).map((status) => (
+              <MenuItem
+                key={status}
+                value={status}
+                sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}
+              >
+                <Box
+                  component={statusConfig[status].icon}
+                  sx={{ color: statusConfig[status].color, fontSize: "1.1rem" }}
+                />
+                <Typography
+                  sx={{ color: statusConfig[status].color, fontWeight: 500 }}
+                >
+                  {status}
+                </Typography>
+              </MenuItem>
+            ))}
+          </TextField>
 
-      <TextField
-        label="Start Date"
-        name="startDate"
-        fullWidth
-        type="date"
-        value={newTask.startDate}
-        onChange={handleInputChange}
-        InputLabelProps={{ shrink: true }}
-        sx={{ marginBottom: 2 }}
-        error={!!errors.startDate}
-        helperText={errors.startDate}
-      />
+          <TextField
+            label="Start Date"
+            name="startDate"
+            fullWidth
+            type="date"
+            value={newTask.startDate}
+            onChange={handleInputChange}
+            InputLabelProps={{ shrink: true }}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.startDate}
+            helperText={errors.startDate}
+          />
 
-      <TextField
-        label="End Date"
-        name="endDate"
-        fullWidth
-        type="date"
-        value={newTask.endDate}
-        onChange={handleInputChange}
-        InputLabelProps={{ shrink: true }}
-        sx={{ marginBottom: 2 }}
-        error={!!errors.endDate}
-        helperText={errors.endDate}
-      />
+          <TextField
+            label="End Date"
+            name="endDate"
+            fullWidth
+            type="date"
+            value={newTask.endDate}
+            onChange={handleInputChange}
+            InputLabelProps={{ shrink: true }}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.endDate}
+            helperText={errors.endDate}
+          />
 
-      <TextField
-        label="Add Description"
-        name="description"
-        fullWidth
-        multiline
-        rows={4}
-        value={newTask.description}
-        onChange={handleInputChange}
-        sx={{ marginBottom: 3 }}
-      />
+          <TextField
+            label="Add Description"
+            name="description"
+            fullWidth
+            multiline
+            rows={4}
+            value={newTask.description}
+            onChange={handleInputChange}
+            sx={{ marginBottom: 3 }}
+          />
 
-      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Button variant="contained" color="primary" onClick={handleSubmit}>
-          Add
-        </Button>
-        <Button variant="outlined" color="error" onClick={handleCancel}>
-          Cancel
-        </Button>
-      </Box>
-    </Box>
-  </Drawer>
+          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+            <Button variant="contained" color="primary" onClick={handleSubmit}>
+              Add
+            </Button>
+            <Button variant="outlined" color="error" onClick={handleCancel}>
+              Cancel
+            </Button>
+          </Box>
+        </Box>
+      </Drawer>
 
       {/* Edit Task */}
       <Modal
@@ -1399,63 +1406,67 @@ console.log("pagination",paginatedTasks)
             <>
               <TextField
                 label="Task Name"
-                name="name"
+                name="Task_Name"
                 fullWidth
-                value={currentTask.name}
+                value={currentTask.Task_Name}
                 onChange={handleEditInputChange}
                 sx={{ mb: 2 }}
               />
 
               <TextField
                 label="Project"
-                name="project"
+                name="Project_Name"
                 fullWidth
                 select
-                value={currentTask.projectId || ""}
+                value={currentTask.ProjectID || ""}
                 onChange={handleEditInputChange}
                 sx={{ mb: 2 }}
               >
-                {projects.map((option) => (
+                {data.map((option) => (
                   <MenuItem key={option.ROWID} value={option.ROWID}>
                     {option.Project_Name}
                   </MenuItem>
                 ))}
               </TextField>
 
-              <TextField
-                label="Associated"
-                name="associated"
+              <Autocomplete
+                multiple
                 fullWidth
-                select
-                SelectProps={{ multiple: true }}
-                value={
-                  currentTask.assignToID
-                    ? currentTask.assignToID.split(",")
+                options={assignOptions}
+                getOptionLabel={(option) => option.username}
+                value={assignOptions.filter((opt) =>
+                  currentTask.Assign_To_ID
+                    ? currentTask.Assign_To_ID.split(",").includes(opt.userID)
                     : []
-                }
-                onChange={handleEditInputChange}
-                sx={{ mb: 2 }}
-              >
-                {assignOptions.map((option) => (
-                  <MenuItem key={option.userID} value={option.userID}>
-                    {option.username}
-                  </MenuItem>
-                ))}
-              </TextField>
+                )}
+                onChange={(event, newValue) => {
+                  const selectedIDs = newValue.map((item) => item.userID);
+                  const selectedNames = newValue.map((item) => item.username);
+
+                  setCurrentTask((prev) => ({
+                    ...prev,
+                    Assign_To_ID: selectedIDs.join(","),
+                    Assign_To: selectedNames.join(", "),
+                  }));
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Associated" sx={{ mb: 2 }} />
+                )}
+              />
 
               <TextField
                 select
                 fullWidth
                 label="Status"
-                name="status"
-                value={currentTask.status}
+                name="Status"
+                value={currentTask.Status}
                 onChange={handleEditInputChange}
                 sx={{ mb: 2 }}
               >
-                {Object.keys(statusConfig).map((status) => (
+                {Object.keys(statusConfig).map((Status) => (
                   <MenuItem
-                    key={status}
-                    value={status}
+                    key={Status}
+                    value={Status}
                     sx={{
                       display: "flex",
                       alignItems: "center",
@@ -1464,19 +1475,19 @@ console.log("pagination",paginatedTasks)
                     }}
                   >
                     <Box
-                      component={statusConfig[status].icon}
+                      component={statusConfig[Status].icon}
                       sx={{
-                        color: statusConfig[status].color,
+                        color: statusConfig[Status].color,
                         fontSize: "1.1rem",
                       }}
                     />
                     <Typography
                       sx={{
-                        color: statusConfig[status].color,
+                        color: statusConfig[Status].color,
                         fontWeight: 500,
                       }}
                     >
-                      {status}
+                      {Status}
                     </Typography>
                   </MenuItem>
                 ))}
@@ -1484,10 +1495,10 @@ console.log("pagination",paginatedTasks)
 
               <TextField
                 label="Start Date"
-                name="startDate"
+                name="Start_Date"
                 fullWidth
                 type="date"
-                value={currentTask.startDate}
+                value={currentTask.Start_Date}
                 onChange={handleEditInputChange}
                 InputLabelProps={{ shrink: true }}
                 sx={{ mb: 2 }}
@@ -1495,10 +1506,10 @@ console.log("pagination",paginatedTasks)
 
               <TextField
                 label="End Date"
-                name="endDate"
+                name="End_Date"
                 fullWidth
                 type="date"
-                value={currentTask.endDate}
+                value={currentTask.End_Date}
                 onChange={handleEditInputChange}
                 InputLabelProps={{ shrink: true }}
                 sx={{ mb: 2 }}
@@ -1506,11 +1517,11 @@ console.log("pagination",paginatedTasks)
 
               <TextField
                 label="Add Description"
-                name="description"
+                name="Description"
                 fullWidth
                 multiline
                 rows={4}
-                value={currentTask.description}
+                value={currentTask.Description}
                 onChange={handleEditInputChange}
                 sx={{ marginBottom: 3 }}
               />
@@ -1536,12 +1547,13 @@ console.log("pagination",paginatedTasks)
         </Box>
       </Modal>
 
+      {console.log("viewtask", viewTask)}
       {/* time entry */}
       {viewTask ? (
         <TimeEntry
           theme={theme}
           handleEditInputChange={handleEditInputChange}
-          projects={projects}
+          projects={data}
           statusOptions={statusOptions}
           handleUpdateTask={handleUpdateTask}
           viewModalOpen={viewModalOpen}
@@ -1563,8 +1575,7 @@ console.log("pagination",paginatedTasks)
         <DialogTitle id="delete-dialog-title">{"Confirm Delete"}</DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            Are you sure you want to delete task "{taskToDelete?.name}"? This
-            action cannot be undone.
+            Are you sure you want to delete task "{taskToDelete?.Task_Name}"?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -1616,1449 +1627,3 @@ console.log("pagination",paginatedTasks)
 }
 
 export default Task;
-
-
-
-
-
-
-// import React, { useEffect, useState } from "react";
-// import {
-//   Box,
-//   Grid,
-//   Typography,
-//   Button,
-//   TextField,
-//   Card,
-//   CardContent,
-//   Table,
-//   TableBody,
-//   TableCell,
-//   TableContainer,
-//   TableHead,
-//   TableRow,
-//   Paper,
-//   TableFooter,
-//   TablePagination,
-//   IconButton,
-//   Drawer,
-//   MenuItem,
-//   Modal,
-//   useTheme,
-//   Popover,
-//   List,
-//   ListItem,
-//   ListItemText,
-//   Tooltip,
-//   Chip,
-//   Dialog,
-//   DialogTitle,
-//   DialogContent,
-//   DialogContentText,
-//   DialogActions,
-//   Snackbar,
-//   Alert,
-// } from "@mui/material";
-// import Skeleton from "@mui/material/Skeleton";
-// import EditIcon from "@mui/icons-material/Edit";
-// import DeleteIcon from "@mui/icons-material/Delete";
-// import {
-//   FaTasks,
-//   FaUsers,
-//   FaCheckCircle,
-//   FaHourglassHalf,
-//   FaPlayCircle,
-// } from "react-icons/fa";
-// import axios from "axios";
-// import { TimeEntry } from "./TimeEntry";
-// import Slide from "@mui/material/Slide";
-
-// const statusOptions = ["Open", "In Progress", "Completed"];
-// const statusConfig = {
-//   Completed: {
-//     icon: FaCheckCircle,
-//     color: "#2e7d32",
-//     backgroundColor: "#e6f4ea",
-//     borderColor: "#a5d6a7",
-//   },
-//   "In Progress": {
-//     icon: FaPlayCircle,
-//     color: "#1976d2",
-//     backgroundColor: "#e8f0fe",
-//     borderColor: "#90caf9",
-//   },
-//   Pending: {
-//     icon: FaHourglassHalf,
-//     color: "#ed6c02",
-//     backgroundColor: "#fff8e6",
-//     borderColor: "#ffb74d",
-//   },
-// };
-
-// function Task() {
-//   const theme = useTheme();
-//   const [tasks, setTasks] = useState([]);
-//   const [projects, setProjects] = useState([]);
-//   const [searchQuery, setSearchQuery] = useState("");
-//   const [page, setPage] = useState(0);
-//   const [rowsPerPage, setRowsPerPage] = useState(10);
-//   const [drawerOpen, setDrawerOpen] = useState(false);
-//   const [editModalOpen, setEditModalOpen] = useState(false);
-//   const [currentTask, setCurrentTask] = useState(null);
-//   const [viewModalOpen, setViewModalOpen] = useState(false);
-//   const [viewTask, setViewTask] = useState(null);
-//   const [assignOptions, setAssignOptions] = useState([]);
-//   const [anchorEl, setAnchorEl] = useState(null);
-//   const [selectedAssignees, setSelectedAssignees] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-//   const [taskToDelete, setTaskToDelete] = useState(null);
-//   const [snackbar, setSnackbar] = useState({
-//     open: false,
-//     message: "",
-//     severity: "success",
-//   });
-
-//   const [newTask, setNewTask] = useState({
-//     projectId: "",
-//     project_name: "",
-//     name: "",
-//     assignTo: "",
-//     assignToID: "",
-//     status: "",
-//     startDate: "",
-//     endDate: "",
-//     description: "",
-//   });
-
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       setLoading(true);
-//       try {
-//         const TaskResponse = await axios.get(
-//           "/server/time_entry_management_application_function/tasks"
-//         );
-//         const ProjectResponse = await axios.get(
-//           "/server/time_entry_management_application_function/projects"
-//         );
-//         const EmployeeResponse = await axios.get(
-//           "/server/time_entry_management_application_function/employee"
-//         );
-
-//         if (EmployeeResponse.status === 200) {
-//           const formattedAssignTo = EmployeeResponse.data.users
-//             .filter(
-//               (employee) =>
-//                 employee.role_details.role_name !== "Admin" &&
-//                 employee.role_details.role_name !== "Super Admin"
-//             )
-//             .map((employee) => ({
-//               username: `${employee.first_name} ${employee.last_name}`,
-//               userID: employee.user_id,
-//             }));
-
-//           setAssignOptions(formattedAssignTo);
-//         }
-
-//         const tasksFromResponse = TaskResponse.data.data.map((item) => ({
-//           id: item.ROWID,
-//           taskid: item.ROWID,
-//           name: item.Task_Name,
-//           projectId: item.ProjectID,
-//           project_name: item.Project_Name,
-//           assignTo: item.Assign_To,
-//           assignToID: item.Assign_To_ID,
-//           status: item.Status,
-//           startDate: item.Start_Date,
-//           endDate: item.End_Date,
-//           description: item.Description,
-//         }));
-
-//         setTasks(tasksFromResponse);
-//         setProjects(ProjectResponse.data.data);
-
-//         //console.log("tasks=>", tasksFromResponse);
-//         //console.log("projects=>", ProjectResponse.data.data);
-//         //console.log("assignTo=>", assignOptions);
-//       } catch (error) {
-//         console.error("Error fetching data:", error);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchData();
-//   }, []);
-
-//   const handleSearch = (event) => {
-//     setSearchQuery(event.target.value);
-//   };
-
-//   const handleChangePage = (event, newPage) => {
-//     setPage(newPage);
-//   };
-
-//   const handleChangeRowsPerPage = (event) => {
-//     setRowsPerPage(parseInt(event.target.value, 10));
-//     setPage(0);
-//   };
-
-//   const filteredTasks = tasks.filter((task) =>
-//     task.name.toLowerCase().includes(searchQuery.toLowerCase())
-//   );
-
-//   const paginatedTasks = filteredTasks.slice(
-//     page * rowsPerPage,
-//     page * rowsPerPage + rowsPerPage
-//   );
-
-//   const toggleDrawer = (open) => {
-//     setDrawerOpen(open);
-//   };
-
-//   const handleInputChange = (event) => {
-//     const { name, value } = event.target;
-
-//     if (name === "project") {
-//       const selectedOption = projects.find((option) => option.ROWID === value);
-//       //console.log(selectedOption);
-
-//       if (selectedOption) {
-//         setNewTask((prev) => ({
-//           ...prev,
-//           project_name: selectedOption.Project_Name,
-//           projectId: selectedOption.ROWID,
-//         }));
-//       }
-//     } else if (name === "associated") {
-//       // Handle multiple selections
-//       const selectedValues = event.target.value;
-//       const selectedUsernames = selectedValues
-//         .map((id) => {
-//           const user = assignOptions.find((option) => option.userID === id);
-//           return user ? user.username : "";
-//         })
-//         .filter((name) => name)
-//         .join(", ");
-
-//       setNewTask((prev) => ({
-//         ...prev,
-//         assignTo: selectedUsernames,
-//         assignToID: selectedValues.join(","),
-//       }));
-//     } else {
-//       setNewTask((prev) => ({ ...prev, [name]: value }));
-//     }
-//   };
-
-//   const handleAlert = (severity, message) => {
-//     setSnackbar({
-//       open: true,
-//       message,
-//       severity,
-//     });
-//   };
-
-//   const handleCloseSnackbar = (event, reason) => {
-//     if (reason === "clickaway") {
-//       return;
-//     }
-//     setSnackbar((prev) => ({ ...prev, open: false }));
-//   };
-
-//   function SlideTransition(props) {
-//     return <Slide {...props} direction="down" />;
-//   }
-
-//   const handleAddTask = async () => {
-//     //console.log("newTask", newTask);
-//     try {
-//       // Ensure assignToID is properly formatted as a string
-//       const assignToID = Array.isArray(newTask.assignToID)
-//         ? newTask.assignToID.join(",")
-//         : newTask.assignToID;
-
-//       const response = await axios.post(
-//         "/server/time_entry_management_application_function/tasks",
-//         {
-//           Status: newTask.status,
-//           Description: newTask.description,
-//           Assign_To: newTask.assignTo, // Already comma-separated string of names
-//           Assign_To_ID: assignToID, // Ensure it's a comma-separated string of IDs
-//           ProjectID: newTask.projectId,
-//           Project_Name: newTask.project_name,
-//           Task_Name: newTask.name,
-//           Start_Date: newTask.startDate,
-//           End_Date: newTask.endDate,
-//         }
-//       );
-
-//       const updateData = {
-//         id: response.data.data.ROWID,
-//         taskid:
-//           "TASK " +
-//           response.data.data.ROWID.substr(response.data.data.ROWID.length - 4),
-//         name: response.data.data.Task_Name,
-//         projectId: response.data.data.ProjectID,
-//         project_name: response.data.data.Project_Name,
-//         assignTo: response.data.data.Assign_To,
-//         assignToID: response.data.data.Assign_To_ID,
-//         status: response.data.data.Status,
-//         startDate: response.data.data.Start_Date,
-//         endDate: response.data.data.End_Date,
-//         description: response.data.data.Description,
-//       };
-
-//       const newTaskData = [...tasks, updateData];
-//       setTasks(newTaskData);
-//       handleCancel();
-//       handleAlert("success", "Task added successfully");
-//     } catch (error) {
-//       handleAlert("error", error.message || "Error adding task");
-//     }
-//   };
-
-//   const handleCancel = () => {
-//     setNewTask({
-//       project: "",
-//       name: "",
-//       assignTo: "",
-//       status: "",
-//       startDate: "",
-//       endDate: "",
-//       description: "",
-//     });
-//     toggleDrawer(false);
-//   };
-
-//   const handleEdit = (task) => {
-//     setCurrentTask(task);
-//     setEditModalOpen(true);
-//   };
-
-//   const handleDelete = async (ROWID) => {
-//     const response = await axios.delete(
-//       `/server/time_entry_management_application_function/tasks/${ROWID}`
-//     );
-
-//     const newTasksData = tasks.filter((item) => item.id !== ROWID);
-//     setTasks(newTasksData);
-//   };
-
-//   const handleUpdateTask = async () => {
-//     //console.log(currentTask);
-//     try {
-//       const ROWID = currentTask.id;
-//       // Ensure assignToID is properly formatted as a string
-//       const assignToID = Array.isArray(currentTask.assignToID)
-//         ? currentTask.assignToID.join(",")
-//         : currentTask.assignToID;
-
-//       const updateResponse = await axios.post(
-//         `/server/time_entry_management_application_function/tasks/${ROWID}`,
-//         {
-//           Status: currentTask.status,
-//           Description: currentTask.description,
-//           Assign_To: currentTask.assignTo, // Already comma-separated string of names
-//           Assign_To_ID: assignToID, // Ensure it's a comma-separated string of IDs
-//           ProjectID: currentTask.projectId,
-//           Project_Name: currentTask.project_name,
-//           Task_Name: currentTask.name,
-//           Start_Date: currentTask.startDate,
-//           End_Date: currentTask.endDate,
-//         }
-//       );
-
-//       if (updateResponse.status === 200) {
-//         setTasks((prev) =>
-//           prev.map((task) =>
-//             task.id === currentTask.id
-//               ? {
-//                   ...currentTask,
-//                   assignToID: assignToID, // Ensure the updated task has the correct format
-//                 }
-//               : task
-//           )
-//         );
-//         setCurrentTask(null);
-//         setEditModalOpen(false);
-//         handleAlert("success", "Task updated successfully");
-//       } else {
-//         handleAlert("error", "Failed to update task");
-//       }
-//     } catch (error) {
-//       handleAlert("error", error.message || "Error updating task");
-//     }
-//   };
-
-//   const handleEditInputChange = (event) => {
-//     const { name, value } = event.target;
-
-//     if (name === "project") {
-//       const selectedOption = projects.find((option) => option.ROWID === value);
-
-//       if (selectedOption) {
-//         setCurrentTask((prev) => ({
-//           ...prev,
-//           project_name: selectedOption.Project_Name,
-//           projectId: selectedOption.ROWID,
-//         }));
-//       }
-//     } else if (name === "associated") {
-//       // Handle multiple selections
-//       const selectedValues = event.target.value;
-//       const selectedUsernames = selectedValues
-//         .map((id) => {
-//           const user = assignOptions.find((option) => option.userID === id);
-//           return user ? user.username : "";
-//         })
-//         .filter((name) => name)
-//         .join(", ");
-
-//       setCurrentTask((prev) => ({
-//         ...prev,
-//         assignTo: selectedUsernames,
-//         assignToID: selectedValues.join(","),
-//       }));
-//     } else {
-//       setCurrentTask((prev) => ({ ...prev, [name]: value }));
-//     }
-//   };
-
-//   const handleCloseEditModal = () => {
-//     setEditModalOpen(false);
-//   };
-
-//   const handleViewTask = (task) => {
-//     setViewTask(task);
-//     setViewModalOpen(true);
-//   };
-
-//   const handleCloseViewModal = () => {
-//     setViewTask(null);
-//     setViewModalOpen(false);
-//   };
-
-//   const handleAssigneeClick = (event, assignees) => {
-//     setSelectedAssignees(assignees.split(",").map((name) => name.trim()));
-//     setAnchorEl(event.currentTarget);
-//   };
-
-//   const handleClosePopover = () => {
-//     setAnchorEl(null);
-//   };
-
-//   const handleDeleteClick = (task) => {
-//     setTaskToDelete(task);
-//     setDeleteConfirmOpen(true);
-//   };
-
-//   const handleDeleteConfirm = async () => {
-//     if (taskToDelete) {
-//       try {
-//         const response = await axios.delete(
-//           `/server/time_entry_management_application_function/tasks/${taskToDelete.id}`
-//         );
-//         if (response.status === 200) {
-//           setTasks((prevTasks) =>
-//             prevTasks.filter((task) => task.id !== taskToDelete.id)
-//           );
-//           handleAlert("success", "Task deleted successfully");
-//         } else {
-//           handleAlert("error", "Failed to delete task");
-//         }
-//       } catch (error) {
-//         handleAlert("error", error.message || "Error deleting task");
-//       } finally {
-//         setDeleteConfirmOpen(false);
-//         setTaskToDelete(null);
-//       }
-//     }
-//   };
-
-//   const handleDeleteCancel = () => {
-//     setDeleteConfirmOpen(false);
-//     setTaskToDelete(null);
-//   };
-
-//   return (
-//     <Box sx={{ padding: 3 }}>
-//       <Box
-//         sx={{
-//           display: "flex",
-//           justifyContent: "space-between",
-//           alignItems: "center",
-//           marginBottom: 3,
-//         }}
-//       >
-//         <Typography variant="h4">Tasks</Typography>
-//       </Box>
-
-//       <Grid container spacing={3}>
-//         <Grid item xs={12}>
-//           <Card>
-//             <CardContent
-//               sx={{
-//                 display: "flex",
-//                 justifyContent: "space-between",
-//                 alignItems: "center",
-//               }}
-//             >
-//               <TextField
-//                 label="Search Tasks"
-//                 variant="outlined"
-//                 size="small"
-//                 value={searchQuery}
-//                 onChange={handleSearch}
-//                 sx={{ width: "40%" }}
-//               />
-//               <Button
-//                 variant="contained"
-//                 color="primary"
-//                 onClick={() => toggleDrawer(true)}
-//               >
-//                 Add Task
-//               </Button>
-//             </CardContent>
-//           </Card>
-//         </Grid>
-
-//         <Grid item xs={12}>
-//           {loading ? (
-//             <Table>
-//               <TableHead>
-//                 <TableRow
-//                   sx={{
-//                     backgroundColor: theme.palette.primary.main,
-//                   }}
-//                 >
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Task ID
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Task Name
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Project Name
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Status
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Start Date
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     End Date
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Description
-//                   </TableCell>
-//                 </TableRow>
-//               </TableHead>
-//               <TableBody>
-//                 <TableRow>
-//                   <TableCell colSpan={7}>
-//                     <Box
-//                       sx={{
-//                         display: "flex",
-//                         flexDirection: "column",
-//                         alignItems: "center",
-//                         justifyContent: "center",
-//                         height: "300px",
-//                         gap: 2,
-//                       }}
-//                     >
-//                       {[...Array(6)].map((_, index) => (
-//                         <Box
-//                           key={index}
-//                           sx={{
-//                             display: "flex",
-//                             width: "100%",
-//                             height: "40px",
-//                             alignItems: "center",
-//                             gap: 2,
-//                           }}
-//                         >
-//                           <Skeleton variant="text" width="8%" />
-//                           <Skeleton variant="text" width="15%" />
-//                           <Skeleton variant="text" width="10%" />
-//                           <Skeleton variant="text" width="12%" />
-//                           <Skeleton variant="text" width="15%" />
-//                           <Skeleton variant="text" width="12%" />
-//                           <Skeleton variant="text" width="12%" />
-//                           <Skeleton variant="text" width="8%" />
-//                           <Skeleton variant="text" width="8%" />
-//                         </Box>
-//                       ))}
-//                     </Box>
-//                   </TableCell>
-//                 </TableRow>
-//               </TableBody>
-//             </Table>
-//           ) : tasks.length === 0 ? (
-//             <Table>
-//               <TableHead>
-//                 <TableRow
-//                   sx={{
-//                     backgroundColor: theme.palette.primary.main,
-//                   }}
-//                 >
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Task ID
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Task Name
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Project Name
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Associated
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Status
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Start Date
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     End Date
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Action
-//                   </TableCell>
-//                   <TableCell
-//                     sx={{
-//                       color: theme.palette.primary.contrastText,
-//                       fontWeight: "bold",
-//                     }}
-//                   >
-//                     Time
-//                   </TableCell>
-//                 </TableRow>
-//               </TableHead>
-//               <TableBody>
-//                 <TableRow>
-//                   <TableCell colSpan={8}>
-//                     <Box
-//                       sx={{
-//                         p: 3,
-//                         textAlign: "center",
-//                         minHeight: "200px",
-//                         display: "flex",
-//                         flexDirection: "column",
-//                         justifyContent: "center",
-//                         alignItems: "center",
-//                         gap: 2,
-//                       }}
-//                     >
-//                       <FaTasks size={50} color={theme.palette.text.secondary} />
-//                       <Typography variant="h5" color="text.secondary">
-//                         No Tasks Found
-//                       </Typography>
-//                       <Typography variant="body1" color="text.secondary">
-//                         There are no tasks to display.
-//                       </Typography>
-//                     </Box>
-//                   </TableCell>
-//                 </TableRow>
-//               </TableBody>
-//             </Table>
-//           ) : (
-//             <TableContainer component={Paper}>
-//               <Table>
-//                 <TableHead>
-//                   <TableRow
-//                     sx={{
-//                       backgroundColor: theme.palette.primary.main,
-//                     }}
-//                   >
-//                     <TableCell
-//                       sx={{
-//                         color: theme.palette.primary.contrastText,
-//                         fontWeight: "bold",
-//                       }}
-//                     >
-//                       Task ID
-//                     </TableCell>
-//                     <TableCell
-//                       sx={{
-//                         color: theme.palette.primary.contrastText,
-//                         fontWeight: "bold",
-//                       }}
-//                     >
-//                       Task Name
-//                     </TableCell>
-//                     <TableCell
-//                       sx={{
-//                         color: theme.palette.primary.contrastText,
-//                         fontWeight: "bold",
-//                       }}
-//                     >
-//                       Project Name
-//                     </TableCell>
-//                     <TableCell
-//                       sx={{
-//                         color: theme.palette.primary.contrastText,
-//                         fontWeight: "bold",
-//                       }}
-//                     >
-//                       Associated
-//                     </TableCell>
-//                     <TableCell
-//                       sx={{
-//                         color: theme.palette.primary.contrastText,
-//                         fontWeight: "bold",
-//                       }}
-//                     >
-//                       Status
-//                     </TableCell>
-//                     <TableCell
-//                       sx={{
-//                         color: theme.palette.primary.contrastText,
-//                         fontWeight: "bold",
-//                       }}
-//                     >
-//                       Start Date
-//                     </TableCell>
-//                     <TableCell
-//                       sx={{
-//                         color: theme.palette.primary.contrastText,
-//                         fontWeight: "bold",
-//                       }}
-//                     >
-//                       End Date
-//                     </TableCell>
-//                     <TableCell
-//                       sx={{
-//                         color: theme.palette.primary.contrastText,
-//                         fontWeight: "bold",
-//                       }}
-//                     >
-//                       Action
-//                     </TableCell>
-//                     <TableCell
-//                       sx={{
-//                         color: theme.palette.primary.contrastText,
-//                         fontWeight: "bold",
-//                       }}
-//                     >
-//                       Time Entry
-//                     </TableCell>
-//                   </TableRow>
-//                 </TableHead>
-//                 {loading ? (
-//                   <TableBody>
-//                     <TableRow>
-//                       <TableCell colSpan={7}>
-//                         <Box
-//                           sx={{
-//                             display: "flex",
-//                             flexDirection: "column",
-//                             alignItems: "center",
-//                             justifyContent: "center",
-//                             height: "300px",
-//                             gap: 2,
-//                           }}
-//                         >
-//                           {[...Array(6)].map((_, index) => (
-//                             <Box
-//                               key={index}
-//                               sx={{
-//                                 display: "flex",
-//                                 width: "100%",
-//                                 height: "40px",
-//                                 alignItems: "center",
-//                                 gap: 2,
-//                               }}
-//                             >
-//                               <Skeleton variant="text" width="8%" />
-//                               <Skeleton variant="text" width="15%" />
-//                               <Skeleton variant="text" width="10%" />
-//                               <Skeleton variant="text" width="12%" />
-//                               <Skeleton variant="text" width="15%" />
-//                               <Skeleton variant="text" width="12%" />
-//                               <Skeleton variant="text" width="12%" />
-//                               <Skeleton variant="text" width="8%" />
-//                               <Skeleton variant="text" width="8%" />
-//                             </Box>
-//                           ))}
-//                         </Box>
-//                       </TableCell>
-//                     </TableRow>
-//                   </TableBody>
-//                 ) : tasks.length === 0 ? (
-//                   <TableBody>
-//                     <TableRow>
-//                       <TableCell colSpan={9} sx={{ p: 0 }}>
-//                         <Box
-//                           sx={{
-//                             width: "100%",
-//                             display: "flex",
-//                             flexDirection: "column",
-//                             gap: 1,
-//                             p: 2,
-//                           }}
-//                         >
-//                           {[...Array(6)].map((_, index) => (
-//                             <Box
-//                               key={index}
-//                               sx={{
-//                                 display: "flex",
-//                                 width: "100%",
-//                                 height: "40px",
-//                                 alignItems: "center",
-//                                 gap: 2,
-//                               }}
-//                             >
-//                               <Skeleton variant="text" width="8%" />{" "}
-//                               {/* Task ID */}
-//                               <Skeleton variant="text" width="15%" />{" "}
-//                               {/* Task Name */}
-//                               <Skeleton variant="text" width="15%" />{" "}
-//                               {/* Project Name */}
-//                               <Skeleton variant="text" width="12%" />{" "}
-//                               {/* Associated */}
-//                               <Skeleton variant="text" width="10%" />{" "}
-//                               {/* Status */}
-//                               <Skeleton variant="text" width="12%" />{" "}
-//                               {/* Start Date */}
-//                               <Skeleton variant="text" width="12%" />{" "}
-//                               {/* End Date */}
-//                               <Skeleton variant="text" width="8%" />{" "}
-//                               {/* Actions */}
-//                               <Skeleton variant="text" width="8%" />{" "}
-//                               {/* Time Entry */}
-//                             </Box>
-//                           ))}
-//                         </Box>
-//                       </TableCell>
-//                     </TableRow>
-//                   </TableBody>
-//                 ) : (
-//                   <TableBody>
-//                     {paginatedTasks.map((task) => (
-//                       <TableRow key={task.id}>
-//                         <TableCell>
-//                           {"T" + task.id.substr(task.id.length - 4)}
-//                         </TableCell>
-//                         <TableCell>{task.name}</TableCell>
-//                         <TableCell>{task.project_name}</TableCell>
-//                         <TableCell>
-//                           <Tooltip title="View Assignees">
-//                             <IconButton
-//                               size="small"
-//                               onClick={(e) =>
-//                                 handleAssigneeClick(e, task.assignTo)
-//                               }
-//                               sx={{ color: theme.palette.primary.main }}
-//                             >
-//                               <FaUsers />
-//                               <Typography variant="body2" sx={{ ml: 1 }}>
-//                                 {task.assignTo.split(",").length}
-//                               </Typography>
-//                             </IconButton>
-//                           </Tooltip>
-
-//                           <Popover
-//                             open={Boolean(anchorEl)}
-//                             anchorEl={anchorEl}
-//                             onClose={handleClosePopover}
-//                             anchorOrigin={{
-//                               vertical: "bottom",
-//                               horizontal: "left",
-//                             }}
-//                             transformOrigin={{
-//                               vertical: "top",
-//                               horizontal: "left",
-//                             }}
-//                           >
-//                             <List
-//                               sx={{
-//                                 minWidth: 200,
-//                                 maxWidth: 300,
-//                                 p: 1,
-//                                 bgcolor: theme.palette.background.paper,
-//                                 boxShadow: theme.shadows[2],
-//                                 borderRadius: 1,
-//                               }}
-//                             >
-//                               <Typography
-//                                 variant="subtitle2"
-//                                 sx={{
-//                                   px: 2,
-//                                   py: 1,
-//                                   color: theme.palette.text.secondary,
-//                                   borderBottom: `1px solid ${theme.palette.divider}`,
-//                                 }}
-//                               >
-//                                 Assigned Users
-//                               </Typography>
-//                               {selectedAssignees.map((assignee, index) => (
-//                                 <ListItem key={index} sx={{ py: 0.5 }}>
-//                                   <ListItemText
-//                                     primary={assignee}
-//                                     primaryTypographyProps={{
-//                                       variant: "body2",
-//                                     }}
-//                                   />
-//                                 </ListItem>
-//                               ))}
-//                             </List>
-//                           </Popover>
-//                         </TableCell>
-//                         <TableCell>
-//                           <Chip
-//                             icon={
-//                               <Box
-//                                 component={
-//                                   statusConfig[task.status]?.icon ||
-//                                   FaHourglassHalf
-//                                 }
-//                                 sx={{
-//                                   fontSize: "1rem !important",
-//                                   mr: "4px !important",
-//                                   ml: "4px !important",
-//                                   color:
-//                                     statusConfig[task.status]?.color ||
-//                                     "#757575",
-//                                 }}
-//                               />
-//                             }
-//                             label={task.status}
-//                             sx={{
-//                               backgroundColor:
-//                                 statusConfig[task.status]?.backgroundColor ||
-//                                 "#f5f5f5",
-//                               color:
-//                                 statusConfig[task.status]?.color || "#757575",
-//                               border: `1px solid ${statusConfig[task.status]?.borderColor || "#e0e0e0"}`,
-//                               fontWeight: 500,
-//                               "& .MuiChip-label": {
-//                                 px: 1,
-//                               },
-//                               minWidth: 110,
-//                               height: 28,
-//                               borderRadius: "14px",
-//                               "&:hover": {
-//                                 backgroundColor:
-//                                   statusConfig[task.status]?.backgroundColor ||
-//                                   "#f5f5f5",
-//                                 opacity: 0.9,
-//                               },
-//                             }}
-//                             size="small"
-//                           />
-//                         </TableCell>
-//                         <TableCell>{task.startDate}</TableCell>
-//                         <TableCell>{task.endDate}</TableCell>
-//                         <TableCell>
-//                           <IconButton
-//                             color="primary"
-//                             onClick={() => handleEdit(task)}
-//                           >
-//                             <EditIcon />
-//                           </IconButton>
-//                           <IconButton
-//                             color="error"
-//                             onClick={() => handleDeleteClick(task)}
-//                           >
-//                             <DeleteIcon />
-//                           </IconButton>
-//                         </TableCell>
-//                         <TableCell>
-//                           <Button
-//                             variant="outlined"
-//                             size="small"
-//                             color="primary"
-//                             onClick={() => handleViewTask(task)}
-//                           >
-//                             View
-//                           </Button>
-//                         </TableCell>
-//                       </TableRow>
-//                     ))}
-//                   </TableBody>
-//                 )}
-//                 <TableFooter>
-//                   <TableRow>
-//                     <TablePagination
-//                       rowsPerPageOptions={[5, 10, 20]}
-//                       count={filteredTasks.length}
-//                       rowsPerPage={rowsPerPage}
-//                       page={page}
-//                       onPageChange={handleChangePage}
-//                       onRowsPerPageChange={handleChangeRowsPerPage}
-//                     />
-//                   </TableRow>
-//                 </TableFooter>
-//               </Table>
-//             </TableContainer>
-//           )}
-//         </Grid>
-//       </Grid>
-
-//       {/* Add Task Drawer */}
-//       <Drawer
-//         anchor="right"
-//         open={drawerOpen}
-//         onClose={() => toggleDrawer(false)}
-//       >
-//         <Box
-//           sx={{
-//             width: 400,
-//             padding: 2,
-//             position: "relative",
-//             maxHeight: "90vh",
-//             overflowY: "auto",
-//             marginTop: "70px",
-//           }}
-//         >
-//           <Typography variant="h5" sx={{ marginBottom: 3 }}>
-//             Add Task
-//           </Typography>
-
-//           <TextField
-//             label="Add Project"
-//             name="project"
-//             fullWidth
-//             select
-//             value={newTask.projectId}
-//             onChange={handleInputChange}
-//             sx={{ marginBottom: 2 }}
-//           >
-//             {projects.map((option) => (
-//               <MenuItem key={option.ROWID} value={option.ROWID}>
-//                 {option.Project_Name}
-//               </MenuItem>
-//             ))}
-//           </TextField>
-
-//           <TextField
-//             label="Add Task"
-//             name="name"
-//             fullWidth
-//             value={newTask.name}
-//             onChange={handleInputChange}
-//             sx={{ marginBottom: 2 }}
-//           />
-
-//           <TextField
-//             label="Associated"
-//             name="associated"
-//             fullWidth
-//             select
-//             SelectProps={{ multiple: true }}
-//             value={newTask.assignToID ? newTask.assignToID.split(",") : []}
-//             onChange={handleInputChange}
-//             sx={{ marginBottom: 2 }}
-//           >
-//             {assignOptions.map((option) => (
-//               <MenuItem key={option.userID} value={option.userID}>
-//                 {option.username}
-//               </MenuItem>
-//             ))}
-//           </TextField>
-
-//           <TextField
-//             select
-//             fullWidth
-//             label="Status"
-//             name="status"
-//             value={newTask.status}
-//             onChange={handleInputChange}
-//             sx={{ mb: 2 }}
-//           >
-//             {Object.keys(statusConfig).map((status) => (
-//               <MenuItem
-//                 key={status}
-//                 value={status}
-//                 sx={{
-//                   display: "flex",
-//                   alignItems: "center",
-//                   gap: 1,
-//                   py: 1,
-//                 }}
-//               >
-//                 <Box
-//                   component={statusConfig[status].icon}
-//                   sx={{
-//                     color: statusConfig[status].color,
-//                     fontSize: "1.1rem",
-//                   }}
-//                 />
-//                 <Typography
-//                   sx={{
-//                     color: statusConfig[status].color,
-//                     fontWeight: 500,
-//                   }}
-//                 >
-//                   {status}
-//                 </Typography>
-//               </MenuItem>
-//             ))}
-//           </TextField>
-
-//           <TextField
-//             label="Start Date"
-//             name="startDate"
-//             fullWidth
-//             type="date"
-//             value={newTask.startDate}
-//             onChange={handleInputChange}
-//             InputLabelProps={{ shrink: true }}
-//             sx={{ marginBottom: 2 }}
-//           />
-
-//           <TextField
-//             label="End Date"
-//             name="endDate"
-//             fullWidth
-//             type="date"
-//             value={newTask.endDate}
-//             onChange={handleInputChange}
-//             InputLabelProps={{ shrink: true }}
-//             sx={{ marginBottom: 2 }}
-//           />
-
-//           <TextField
-//             label="Add Description"
-//             name="description"
-//             fullWidth
-//             multiline
-//             rows={4}
-//             value={newTask.description}
-//             onChange={handleInputChange}
-//             sx={{ marginBottom: 3 }}
-//           />
-
-//           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-//             <Button variant="contained" color="primary" onClick={handleAddTask}>
-//               Add
-//             </Button>
-//             <Button variant="outlined" color="error" onClick={handleCancel}>
-//               Cancel
-//             </Button>
-//           </Box>
-//         </Box>
-//       </Drawer>
-
-//       {/* Edit Task */}
-//       <Modal
-//         open={editModalOpen}
-//         onClose={handleCloseEditModal}
-//         aria-labelledby="edit-task-modal"
-//         aria-describedby="modal-for-editing-task"
-//       >
-//         <Box
-//           sx={{
-//             position: "absolute",
-//             top: "50%",
-//             left: "50%",
-//             transform: "translate(-50%, -50%)",
-//             width: 400,
-//             bgcolor: theme.palette.background.paper,
-//             boxShadow: 24,
-//             p: 4,
-//             borderRadius: 2,
-//           }}
-//         >
-//           <Typography id="edit-task-modal" variant="h6" sx={{ mb: 2 }}>
-//             Edit Task
-//           </Typography>
-
-//           {currentTask && (
-//             <>
-//               <TextField
-//                 label="Task Name"
-//                 name="name"
-//                 fullWidth
-//                 value={currentTask.name}
-//                 onChange={handleEditInputChange}
-//                 sx={{ mb: 2 }}
-//               />
-
-//               <TextField
-//                 label="Project"
-//                 name="project"
-//                 fullWidth
-//                 select
-//                 value={currentTask.projectId || ""}
-//                 onChange={handleEditInputChange}
-//                 sx={{ mb: 2 }}
-//               >
-//                 {projects.map((option) => (
-//                   <MenuItem key={option.ROWID} value={option.ROWID}>
-//                     {option.Project_Name}
-//                   </MenuItem>
-//                 ))}
-//               </TextField>
-
-//               <TextField
-//                 label="Associated"
-//                 name="associated"
-//                 fullWidth
-//                 select
-//                 SelectProps={{ multiple: true }}
-//                 value={
-//                   currentTask.assignToID
-//                     ? currentTask.assignToID.split(",")
-//                     : []
-//                 }
-//                 onChange={handleEditInputChange}
-//                 sx={{ mb: 2 }}
-//               >
-//                 {assignOptions.map((option) => (
-//                   <MenuItem key={option.userID} value={option.userID}>
-//                     {option.username}
-//                   </MenuItem>
-//                 ))}
-//               </TextField>
-
-//               <TextField
-//                 select
-//                 fullWidth
-//                 label="Status"
-//                 name="status"
-//                 value={currentTask.status}
-//                 onChange={handleEditInputChange}
-//                 sx={{ mb: 2 }}
-//               >
-//                 {Object.keys(statusConfig).map((status) => (
-//                   <MenuItem
-//                     key={status}
-//                     value={status}
-//                     sx={{
-//                       display: "flex",
-//                       alignItems: "center",
-//                       gap: 1,
-//                       py: 1,
-//                     }}
-//                   >
-//                     <Box
-//                       component={statusConfig[status].icon}
-//                       sx={{
-//                         color: statusConfig[status].color,
-//                         fontSize: "1.1rem",
-//                       }}
-//                     />
-//                     <Typography
-//                       sx={{
-//                         color: statusConfig[status].color,
-//                         fontWeight: 500,
-//                       }}
-//                     >
-//                       {status}
-//                     </Typography>
-//                   </MenuItem>
-//                 ))}
-//               </TextField>
-
-//               <TextField
-//                 label="Start Date"
-//                 name="startDate"
-//                 fullWidth
-//                 type="date"
-//                 value={currentTask.startDate}
-//                 onChange={handleEditInputChange}
-//                 InputLabelProps={{ shrink: true }}
-//                 sx={{ mb: 2 }}
-//               />
-
-//               <TextField
-//                 label="End Date"
-//                 name="endDate"
-//                 fullWidth
-//                 type="date"
-//                 value={currentTask.endDate}
-//                 onChange={handleEditInputChange}
-//                 InputLabelProps={{ shrink: true }}
-//                 sx={{ mb: 2 }}
-//               />
-
-//               <TextField
-//                 label="Add Description"
-//                 name="description"
-//                 fullWidth
-//                 multiline
-//                 rows={4}
-//                 value={currentTask.description}
-//                 onChange={handleEditInputChange}
-//                 sx={{ marginBottom: 3 }}
-//               />
-
-//               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-//                 <Button
-//                   variant="contained"
-//                   color="primary"
-//                   onClick={handleUpdateTask}
-//                 >
-//                   Update
-//                 </Button>
-//                 <Button
-//                   variant="outlined"
-//                   color="error"
-//                   onClick={handleCloseEditModal}
-//                 >
-//                   Cancel
-//                 </Button>
-//               </Box>
-//             </>
-//           )}
-//         </Box>
-//       </Modal>
-
-//       {/* time entry */}
-//       {viewTask ? (
-//         <TimeEntry
-//           theme={theme}
-//           handleEditInputChange={handleEditInputChange}
-//           projects={projects}
-//           statusOptions={statusOptions}
-//           handleUpdateTask={handleUpdateTask}
-//           viewModalOpen={viewModalOpen}
-//           viewTask={viewTask}
-//           setViewTask={setViewTask}
-//           handleCloseViewModal={handleCloseViewModal}
-//         />
-//       ) : (
-//         <div></div>
-//       )}
-
-//       {/* Delete Confirmation Dialog */}
-//       <Dialog
-//         open={deleteConfirmOpen}
-//         onClose={handleDeleteCancel}
-//         aria-labelledby="delete-dialog-title"
-//         aria-describedby="delete-dialog-description"
-//       >
-//         <DialogTitle id="delete-dialog-title">{"Confirm Delete"}</DialogTitle>
-//         <DialogContent>
-//           <DialogContentText id="delete-dialog-description">
-//             Are you sure you want to delete task "{taskToDelete?.name}"? This
-//             action cannot be undone.
-//           </DialogContentText>
-//         </DialogContent>
-//         <DialogActions>
-//           <Button onClick={handleDeleteCancel} color="primary">
-//             Cancel
-//           </Button>
-//           <Button
-//             onClick={handleDeleteConfirm}
-//             color="error"
-//             variant="contained"
-//             autoFocus
-//           >
-//             Delete
-//           </Button>
-//         </DialogActions>
-//       </Dialog>
-
-//       <Snackbar
-//         open={snackbar.open}
-//         autoHideDuration={3000}
-//         onClose={handleCloseSnackbar}
-//         anchorOrigin={{ vertical: "top", horizontal: "center" }}
-//         TransitionComponent={SlideTransition}
-//       >
-//         <Alert
-//           onClose={handleCloseSnackbar}
-//           severity={snackbar.severity}
-//           variant="filled"
-//           sx={{
-//             width: "100%",
-//             "&.MuiAlert-standardSuccess": {
-//               backgroundColor: "#4caf50",
-//               color: "#fff",
-//             },
-//             "&.MuiAlert-standardError": {
-//               backgroundColor: "#f44336",
-//               color: "#fff",
-//             },
-//             "& .MuiAlert-icon": {
-//               color: "#fff",
-//             },
-//           }}
-//         >
-//           {snackbar.message}
-//         </Alert>
-//       </Snackbar>
-//     </Box>
-//   );
-// }
-
-// export default Task;

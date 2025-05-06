@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import axios from "axios";
+
+// MUI Components
 import {
   Box,
   Typography,
@@ -16,47 +19,64 @@ import {
   Skeleton,
   Input,
   Chip,
-} from "@mui/material";
-import {
+  Snackbar,
+  Alert,
+  CircularProgress,
+  IconButton,
+  Divider,
+  Paper,
+  useTheme,
+  Slide,
   Table,
   TableBody,
   TableCell,
   TableContainer,
-  TableHead,
   TableRow,
-  Paper,
-  Snackbar,
-  Alert,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import Slide from "@mui/material/Slide";
 
-import CloudDownloadSharpIcon from "@mui/icons-material/CloudDownloadSharp";
-import CloudUploadSharpIcon from "@mui/icons-material/CloudUploadSharp";
-import axios from "axios";
-import { useDispatch, useSelector } from 'react-redux';
+// MUI Icons
+import {
+  Close,
+  Save,
+  AccountCircle,
+  Image,
+  Delete,
+  Edit,
+  CloudUpload,
+  PhotoCamera,
+  Info,
+  CheckCircle,
+} from "@mui/icons-material";
+
+// import EditIcon from "@mui/icons-material/Edit";
+import {
+  Edit as EditIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  LocationOn as LocationOnIcon,
+  CloudUpload as CloudUploadIcon,
+  CloudDownload as CloudDownloadIcon,
+} from "@mui/icons-material";
+import { alpha } from "@mui/material/styles";
 import { fetchProfile } from "../redux/Profile/Profile";
-function Profile() {
-  const state = useSelector((state) => state.projectReducer);
-  console.log("profile", state?.data);
-
+import UploadIcon from "@mui/icons-material/Upload";
+import { blue } from "@mui/material/colors";
+import { useDispatch,useSelector } from "react-redux";
+function Profile({ handleDialogClose, processImageSave }) {
   const [userInfo, setUserInfo] = useState({});
-  const [skills, setSkills] = useState(
-    userInfo.skills || [
-      "React",
-      "Nodejs",
-      "Catalyst",
-      "AI/ML",
-      "Analyst",
-      "CRM",
-      "Zoho",
-      "Problem-Solving",
-    ]
-  );
+  const [skills, setSkills] = useState(userInfo.skills || ["Not Available"]);
+  const theme = useTheme();
+
   const [newSkill, setNewSkill] = useState("");
   const [currUser, setCurrUser] = useState({});
-  const [isEditing, setIsEditing] = useState(false);
+  const [showviewBtn, setShowviewBtn] = useState(false);
+  const [isEditingProfileData, setIsEditingProfileData] = useState(false);
+
+  const [isEditingProfileImage, setIsEditingProfileImg] = useState(false);
+
   const [skillModelOpen, setSkillModelOpen] = useState(false);
+
+
   const [editedInfo, setEditedInfo] = useState({
     name: userInfo.name || "",
     email: userInfo.email || "",
@@ -66,58 +86,53 @@ function Profile() {
   });
   const [loading, setLoading] = useState(true);
   const [cvFile, setCvFile] = useState(null);
+
   const [profileImage, setProfileImage] = useState(null);
   const [coverImage, setCoverImage] = useState(null);
-  const [displayCV, setDisplayCV] = useState(false);
-  const [cvURL, setCvURL] = useState("");
+
   const [isCvModalOpen, setIsCvModalOpen] = useState(false);
-  const handleSkillModekOpen = () => setSkillModelOpen(true);
   const handleSkillModelClose = () => setSkillModelOpen(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
-      const dispatch = useDispatch();
-    const profileData = useSelector((state) => state.profileReducer);
-    console.log("profilesection",profileData);
-
-    // useEffect(() => {
-    //   const user = JSON.parse(localStorage.getItem("currUser"));
-    //   console.log("user", user);
-    //   setCurrUser(user);
-    
-    //   if (user?.userid) {
-    //     dispatch(fetchProfile());
-    //   }
-    // }, [dispatch]);
-
+  // const dispatch = useDispatch();
+  // const {data:profileData} = useSelector(state => state.profileReducer);
   useEffect(() => {
     const getUserDetail = async () => {
       const user = JSON.parse(localStorage.getItem("currUser"));
-      console.log("user",user);
       setCurrUser(user);
-      if (!profileData) return;
+      if (!user?.userid) return;
 
       try {
         const response = await axios.get(
           `/server/time_entry_management_application_function/profile/data/${user.userid}`
         );
+        // dispatch(fetchProfile());
 
-        // const response = profileData;
-        
         const data = response.data.data;
         console.log("data", data);
-
         const profileBase64 = localStorage.getItem("profileData");
         const coverBase64 = localStorage.getItem("coverData");
 
-        // Parse skills from API response
         const userSkills = data.Users.Skills
           ? data.Users.Skills.split(",").map((skill) => skill.trim())
           : [];
         setSkills(userSkills);
 
+        // console.log("userData", {
+        //   name: `${user.firstName} ${user.lastName}`,
+        //   email: user.mailid,
+        //   phone: data.Users.Phone,
+        //   address: data.Users.Address,
+        //   AboutME: data.Users.AboutME,
+        //   profileImage: profileBase64,
+        //   coverImage: coverBase64,
+        //   role: user.role,
+        //   skills: userSkills,
+        // });
+       
         setUserInfo({
           name: `${user.firstName} ${user.lastName}`,
           email: user.mailid,
@@ -128,7 +143,12 @@ function Profile() {
           coverImage: coverBase64,
           role: user.role,
           skills: userSkills,
+          resume:data.Users.Resume_Link,
         });
+       if(data.Users.Resume_Link) {
+        console.log("helllo hello hi")
+        setShowviewBtn(true);
+        }
       } catch (error) {
         console.error("Error fetching user details:", error);
       } finally {
@@ -149,9 +169,29 @@ function Profile() {
     });
   }, [userInfo]);
 
-  const handleEditClick = () => {
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setCvFile(file);
+    }
+  };
+
+  const handleSaveCVWithLoader = () => {
+    if (!cvFile) return;
+    setLoading(true);
+    // Simulate a save delay
+    setTimeout(() => {
+      setLoading(false);
+      handleSaveCV();
+    }, 2000);
+  };
+
+  const handleEditProfileDataClick = () => {
     console.log(userInfo.profileImage, userInfo.coverImage);
-    setIsEditing(true);
+    setIsEditingProfileData(true);
+  };
+  const handleEditProfileImgClick = () => {
+    setIsEditingProfileImg(true);
   };
 
   const handleInputChange = (e) => {
@@ -203,16 +243,6 @@ function Profile() {
     return imageURL.url;
   };
 
-   const handleCloseSnackbar = (event, reason) => {
-      if (reason === "clickaway") {
-        return;
-      }
-      setSnackbar((prev) => ({ ...prev, open: false }));
-    };
-    function SlideTransition(props) {
-        return <Slide {...props} direction="down" />;
-      }
-
   const handleAlert = (severity, message) => {
     setSnackbar({
       open: true,
@@ -221,35 +251,15 @@ function Profile() {
     });
   };
 
-  const [errors, setErrors] = useState({});
-
-  const validateForm = () => {
-    let newErrors = {}; // Create a new errors object
-  
-    // Mobile Number Validation (10 digits, starts with 6-9)
-    const mobileRegex = /^[6-9]\d{9}$/;
-    if (!editedInfo.phone || !mobileRegex.test(editedInfo.phone)) {
-      newErrors.mobile = "Invalid mobile number. It should be 10 digits and start with 6-9.";
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
     }
-  
-    // About Me Validation (Optional, but must be 5-200 characters)
-    if (editedInfo.AboutME && (editedInfo.AboutME.length < 5 || editedInfo.AboutME.length > 200)) {
-      newErrors.aboutMe = "About Me should be between 5 to 200 characters.";
-    }
-  
-    // Address Validation (Must be at least 10 characters)
-    if (!editedInfo.address || editedInfo.address.length < 10) {
-      newErrors.address = "Address must be at least 10 characters long.";
-    }
-  
-    setErrors(newErrors); // Update state with errors
-  
-    return Object.keys(newErrors).length === 0; // Return true if no errors
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
-  
-  
-  
-  
+  function SlideTransition(props) {
+    return <Slide {...props} direction="down" />;
+  }
 
   const handleSave = async () => {
     try {
@@ -257,82 +267,6 @@ function Profile() {
       const user = JSON.parse(localStorage.getItem("currUser"));
       if (!user || !user.userid) {
         handleAlert("error", "User not found. Please log in again.");
-        return;
-      }
-
-
-      let profileUpdateSuccess = true;
-      let coverUpdateSuccess = true;
-
-      try {
-        // Upload profile and cover images concurrently
-        const uploadPromises = [];
-
-        if (profileImage) {
-          uploadPromises.push(
-            imageCloudUpload(profileImage)
-              .then(async (profileURL) => {
-                const response = await axios.post(
-                  `/server/time_entry_management_application_function/userprofile/${user.userid}`,
-                  { profileLink: profileURL }
-                );
-                if (response.status === 200) {
-                  setUserInfo((prev) => ({
-                    ...prev,
-                    profileImage: profileURL,
-                  }));
-                  localStorage.setItem("profileData", profileURL);
-                } else {
-                  profileUpdateSuccess = false;
-                }
-              })
-              .catch(() => {
-                profileUpdateSuccess = false;
-              })
-          );
-        }
-
-        if (coverImage) {
-          uploadPromises.push(
-            imageCloudUpload(coverImage)
-              .then(async (coverURL) => {
-                const response = await axios.post(
-                  `/server/time_entry_management_application_function/usercover/${user.userid}`,
-                  { coverLink: coverURL }
-                );
-                if (response.status === 200) {
-                  setUserInfo((prev) => ({ ...prev, coverImage: coverURL }));
-                  localStorage.setItem("coverData", coverURL);
-                } else {
-                  coverUpdateSuccess = false;
-                }
-              })
-              .catch(() => {
-                coverUpdateSuccess = false;
-              })
-          );
-        }
-
-        await Promise.all(uploadPromises);
-
-        // Provide feedback to user
-        if (!profileUpdateSuccess && !coverUpdateSuccess) {
-          handleAlert("error", "Failed to update profile and cover images.");
-        } else {
-          handleAlert("success", "Images updated successfully!");
-        }
-      } catch (err) {
-        console.error("Image update error:", err);
-        handleAlert("error", "An error occurred while updating images.");
-      }
-
-      if (
-        !editedInfo.address ||
-        !editedInfo.phone ||
-        !editedInfo.AboutME ||
-        !skills
-      ) {
-        alert("error", "Please fill all the fields");
         return;
       }
 
@@ -365,10 +299,10 @@ function Profile() {
       }));
 
       handleAlert("success", "Profile updated successfully!");
-      setIsEditing(false);
+      setIsEditingProfileData(false);
       setProfileImage(null);
       setCoverImage(null);
-      window.location.reload();
+      // window.location.reload();
     } catch (error) {
       console.error("Error updating profile:", error);
       handleAlert("error", "An error occurred while updating profile.");
@@ -392,7 +326,6 @@ function Profile() {
       // for (const [key, value] of formData.entries()) {
       //   console.log(`${key}:`, value);
       // }
-
       const response = await fetch(
         `/server/time_entry_management_application_function/resume/${currUser.userid}`,
         {
@@ -400,14 +333,16 @@ function Profile() {
           body: formData,
         }
       );
-      setLoading(false);
 
-      console.log(response);
+      setLoading(false);
       handleCloseCvModal();
-      if (response.ok) {
-        handleAlert("success","Resume Uploaded successfully!");
+      console.log(response);
+      if (response.ok === true) {
+        setShowviewBtn(true);
+        handleAlert("success", "Resume Uploaded successfully!");
+     
       } else {
-        handleAlert("error","Resume Upload Failed.");
+        handleAlert("error", "Resume Upload Failed.");
       }
     } catch (error) {
       setLoading(false);
@@ -418,23 +353,18 @@ function Profile() {
 
   const handleDisplayCV = async () => {
     try {
-      // Fetch the PDF data from the backend
-
       const response = await axios.get(
-        `/server/time_entry_management_application_function/resume/${currUser.userid}`,
-        {
-          responseType: "blob", // Assuming the response is a file (PDF)
-        }
+        `/server/time_entry_management_application_function/resume/${currUser.userid}`
       );
+      console.log("res", response.data.data);
+      handleAlert("success", "Opening CV in a new tab...");
 
-      console.log("res", response);
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const blobUrl = window.URL.createObjectURL(blob);
-      console.log("url", blobUrl);
-      setCvURL(blobUrl);
-      setDisplayCV(true);
+      setTimeout(() => {
+        window.open(response.data.data, "_blank");
+      }, 500);
     } catch (err) {
       console.error("Error displaying the CV:", err);
+      handleAlert("error", "Error In Resume Fetching...");
     }
   };
 
@@ -442,7 +372,7 @@ function Profile() {
     setEditedInfo({ ...userInfo });
     setProfileImage(null);
     setCoverImage(null);
-    setIsEditing(false);
+    setIsEditingProfileData(false);
   };
 
   const handleAddSkill = () => {
@@ -465,152 +395,679 @@ function Profile() {
   const handleRemoveSkill = (skillToRemove) => {
     setSkills(skills.filter((skill) => skill !== skillToRemove));
   };
-  const handleSubmit= (e)=>{
+
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    let newErrors = {}; // Create a new errors object
+
+    // Mobile Number Validation (10 digits, starts with 6-9)
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!editedInfo.phone || !mobileRegex.test(editedInfo.phone)) {
+      newErrors.mobile =
+        "Invalid mobile number. It should be 10 digits and start with 6-9.";
+    }
+
+    // About Me Validation (Optional, but must be 5-200 characters)
+    if (
+      editedInfo.AboutME &&
+      (editedInfo.AboutME.length < 5 || editedInfo.AboutME.length > 200)
+    ) {
+      newErrors.aboutMe = "About Me should be between 5 to 200 characters.";
+    }
+
+    // Address Validation (Must be at least 10 characters)
+    if (!editedInfo.address || editedInfo.address.length < 10) {
+      newErrors.address = "Address must be at least 10 characters long.";
+    }
+
+    setErrors(newErrors); // Update state with errors
+
+    return Object.keys(newErrors).length === 0; // Return true if no errors
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if(validateForm()){
+    if (validateForm() || 1) {
       handleSave();
-    }else {
+    } else {
       console.log("Validation failed:", errors); // Debugging
     }
-  }
+  };
 
- 
+  const uniqueThemeInstance = useTheme();
+
+  const [uniqueProfileImagePreview, setUniqueProfileImagePreview] = useState(
+    userInfo.profileImage
+  );
+  const [uniqueCoverImagePreview, setUniqueCoverImagePreview] = useState(
+    userInfo.coverImage
+  );
+  const [uniqueIsLoadingState, setUniqueIsLoadingState] = useState(false);
+  const [uniqueErrorMessages, setUniqueErrorMessages] = useState({});
+  const uniqueProfileInputRefV1 = useRef(null);
+  const uniqueCoverInputRefV1 = useRef(null);
+  const uniqueProfileChangeRefV1 = useRef(null);
+  const uniqueCoverChangeRefV1 = useRef(null);
+
+  const uniqueValidateImageFileFunc = (fileToValidate, imageTypeLabel) => {
+    if (!fileToValidate.type.startsWith("image/")) {
+      return "Please upload an image file";
+    }
+
+    if (fileToValidate.size > 5 * 1024 * 1024) {
+      return "File size exceeds 5MB limit";
+    }
+
+    return null;
+  };
+
+  const uniqueHandleImageChangeFunc = (eventObj, imageTypeLabel) => {
+    const selectedFile = eventObj.target.files?.[0];
+    if (!selectedFile) return;
+
+    const validationError = uniqueValidateImageFileFunc(
+      selectedFile,
+      imageTypeLabel
+    );
+    if (validationError) {
+      setUniqueErrorMessages({
+        ...uniqueErrorMessages,
+        [imageTypeLabel]: validationError,
+      });
+      return;
+    }
+
+    setUniqueErrorMessages({ ...uniqueErrorMessages, [imageTypeLabel]: "" });
+    const uniqueFileReader = new FileReader();
+    uniqueFileReader.onload = () => {
+      if (imageTypeLabel === "profile") {
+        setProfileImage(selectedFile);
+        setUniqueProfileImagePreview(uniqueFileReader.result);
+      } else {
+        setCoverImage(selectedFile);
+        setUniqueCoverImagePreview(uniqueFileReader.result);
+      }
+    };
+    uniqueFileReader.readAsDataURL(selectedFile);
+  };
+
+  const uniqueHandleDropFunc = useCallback(
+    (eventObj, imageTypeLabel) => {
+      eventObj.preventDefault();
+      eventObj.stopPropagation();
+
+      const droppedFile = eventObj.dataTransfer.files?.[0];
+      if (!droppedFile) return;
+
+      const validationError = uniqueValidateImageFileFunc(
+        droppedFile,
+        imageTypeLabel
+      );
+      if (validationError) {
+        setUniqueErrorMessages({
+          ...uniqueErrorMessages,
+          [imageTypeLabel]: validationError,
+        });
+        return;
+      }
+
+      setUniqueErrorMessages({ ...uniqueErrorMessages, [imageTypeLabel]: "" });
+      const uniqueFileReader = new FileReader();
+      uniqueFileReader.onload = () => {
+        if (imageTypeLabel === "profile") {
+          setProfileImage(droppedFile);
+          setUniqueProfileImagePreview(uniqueFileReader.result);
+        } else {
+          setCoverImage(droppedFile);
+          setUniqueCoverImagePreview(uniqueFileReader.result);
+        }
+      };
+      uniqueFileReader.readAsDataURL(droppedFile);
+    },
+    [uniqueErrorMessages]
+  );
+
+  const uniqueHandleRemoveImageFunc = (imageTypeLabel) => {
+    if (imageTypeLabel === "profile") {
+      setProfileImage(null);
+      setUniqueProfileImagePreview(null);
+      if (uniqueProfileInputRefV1.current)
+        uniqueProfileInputRefV1.current.value = "";
+      if (uniqueProfileChangeRefV1.current)
+        uniqueProfileChangeRefV1.current.value = "";
+    } else {
+      setCoverImage(null);
+      setUniqueCoverImagePreview(null);
+      if (uniqueCoverInputRefV1.current)
+        uniqueCoverInputRefV1.current.value = "";
+      if (uniqueCoverChangeRefV1.current)
+        uniqueCoverChangeRefV1.current.value = "";
+    }
+    setUniqueErrorMessages({ ...uniqueErrorMessages, [imageTypeLabel]: "" });
+  };
+
+  const uniqueHandleDragOverFunc = (eventObj) => {
+    eventObj.preventDefault();
+    eventObj.stopPropagation();
+  };
+
+  const uniqueHandleCancelFunc = () => {
+    setProfileImage(null);
+    setCoverImage(null);
+    setUniqueProfileImagePreview(null);
+    setUniqueCoverImagePreview(null);
+    setUniqueErrorMessages({});
+    setIsEditingProfileImg(false);
+  };
+
+  const uniqueHandleSubmitFunc = async () => {
+    console.log(profileImage, coverImage);
+    if (!profileImage && !coverImage) return;
+
+    setUniqueIsLoadingState(true);
+    setLoading(true);
+    const user = JSON.parse(localStorage.getItem("currUser"));
+    if (!user || !user.userid) {
+      handleAlert("error", "User not found. Please log in again.");
+      return;
+    }
+
+    const formData = new FormData();
+
+    let profileUpdateSuccess = true;
+    let coverUpdateSuccess = true;
+
+    try {
+      const uploadPromises = [];
+
+      if (profileImage) {
+        console.log("profileImage", profileImage);
+        formData.append("profile", profileImage, profileImage.name);
+
+        uploadPromises.push(
+          await axios
+            .post(
+              `/server/time_entry_management_application_function/userprofile/${user.userid}`,
+              formData,
+              { headers: { "Content-Type": "multipart/form-data" } }
+            )
+            .then(async (response) => {
+              if (response.status === 200) {
+                setUserInfo((prev) => ({
+                  ...prev,
+                  profileImage: response.data.profileLink,
+                }));
+                localStorage.setItem("profileData", response.data.profileLink);
+              } else {
+                profileUpdateSuccess = false;
+              }
+            })
+            .catch(() => {
+              profileUpdateSuccess = false;
+            })
+        );
+      }
+
+      if (coverImage) {
+        console.log("coverImage", coverImage);
+        formData.append("cover", coverImage, coverImage.name);
+        uploadPromises.push(
+          await axios
+            .post(
+              `/server/time_entry_management_application_function/usercover/${user.userid}`,
+              formData,
+              { headers: { "Content-Type": "multipart/form-data" } }
+            )
+            .then(async (response) => {
+              if (response.status === 200) {
+                setUserInfo((prev) => ({
+                  ...prev,
+                  coverImage: response.data.coverLink,
+                }));
+                localStorage.setItem("coverData", response.data.coverLink);
+              } else {
+                coverUpdateSuccess = false;
+              }
+            })
+            .catch(() => {
+              coverUpdateSuccess = false;
+            })
+        );
+
+        // uploadPromises.push(
+        //   imageCloudUpload(coverImage)
+        //     .then(async (coverURL) => {
+        //       const response = await axios.post(
+        //         `/server/time_entry_management_application_function/usercover/${user.userid}`,
+        //         { coverLink: coverURL }
+        //       );
+        //       if (response.status === 200) {
+        //         setUserInfo((prev) => ({ ...prev, coverImage: coverURL }));
+        //         localStorage.setItem("coverData", coverURL);
+        //       } else {
+        //         coverUpdateSuccess = false;
+        //       }
+        //     })
+        //     .catch(() => {
+        //       coverUpdateSuccess = false;
+        //     })
+        // );
+      }
+
+      const response = await Promise.all(uploadPromises);
+      console.log("response", response);
+
+      uniqueHandleCancelFunc();
+      // Provide feedback to user
+      if (!profileUpdateSuccess && !coverUpdateSuccess) {
+        handleAlert("error", "Failed to update profile and cover images.");
+        return;
+      } else {
+        handleAlert(
+          "success",
+          "Updating profile and cover images successful. Reloading the page..."
+        );
+      }
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (err) {
+      console.error("Image update error:", err);
+      handleAlert("error", "An error occurred while updating images.");
+    } finally {
+      // setLoading(false);
+      // setUniqueIsLoadingState(false);
+    }
+  };
+
+  const uniqueFormatFileSizeFunc = (sizeInBytes) => {
+    if (sizeInBytes < 1024) {
+      return `${sizeInBytes} B`;
+    } else if (sizeInBytes < 1024 * 1024) {
+      return `${(sizeInBytes / 1024).toFixed(1)} KB`;
+    } else {
+      return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+  };
+
   return (
-    <Box sx={{ padding: 3 }}>
+    <Box sx={{ position: "relative", mb: 6 }}>
+      {/* Enhanced Cover Image */}
       <Box
         sx={{
           position: "relative",
-          height: 200,
+          height: 250, // Increased height
           backgroundImage: `url(${coverImage ? URL.createObjectURL(coverImage) : userInfo.coverImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          borderRadius: 2,
+          borderRadius: "16px",
           overflow: "hidden",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "100px",
+            background:
+              "linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0))",
+          },
         }}
-      />
+      ></Box>
 
-      {/* Profile Section - Left Aligned */}
       <Box
         sx={{
           position: "relative",
           display: "flex",
-          alignItems: "center",
-          marginTop: -8,
-          marginLeft: 3,
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "center", sm: "flex-end" },
+          justifyContent: "space-between",
+          px: { xs: 2, sm: 4 },
+          mt: -8,
         }}
       >
-        {/* Profile Image with Edit Button */}
-        {loading ? (
-          <Skeleton variant="circular" width={150} height={150} />
-        ) : (
-          <Box sx={{ position: "relative" }}>
-            <Avatar
-              src={userInfo.profileImage || ""}
-              sx={{ width: 150, height: 150, border: "4px solid white" }}
-            />
-            <Button
-              variant="contained"
-              sx={{
-                position: "absolute",
-                bottom: 0,
-                right: 0,
-                minWidth: "auto",
-                padding: "4px",
-                borderRadius: "50%",
-                transform: "translate(25%, 25%)",
-              }}
-              onClick={handleEditClick}
-            >
-              <EditIcon fontSize="small" />
-            </Button>
-          </Box>
-        )}
-
-        {/* Name and Bio aligned next to Profile Image */}
-        <Box sx={{ marginLeft: 3, marginTop: 6 }}>
+        {/* Profile Image with Enhanced Design */}
+        <Box
+          sx={{
+            position: "relative",
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "center", sm: "flex-end" },
+            zIndex: 5,
+            mb: { xs: 2, sm: 0 },
+          }}
+        >
           {loading ? (
-            <>
-              <Skeleton variant="text" width={200} height={40} />
-              <Skeleton variant="text" width={150} height={30} />
-            </>
+            <Skeleton variant="circular" width={160} height={160} />
           ) : (
-            <>
-              <Typography variant="h4"> {userInfo.name ? userInfo.name : `${currUser.firstName} ${currUser.lastName}`}</Typography>
-              <Typography variant="body1" color="textSecondary">
-                {userInfo.role}
-              </Typography>
-            </>
+            <Box sx={{ position: "relative" }}>
+              <Avatar
+                src={userInfo.profileImage || ""}
+                sx={{
+                  width: 160,
+                  height: 160,
+                  border: "5px solid white",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                  transition: "transform 0.3s ease",
+                  "&:hover": {
+                    transform: "scale(1.03)",
+                  },
+                }}
+              />
+              <IconButton
+                sx={{
+                  position: "absolute",
+                  bottom: 5,
+                  right: 5,
+                  backgroundColor: "primary.main",
+                  color: "white",
+                  padding: "8px",
+                  "&:hover": {
+                    backgroundColor: "primary.dark",
+                    transform: "scale(1.1)",
+                  },
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                }}
+                onClick={handleEditProfileImgClick}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Box>
           )}
+
+          {/* Name and Bio with Enhanced Typography */}
+          <Box
+            sx={{
+              ml: { xs: 0, sm: 3 },
+              mt: { xs: 2, sm: 0 },
+              mb: { xs: 0, sm: 2 },
+              textAlign: { xs: "center", sm: "left" },
+            }}
+          >
+            {loading ? (
+              <>
+                <Skeleton variant="text" width={200} height={40} />
+                <Skeleton variant="text" width={150} height={30} />
+              </>
+            ) : (
+              <>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 700,
+                    textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                    color: "text.primary",
+                    mb: 0.5,
+                  }}
+                >
+                  {userInfo.name}
+                </Typography>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    color: "primary.main",
+                    fontWeight: 500,
+                  }}
+                >
+                  {userInfo.role}
+                </Typography>
+              </>
+            )}
+          </Box>
         </Box>
+
+        {/* Edit Profile Button - Enhanced */}
+        <Button
+          variant="contained"
+          startIcon={<EditIcon />}
+          onClick={handleEditProfileDataClick}
+          sx={{
+            borderRadius: "30px",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
+            px: 3,
+            py: 1,
+            backgroundColor: "primary.main",
+            color: "white",
+            fontWeight: 600,
+            textTransform: "none",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "primary.dark",
+              boxShadow: "0 6px 20px rgba(0,0,0,0.2)",
+              transform: "translateY(-2px)",
+            },
+            zIndex: 2,
+            alignSelf: { xs: "center", sm: "flex-end" },
+            mb: { xs: 0, sm: 2 },
+            mt: { xs: 2, sm: 0 },
+          }}
+        >
+          Edit Profile
+        </Button>
       </Box>
 
-      {/* CV Upload Modal */}
-      <Dialog
-        open={isCvModalOpen}
-        onClose={handleCloseCvModal}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Upload CV</DialogTitle>
-        <DialogContent>
-          <Input type="file" onChange={handleCvUpload} fullWidth />
-          {cvFile && (
-            <Typography variant="body2" sx={{ marginTop: 1 }}>
-              Selected: {cvFile.name}
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCvModal} color="error" variant="outlined">
-            Cancel
-          </Button>
-          <Button color="primary" variant="contained" onClick={handleSaveCV}>
-            Save CV
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Grid container spacing={2} sx={{ mt: 3 }}>
-        <Grid item xs={8}>
-          <Card sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="h6">About Me</Typography>
-              <Typography variant="body1" sx={{ mt: 1 }}>
+      {/* Main Content Grid - Enhanced */}
+      <Grid container spacing={3} sx={{ mt: 4, px: { xs: 2, sm: 3 } }}>
+        {/* Left Column - About & Contact */}
+        <Grid item xs={12} md={8}>
+          {/* About Me Card - Enhanced */}
+          <Card
+            sx={{
+              mb: 3,
+              borderRadius: "16px",
+              overflow: "hidden",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              transition: "transform 0.3s ease, box-shadow 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-3px)",
+                boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+              },
+            }}
+          >
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  mb: 2,
+                  fontWeight: 700,
+                  color: "primary.dark",
+                  display: "flex",
+                  alignItems: "center",
+                  "&::before": {
+                    content: '""',
+                    display: "inline-block",
+                    width: "4px",
+                    height: "20px",
+                    backgroundColor: "primary.main",
+                    marginRight: "12px",
+                    borderRadius: "2px",
+                  },
+                }}
+              >
+                About Me
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  lineHeight: 1.7,
+                  color: "text.secondary",
+                }}
+              >
+               
                 {userInfo?.AboutME || "Not provided"}
               </Typography>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent>
-              <TableContainer component={Paper}>
+
+          {/* Contact Information Card - Enhanced */}
+          <Card
+            sx={{
+              borderRadius: "16px",
+              overflow: "hidden",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              transition: "transform 0.3s ease, box-shadow 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-3px)",
+                boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+              },
+            }}
+          >
+            <CardContent sx={{ p: 0 }}>
+              <Box sx={{ p: 3, pb: 2 }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    mb: 2,
+                    fontWeight: 700,
+                    color: "primary.dark",
+                    display: "flex",
+                    alignItems: "center",
+                    "&::before": {
+                      content: '""',
+                      display: "inline-block",
+                      width: "4px",
+                      height: "20px",
+                      backgroundColor: "primary.main",
+                      marginRight: "12px",
+                      borderRadius: "2px",
+                    },
+                  }}
+                >
+                  Contact Information
+                </Typography>
+              </Box>
+
+              <TableContainer>
                 <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell colSpan={2}>
-                        <Typography variant="h6">
-                          Contact Information
+                  <TableBody>
+                    <TableRow
+                      sx={{
+                        "&:nth-of-type(odd)": {
+                          backgroundColor: "rgba(0, 0, 0, 0.02)",
+                        },
+                      }}
+                    >
+                      <TableCell
+                        sx={{
+                          borderColor: "rgba(0, 0, 0, 0.06)",
+                          py: 2.5,
+                          pl: 3,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontWeight: 600,
+                            color: "text.primary",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <EmailIcon
+                            sx={{
+                              mr: 1,
+                              color: "primary.main",
+                              fontSize: "1.2rem",
+                            }}
+                          />
+                          Email
+                        </Typography>
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          borderColor: "rgba(0, 0, 0, 0.06)",
+                          py: 2.5,
+                        }}
+                      >
+                        <Typography sx={{ color: "text.secondary" }}>
+                          {userInfo.email}
                         </Typography>
                       </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
+
                     <TableRow>
-                      <TableCell>
-                        <strong>Email:</strong>
+                      <TableCell
+                        sx={{
+                          borderColor: "rgba(0, 0, 0, 0.06)",
+                          py: 2.5,
+                          pl: 3,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontWeight: 600,
+                            color: "text.primary",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <PhoneIcon
+                            sx={{
+                              mr: 1,
+                              color: "primary.main",
+                              fontSize: "1.2rem",
+                            }}
+                          />
+                          Phone
+                        </Typography>
                       </TableCell>
-                      <TableCell>{userInfo.email}</TableCell>
+                      <TableCell
+                        sx={{
+                          borderColor: "rgba(0, 0, 0, 0.06)",
+                          py: 2.5,
+                        }}
+                      >
+                        <Typography sx={{ color: "text.secondary" }}>
+                          {userInfo.phone}
+                        </Typography>
+                      </TableCell>
                     </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <strong>Phone:</strong>
+
+                    <TableRow
+                      sx={{
+                        "&:nth-of-type(odd)": {
+                          backgroundColor: "rgba(0, 0, 0, 0.02)",
+                        },
+                      }}
+                    >
+                      <TableCell
+                        sx={{
+                          borderColor: "rgba(0, 0, 0, 0.06)",
+                          py: 2.5,
+                          pl: 3,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontWeight: 600,
+                            color: "text.primary",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <LocationOnIcon
+                            sx={{
+                              mr: 1,
+                              color: "primary.main",
+                              fontSize: "1.2rem",
+                            }}
+                          />
+                          Address
+                        </Typography>
                       </TableCell>
-                      <TableCell>{userInfo.phone}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <strong>Address:</strong>
+                      <TableCell
+                        sx={{
+                          borderColor: "rgba(0, 0, 0, 0.06)",
+                          py: 2.5,
+                        }}
+                      >
+                        <Typography sx={{ color: "text.secondary" }}>
+                          {userInfo.address}
+                        </Typography>
                       </TableCell>
-                      <TableCell>{userInfo.address}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -619,56 +1076,83 @@ function Profile() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={4}>
-          {/* Card with Skills */}
+        {/* Right Column - Skills & CV */}
+        <Grid item xs={12} md={4}>
+          {/* Skills Card - Enhanced */}
           <Card
             sx={{
-              borderRadius: "8px",
-              boxShadow: 3,
-              "&:hover": { boxShadow: 6 },
+              borderRadius: "16px",
+              overflow: "hidden",
+              boxShadow: "0 8px 25px rgba(0,0,0,0.1)",
+              transition: "transform 0.3s ease, box-shadow 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-5px)",
+                boxShadow: "0 12px 30px rgba(0,0,0,0.15)",
+              },
+              mb: 3,
+              position: "relative",
             }}
           >
-            <CardContent>
+            {/* Decorative top accent bar */}
+            <Box
+              sx={{
+                height: "6px",
+                width: "100%",
+                background:
+                  "linear-gradient(90deg, primary.main, primary.light)",
+              }}
+            />
+
+            <CardContent sx={{ p: 3 }}>
               <Typography
                 variant="h6"
                 sx={{
                   display: "flex",
-                  justifyContent: "space-between",
                   alignItems: "center",
-                  fontWeight: "bold",
+                  fontWeight: 700,
                   color: "primary.dark",
+                  mb: 2,
+                  "&::before": {
+                    content: '""',
+                    display: "inline-block",
+                    width: "4px",
+                    height: "20px",
+                    backgroundColor: "primary.main",
+                    marginRight: "12px",
+                    borderRadius: "2px",
+                  },
                 }}
               >
                 Skills
-                {/* <Button
-                  variant="contained"
-                  sx={{
-                    padding: "4px",
-                    borderRadius: "50%",
-                    minWidth: "auto",
-                    backgroundColor: "primary.main",
-                    "&:hover": { backgroundColor: "primary.dark" },
-                  }}
-                  onClick={handleSkillModekOpen}
-                >
-                  <EditIcon fontSize="small" />
-                </Button> */}
               </Typography>
 
-              {/* Skill Chips */}
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}>
+              {/* Skill Chips with Enhanced Design */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.2, mt: 2 }}>
                 {skills.map((skill, index) => (
                   <Chip
                     key={index}
                     label={skill}
-                    onDelete={() => handleRemoveSkill(skill)}
-                    color="primary"
                     sx={{
-                      borderRadius: "16px",
-                      backgroundColor: "primary.light",
-                      "&:hover": { backgroundColor: "primary.main" },
+                      borderRadius: "12px",
+                      py: 2.5,
+                      fontWeight: 1000,
+                      backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                      color: "text.secondary",
+                      border: "1px solid",
+                      borderColor: alpha(theme.palette.primary.main, 0.2),
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        backgroundColor: alpha(
+                          theme.palette.primary.main,
+                          0.15
+                        ),
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      },
                       "& .MuiChip-deleteIcon": {
-                        color: "primary.contrastText",
+                        color: "primary.main",
+                        "&:hover": {
+                          color: "error.main",
+                        },
                       },
                     }}
                   />
@@ -677,54 +1161,158 @@ function Profile() {
             </CardContent>
           </Card>
 
-          {/* Button Group */}
-          <ButtonGroup
-            fullWidth
-            variant="contained"
-            color="primary"
+          {/* CV Buttons - Enhanced */}
+          <Box
             sx={{
+              display: "flex",
+              flexDirection: "column",
               gap: 2,
               mt: 3,
-              borderRadius: "8px",
-              boxShadow: 2,
-              "&:hover": { boxShadow: 5 },
             }}
           >
             <Button
+              fullWidth
+              variant="contained"
               onClick={() => setIsCvModalOpen(true)}
-              startIcon={<CloudUploadSharpIcon />}
+              startIcon={<CloudUploadIcon />}
               sx={{
+                borderRadius: "12px",
+                py: 1.5,
+                boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
                 backgroundColor: "primary.main",
-                "&:hover": { backgroundColor: "primary.dark" },
+                fontWeight: 600,
+                textTransform: "none",
+                fontSize: "0.95rem",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  backgroundColor: "primary.dark",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+                  transform: "translateY(-3px)",
+                },
               }}
             >
-              Upload CV
+             {showviewBtn? "Update CV" : "Upload CV" }
             </Button>
+
+           { showviewBtn &&  (
             <Button
-              onClick={handleDisplayCV}
-              startIcon={<CloudDownloadSharpIcon />}
-              sx={{
-                backgroundColor: "primary.main",
-                "&:hover": { backgroundColor: "primary.dark" },
-              }}
-            >
-              Show CV
-            </Button>
-          </ButtonGroup>
+            fullWidth
+            variant="outlined"
+            onClick={handleDisplayCV}
+            startIcon={<CloudDownloadIcon />}
+            sx={{
+              borderRadius: "12px",
+              py: 1.5,
+              borderColor: "primary.main",
+              borderWidth: "2px",
+              color: "primary.main",
+              fontWeight: 600,
+              textTransform: "none",
+              fontSize: "0.95rem",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                borderColor: "primary.dark",
+                backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                transform: "translateY(-3px)",
+              },
+            }}
+          >
+            View CV
+          </Button>
+
+           )
+           } 
+          </Box>
         </Grid>
       </Grid>
 
+      <Dialog
+        open={isCvModalOpen}
+        onClose={handleCloseCvModal}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center" }}>
+          <IconButton
+            edge="start"
+            color="primary"
+            aria-label="upload"
+            sx={{ mr: 1 }}
+          >
+            <UploadIcon />
+          </IconButton>
+          Upload CV
+        </DialogTitle>
+
+        <DialogContent sx={{ position: "relative" }}>
+          <Input
+            type="file"
+            onChange={handleFileChange}
+            fullWidth
+            disableUnderline
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              border: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+              "&:hover": {
+                borderColor: blue[500],
+              },
+            }}
+          />
+
+          {cvFile && (
+            <Typography variant="body2" sx={{ mt: 2, color: blue[700] }}>
+              Selected: {cvFile.name}
+            </Typography>
+          )}
+
+          {loading && (
+            <CircularProgress
+              size={24}
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                mt: "-12px",
+                ml: "-12px",
+              }}
+            />
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={handleCloseCvModal} color="error" variant="outlined">
+            Cancel
+          </Button>
+          <Button
+            color="primary"
+            variant="contained"
+            onClick={handleSaveCVWithLoader}
+            disabled={loading}
+          >
+            {loading ? "Saving..." : "Save CV"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Edit Dialog */}
-      <Dialog open={isEditing} onClose={handleCancel} fullWidth maxWidth="sm" >
+      <Dialog
+        open={isEditingProfileData}
+        onClose={handleCancel}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>Edit Profile</DialogTitle>
-        <DialogContent sx={{overflow:"visible"}}>
+        <DialogContent sx={{ overflow: "visible" }}>
           <TextField
             label="Name"
             name="name"
             fullWidth
             value={editedInfo.name}
-            onChange={handleInputChange}
-            sx={{ marginBottom: 2,}}
+            // onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
             disabled
           />
           <TextField
@@ -742,7 +1330,7 @@ function Profile() {
             fullWidth
             value={editedInfo.phone}
             onChange={handleInputChange}
-            error = {errors.mobile}
+            error={errors.mobile}
             helperText={errors.mobile}
             sx={{ marginBottom: 2 }}
           />
@@ -751,9 +1339,9 @@ function Profile() {
             name="address"
             fullWidth
             value={editedInfo.address}
-            onChange={handleInputChange}
-            error = {errors.address}
+            error={errors.address}
             helperText={errors.address}
+            onChange={handleInputChange}
             sx={{ marginBottom: 2 }}
           />
           <TextField
@@ -764,30 +1352,11 @@ function Profile() {
             rows={4}
             value={editedInfo.AboutME}
             onChange={handleInputChange}
-            error = {errors.aboutMe}
+            error={errors.aboutMe}
             helperText={errors.aboutMe}
             sx={{ marginBottom: 2 }}
           />
-          <Box sx={{ marginBottom: 2 }}>
-            <Typography variant="body1" sx={{ marginBottom: 1 }}>
-              Profile Picture
-            </Typography>
-            <Input
-              type="file"
-              onChange={(e) => handleImageChange(e, "profile")}
-              fullWidth
-            />
-          </Box>
-          <Box sx={{ marginBottom: 2 }}>
-            <Typography variant="body1" sx={{ marginBottom: 1 }}>
-              Cover Image
-            </Typography>
-            <Input
-              type="file"
-              onChange={(e) => handleImageChange(e, "cover")}
-              fullWidth
-            />
-          </Box>
+
           <Box sx={{ marginBottom: 2 }}>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>
               Skills
@@ -847,6 +1416,589 @@ function Profile() {
         </DialogActions>
       </Dialog>
 
+      <Dialog
+        open={isEditingProfileImage}
+        onClose={uniqueHandleCancelFunc}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            overflow: "hidden",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            background: `linear-gradient(135deg, ${uniqueThemeInstance.palette.primary.light}, ${uniqueThemeInstance.palette.primary.main})`,
+            color: "white",
+            px: 3,
+            py: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <PhotoCamera sx={{ mr: 1.5 }} />
+            <Typography variant="h6" component="h2" fontWeight={600}>
+              Manage Profile Images
+            </Typography>
+          </Box>
+          {!uniqueIsLoadingState && (
+            <IconButton
+              onClick={uniqueHandleCancelFunc}
+              color="inherit"
+              sx={{
+                bgcolor: "rgba(255,255,255,0.1)",
+                "&:hover": { bgcolor: "rgba(255,255,255,0.2)" },
+              }}
+              aria-label="Close dialog"
+              size="small"
+            >
+              <Close fontSize="small" />
+            </IconButton>
+          )}
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 3, pt: 2.5 }}>
+          {/* Profile Picture Section */}
+          <Box sx={{ mb: 3 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 1.5,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <AccountCircle
+                  sx={{
+                    color: uniqueThemeInstance.palette.primary.main,
+                    mr: 1,
+                  }}
+                />
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Profile Picture
+                </Typography>
+              </Box>
+              {uniqueErrorMessages.profile && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    color: uniqueThemeInstance.palette.error.main,
+                    bgcolor: uniqueThemeInstance.palette.error.light,
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                  }}
+                >
+                  <Info fontSize="small" sx={{ mr: 0.5 }} />
+                  <Typography variant="caption">
+                    {uniqueErrorMessages.profile}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            <Paper
+              elevation={0}
+              sx={{
+                border: "2px dashed",
+                borderColor: (theme) =>
+                  uniqueErrorMessages.profile
+                    ? theme.palette.error.main
+                    : uniqueProfileImagePreview
+                      ? theme.palette.primary.main
+                      : theme.palette.divider,
+                borderRadius: 2,
+                p: 2,
+                transition: "all 0.3s",
+                background: uniqueProfileImagePreview
+                  ? "rgba(0,0,0,0.02)"
+                  : "linear-gradient(145deg, rgba(255,255,255,0), rgba(0,0,0,0.02))",
+                "&:hover": {
+                  borderColor: "primary.main",
+                  background: "rgba(0,0,0,0.03)",
+                },
+              }}
+              onDrop={(e) => uniqueHandleDropFunc(e, "profile")}
+              onDragOver={uniqueHandleDragOverFunc}
+            >
+              {!uniqueProfileImagePreview ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    py: 3.5,
+                  }}
+                >
+                  <CloudUpload
+                    sx={{
+                      fontSize: 48,
+                      color: uniqueThemeInstance.palette.primary.main,
+                      opacity: 0.7,
+                      mb: 1.5,
+                    }}
+                  />
+                  <Typography
+                    variant="body1"
+                    color="text.primary"
+                    align="center"
+                    fontWeight={500}
+                    sx={{ mb: 1 }}
+                  >
+                    Drag & drop your profile image here
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    align="center"
+                    sx={{ mb: 2 }}
+                  >
+                    or select from your computer
+                  </Typography>
+                  <Button
+                    component="label"
+                    variant="contained"
+                    color="primary"
+                    startIcon={<PhotoCamera />}
+                    sx={{
+                      mb: 2,
+                      px: 3,
+                      py: 1,
+                      borderRadius: 6,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    Browse Files
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={(e) =>
+                        uniqueHandleImageChangeFunc(e, "profile")
+                      }
+                      ref={uniqueProfileInputRefV1}
+                    />
+                  </Button>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      bgcolor: "rgba(0,0,0,0.04)",
+                      px: 2,
+                      py: 1,
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Info
+                      fontSize="small"
+                      sx={{ mr: 1, color: "text.secondary" }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      Recommended: Square JPG or PNG, max 5MB
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <Box sx={{ display: "flex", alignItems: "flex-start" }}>
+                  <Box
+                    sx={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      border: "2px solid",
+                      borderColor: uniqueThemeInstance.palette.primary.main,
+                      mr: 2.5,
+                      flexShrink: 0,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                    }}
+                  >
+                    <img
+                      src={uniqueProfileImagePreview}
+                      alt="Profile preview"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", mb: 0.5 }}
+                    >
+                      <CheckCircle
+                        color="success"
+                        fontSize="small"
+                        sx={{ mr: 1 }}
+                      />
+                      <Typography variant="body1" fontWeight={600}>
+                        {profileImage?.name}
+                      </Typography>
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 2 }}
+                    >
+                      {profileImage &&
+                        uniqueFormatFileSizeFunc(profileImage.size)}
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 2 }}>
+                      <Button
+                        color="error"
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Delete />}
+                        onClick={() => uniqueHandleRemoveImageFunc("profile")}
+                        sx={{
+                          textTransform: "none",
+                          borderRadius: 6,
+                        }}
+                      >
+                        Remove
+                      </Button>
+                      <Button
+                        component="label"
+                        color="primary"
+                        variant="contained"
+                        size="small"
+                        startIcon={<Edit />}
+                        sx={{
+                          textTransform: "none",
+                          borderRadius: 6,
+                        }}
+                      >
+                        Change
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          onChange={(e) =>
+                            uniqueHandleImageChangeFunc(e, "profile")
+                          }
+                          ref={uniqueProfileChangeRefV1}
+                        />
+                      </Button>
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+            </Paper>
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          {/* Cover Image Section */}
+          <Box sx={{ mb: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 1.5,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Image
+                  sx={{
+                    color: uniqueThemeInstance.palette.primary.main,
+                    mr: 1,
+                  }}
+                />
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Cover Image
+                </Typography>
+              </Box>
+              {uniqueErrorMessages.cover && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    color: uniqueThemeInstance.palette.error.main,
+                    bgcolor: uniqueThemeInstance.palette.error.light,
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                  }}
+                >
+                  <Info fontSize="small" sx={{ mr: 0.5 }} />
+                  <Typography variant="caption">
+                    {uniqueErrorMessages.cover}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            <Paper
+              elevation={0}
+              sx={{
+                border: "2px dashed",
+                borderColor: (theme) =>
+                  uniqueErrorMessages.cover
+                    ? theme.palette.error.main
+                    : uniqueCoverImagePreview
+                      ? theme.palette.primary.main
+                      : theme.palette.divider,
+                borderRadius: 2,
+                p: 2,
+                transition: "all 0.3s",
+                background: uniqueCoverImagePreview
+                  ? "rgba(0,0,0,0.02)"
+                  : "linear-gradient(145deg, rgba(255,255,255,0), rgba(0,0,0,0.02))",
+                "&:hover": {
+                  borderColor: "primary.main",
+                  background: "rgba(0,0,0,0.03)",
+                },
+              }}
+              onDrop={(e) => uniqueHandleDropFunc(e, "cover")}
+              onDragOver={uniqueHandleDragOverFunc}
+            >
+              {!uniqueCoverImagePreview ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    py: 3.5,
+                  }}
+                >
+                  <CloudUpload
+                    sx={{
+                      fontSize: 48,
+                      color: uniqueThemeInstance.palette.primary.main,
+                      opacity: 0.7,
+                      mb: 1.5,
+                    }}
+                  />
+                  <Typography
+                    variant="body1"
+                    color="text.primary"
+                    align="center"
+                    fontWeight={500}
+                    sx={{ mb: 1 }}
+                  >
+                    Drag & drop your cover image here
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    align="center"
+                    sx={{ mb: 2 }}
+                  >
+                    or select from your computer
+                  </Typography>
+                  <Button
+                    component="label"
+                    variant="contained"
+                    color="primary"
+                    startIcon={<PhotoCamera />}
+                    sx={{
+                      mb: 2,
+                      px: 3,
+                      py: 1,
+                      borderRadius: 6,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    Browse Files
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={(e) => uniqueHandleImageChangeFunc(e, "cover")}
+                      ref={uniqueCoverInputRefV1}
+                    />
+                  </Button>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      bgcolor: "rgba(0,0,0,0.04)",
+                      px: 2,
+                      py: 1,
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Info
+                      fontSize="small"
+                      sx={{ mr: 1, color: "text.secondary" }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      Recommended: JPG or PNG 1500x500px, max 5MB
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <Box sx={{ display: "flex", alignItems: "flex-start" }}>
+                  <Box
+                    sx={{
+                      width: 140,
+                      height: 70,
+                      borderRadius: 1.5,
+                      overflow: "hidden",
+                      border: "2px solid",
+                      borderColor: uniqueThemeInstance.palette.primary.main,
+                      mr: 2.5,
+                      flexShrink: 0,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                    }}
+                  >
+                    <img
+                      src={uniqueCoverImagePreview}
+                      alt="Cover preview"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", mb: 0.5 }}
+                    >
+                      <CheckCircle
+                        color="success"
+                        fontSize="small"
+                        sx={{ mr: 1 }}
+                      />
+                      <Typography variant="body1" fontWeight={600}>
+                        {coverImage?.name}
+                      </Typography>
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 2 }}
+                    >
+                      {coverImage && uniqueFormatFileSizeFunc(coverImage.size)}
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 2 }}>
+                      <Button
+                        color="error"
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Delete />}
+                        onClick={() => uniqueHandleRemoveImageFunc("cover")}
+                        sx={{
+                          textTransform: "none",
+                          borderRadius: 6,
+                        }}
+                      >
+                        Remove
+                      </Button>
+                      <Button
+                        component="label"
+                        color="primary"
+                        variant="contained"
+                        size="small"
+                        startIcon={<Edit />}
+                        sx={{
+                          textTransform: "none",
+                          borderRadius: 6,
+                        }}
+                      >
+                        Change
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          onChange={(e) =>
+                            uniqueHandleImageChangeFunc(e, "cover")
+                          }
+                          ref={uniqueCoverChangeRefV1}
+                        />
+                      </Button>
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+            </Paper>
+          </Box>
+
+          {uniqueErrorMessages.submit && (
+            <Box
+              sx={{
+                mt: 2,
+                p: 1.5,
+                bgcolor: uniqueThemeInstance.palette.error.light,
+                borderRadius: 1,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Info color="error" sx={{ mr: 1 }} />
+              <Typography variant="body2" color="error.dark">
+                {uniqueErrorMessages.submit}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            px: 3,
+            py: 2.5,
+            bgcolor: "rgba(0,0,0,0.02)",
+            borderTop: "1px solid",
+            borderColor: "divider",
+            justifyContent: "center",
+            gap: 2,
+          }}
+        >
+          <Button
+            onClick={uniqueHandleCancelFunc}
+            color="error"
+            variant="outlined"
+            disabled={uniqueIsLoadingState}
+            startIcon={<Close />}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: 6,
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={uniqueHandleSubmitFunc}
+            color="primary"
+            variant="contained"
+            disabled={uniqueIsLoadingState}
+            startIcon={
+              uniqueIsLoadingState ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <Save />
+              )
+            }
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: 6,
+              textTransform: "none",
+              fontWeight: 600,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+              background: `linear-gradient(135deg, ${uniqueThemeInstance.palette.primary.main}, ${uniqueThemeInstance.palette.primary.dark})`,
+            }}
+          >
+            {uniqueIsLoadingState ? "Saving..." : "Save Changes"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* skill dialog */}
       <Dialog open={skillModelOpen} onClose={handleSkillModelClose}>
         <DialogTitle>Add a Skill</DialogTitle>
@@ -868,61 +2020,85 @@ function Profile() {
         </DialogActions>
       </Dialog>
 
-      <Dialog
+      {/* <Dialog
         open={displayCV}
         onClose={() => setDisplayCV(false)}
         fullWidth
-        sx={{
-          "& .MuiDialog-paper": {
-            width: "210mm", // A4 width
-            height: "297mm", // A4 height
-            maxWidth: "none", // Remove default maxWidth
+        PaperProps={{
+          sx: {
+            width: "210mm",
+            height: "297mm",
+            maxWidth: "none",
+            boxShadow: 5, // Add a subtle shadow
+            borderRadius: 2, // Rounded corners
+            border: "none", // No border
           },
         }}
       >
-        <DialogTitle>Resume</DialogTitle>
-        <DialogContent>
-          {displayCV && cvURL && (
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            px: 3,
+            py: 2,
+            backgroundColor: "#f5f5f5", // Light background for the header
+          }}
+        >
+          <Typography variant="h6">Resume</Typography>
+          <IconButton
+            edge="end"
+            onClick={() => setDisplayCV(false)}
+            aria-label="close"
+            sx={{ color: (theme) => theme.palette.grey[700] }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ height: "calc(297mm - 64px)", p: 0 }}>
+          <Box sx={{ width: "100%", height: "100%" }}>
             <iframe
-              src={cvURL}
+              src={`https://docs.google.com/gview?url=${encodeURIComponent(cvURL)}&embedded=true`}
               width="100%"
               height="100%"
-              title="User CV"
               frameBorder="0"
-            ></iframe>
-          )}
+              title="Resume"
+              style={{ border: "none" }}
+            />
+          </Box>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       <Snackbar
-                    open={snackbar.open}
-                    autoHideDuration={3000}
-                    onClose={handleCloseSnackbar}
-                    anchorOrigin={{ vertical: "top", horizontal: "center" }}
-                    TransitionComponent={SlideTransition}
-                  >
-                    <Alert
-                      onClose={handleCloseSnackbar}
-                      severity={snackbar.severity}
-                      variant="filled"
-                      sx={{
-                        width: "100%",
-                        "&.MuiAlert-standardSuccess": {
-                          backgroundColor: "#4caf50",
-                          color: "#fff",
-                        },
-                        "&.MuiAlert-standardError": {
-                          backgroundColor: "#f44336",
-                          color: "#fff",
-                        },
-                        "& .MuiAlert-icon": {
-                          color: "#fff",
-                        },
-                      }}
-                    >
-                      {snackbar.message}
-                    </Alert>
-                  </Snackbar>
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        TransitionComponent={SlideTransition}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{
+            width: "100%",
+            "&.MuiAlert-standardSuccess": {
+              backgroundColor: "#4caf50",
+              color: "#fff",
+            },
+            "&.MuiAlert-standardError": {
+              backgroundColor: "#f44336",
+              color: "#fff",
+            },
+            "& .MuiAlert-icon": {
+              color: "#fff",
+            },
+          }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

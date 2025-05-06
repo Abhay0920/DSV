@@ -128,7 +128,7 @@ export const TimeEntry = ({
         // Fetch time entry data
         setIsLoading(true);
         const TimeEntryResponse = await axios.get(
-          `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
+          `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
         );
 
         const userProfile = {};
@@ -294,16 +294,16 @@ export const TimeEntry = ({
           Start_time: formatTimeToAMPM(start),
           End_time: formatTimeToAMPM(end),
           Total_time: diffMs,
-          Task_ID: viewTask.id,
-          Task_Name: viewTask.name,
-          Project_ID: viewTask.projectId,
-          Project_Name: viewTask.project_name,
+          Task_ID: viewTask.ROWID,
+          Task_Name: viewTask.Task_Name,
+          Project_ID: viewTask.Project_ID,
+          Project_Name: viewTask.Project_Name,
         }
       );
   
       // After successfully posting, fetch the updated data
       const TimeEntryResponse = await axios.get(
-        `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
+        `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
       );
 
       
@@ -480,15 +480,15 @@ export const TimeEntry = ({
           Start_time: formatTimeToAMPM(start),
           End_time: formatTimeToAMPM(end),
           Total_time: diffMs,
-          Task_ID: viewTask.id,
-          Task_Name: viewTask.name,
-          Project_ID: viewTask.projectId,
-          Project_Name: viewTask.project_name,
+          Task_ID: viewTask.ROWID,
+          Task_Name: viewTask.Task_Name,
+          Project_ID: viewTask.Project_ID,
+          Project_Name: viewTask.Project_Name,
         }
       );
       setEditModalOpen(false);
       const TimeEntryResponse = await axios.get(
-        `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
+        `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
       );
 
       setTimeEntry(TimeEntryResponse.data.data);

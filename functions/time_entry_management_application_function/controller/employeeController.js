@@ -6,6 +6,9 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const fileUpload = require("express-fileupload");
 const path = require("path");
+const {
+  USER_STATUS,
+} = require("zcatalyst-sdk-node/lib/user-management/user-management");
 app.use(fileUpload());
 app.use(express.json()); // To handle text data if sent as JSON
 app.use(express.urlencoded({ extended: true })); // To parse URL-encoded data
@@ -15,7 +18,6 @@ const catalyst = require("zcatalyst-sdk-node");
 app.use(bodyParser.json());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
 
 // Initialize Catalyst app
 app.use((req, res, next) => {
@@ -29,21 +31,34 @@ const getAllUsers = async (req, res) => {
 
     const userManagement = catalystApp.userManagement();
     const users = await userManagement.getAllUsers();
-    console.log("user",users);
+    // console.log("user", users);
     const sortedUsers = users.sort((a, b) => {
-     
-      if (a.role_details.role_name === "Admin" && b.role_details.role_name  !== "Admin") {
-        return -1; 
-      } else if (a.role_details.role_name  !== "Admin" && b.role_details.role_name  === "Admin") {
-        return 1; 
+      if (
+        a.role_details.role_name === "Admin" &&
+        b.role_details.role_name !== "Admin"
+      ) {
+        return -1;
+      } else if (
+        a.role_details.role_name !== "Admin" &&
+        b.role_details.role_name === "Admin"
+      ) {
+        return 1;
       }
       return 0;
     });
 
+    const placeholderURL =
+        "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
+
+    const employeesWithPlaceholders = sortedUsers?.map((employee) => ({
+      ...employee,
+      profile_pic: placeholderURL,
+    }));
+
     // Respond with the user data
     res.status(200).json({
       message: "Users fetched successfully",
-      users: sortedUsers,
+      users: employeesWithPlaceholders,
     });
   } catch (error) {
     console.error("Error fetching users:", error);
@@ -126,12 +141,12 @@ const deleteUser = async (req, res) => {
     });
   }
 };
-const { USER_STATUS } = require("zcatalyst-sdk-node/lib/user-management/user-management");
+
 const updateUserStatus = async (req, res) => {
   const user_ID = req.params.user_ID;
   const active = req.params.active !== "ACTIVE";
 
-  console.log("id at backend", user_ID, active);
+  // console.log("id at backend", user_ID, active);
 
   if (!user_ID || typeof active !== "boolean") {
     return res.status(400).json({
@@ -149,7 +164,7 @@ const updateUserStatus = async (req, res) => {
       active ? "enable" : "disable"
     );
 
-    console.log("response", response);
+    // console.log("response", response);
 
     res.status(200).json({
       success: true,
@@ -218,7 +233,7 @@ const addUser = async (req, res) => {
 
     const zcql = catalystApp.zcql();
     const query = `INSERT INTO Users VALUES (${newUserID}, '${userName}', ${defaultResume}, 
-      'Add Your Address', 9999999999, 'Tell About You', 'Your Skills', '', '')`;
+      'Add Your Address', 9999999999, 'Tell About You', 'Your Skills', '', '' ,'')`;
 
     await zcql.executeZCQLQuery(query);
 
@@ -303,6 +318,52 @@ const getUserProfile = async (req, res) => {
     });
   }
 };
+const getUnassignedEmployees = async (req, res) => {
+  try {
+    const catalystApp = req.catalystApp;
+
+    const assigned_To_Id = await catalystApp
+      .zcql()
+      .executeZCQLQuery(
+        "SELECT Assign_To_ID FROM Tasks WHERE Status!= 'Completed'"
+      );
+
+    const formattedAssignedIds = [
+      ...new Set(
+        assigned_To_Id
+          .map((task) =>
+            task.Tasks.Assign_To_ID.split(",").map((id) => id.trim())
+          )
+          .flat()
+          .filter((id) => id !== "")
+      ),
+    ];
+
+    // console.log(formattedAssignedIds);
+
+    const userManagement = catalystApp.userManagement();
+    const users = await userManagement.getAllUsers();
+
+    const unassignedUsers = users.filter((user) => {
+      return (
+        user.user_id &&
+        !formattedAssignedIds.includes(String(user.user_id)) &&
+        user.role_details.role_name !== "Contacts" &&
+        user.role_details.role_name !== "Admin"
+      );
+    });
+
+    res.status(200).json({
+      success: true,
+      data: unassignedUsers,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
 
 module.exports = {
   getAllUsers,
@@ -312,4 +373,5 @@ module.exports = {
   updateUser,
   getUserTasks,
   getUserProfile,
+  getUnassignedEmployees,
 };

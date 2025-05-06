@@ -17,8 +17,14 @@ import {
   TableFooter,
   TablePagination,
   IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  DialogContentText,
   Drawer,
   MenuItem,
+  alpha,
   useTheme,
   Chip,
   Autocomplete,
@@ -28,17 +34,26 @@ import {
   ListItem,
   ListItemText,
   Modal,
+  Pagination,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { FaUsers } from "react-icons/fa";
+import Slide from "@mui/material/Slide";
+
 import Skeleton from "@mui/material/Skeleton";
+import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
 import EditIcon from "@mui/icons-material/Edit";
+import BugReportIcon from "@mui/icons-material/BugReport";
+import { Avatar } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import axios from "axios";
 import { TimeEntry } from "./TimeEntry";
 import { FaBug } from "react-icons/fa6";
 import { useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-
+import { fetchEmpIssue, issuesActions } from "../redux/EmpTask/EmpIssueSlice";
+import { isUnitless } from "@mui/material/styles/cssUtils";
 // import { fetchEmpTask } from "../redux/EmpTask/Empissuelice";
 const statusOptions = ["Open", "In Progress", "Completed"];
 
@@ -74,102 +89,69 @@ export const EmpIssues = () => {
   const theme = useTheme();
   const location = useLocation();
   const { projectId } = location.state || {};
-  const { projectName } = location.state || {}; // Access projectId from state
-  console.log("= ", projectName);
-  const [issue, setIssue] = useState([]);
+  console.log("projectId", projectId);
+  const colors = {
+    primary: theme.palette.primary.main,
+    primaryLight: theme.palette.primary.light,
+    secondary: theme.palette.secondary.main,
+    success: theme.palette.success.main,
+    successLight: theme.palette.success.light,
+    warning: theme.palette.warning.main,
+    warningLight: theme.palette.warning.light,
+    error: theme.palette.error.main,
+    errorLight: theme.palette.error.light,
+    info: theme.palette.info.main,
+    infoLight: theme.palette.info.light,
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [currentIssue, setCurrentIssue] = useState(null);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [viewTask, setViewTask] = useState(null);
-  const [assignOptions, setAssignOptions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [TaskName, setTaskName] = useState("");
-  const [errors, setErrors] = useState({});
-  const [role, setRole] = useState("");
-
-  const [newIssue, setnewIssue] = useState({
-    Status: "",
-    Description: "",
-    Due_Date: "",
-    Issue_name: "",
-    Project_ID: "",
-    Severity: "",
-    Project_Name: " ",
-    Reporter_ID: "",
-    Assignee_ID: "",
-    Reporter_Name: " ",
-    Assignee_Name: "",
-  });
-
+  const [issues, setIssues] = useState([]);
   const [currUser, setCurrUser] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [assignModelOpen, setAssignModelOpen] = useState(false);
+  const [assignIssue, setAssignIssue] = useState(null);
+    const [snackbar, setSnackbar] = useState({
+      open: false,
+      message: "",
+      severity: "success",
+    });
 
-  const Projects = useSelector((state) => state.projectReducer);
-  const Employees = useSelector((state) => state.employeeReducer);
-
-  console.log("Employee", Employees?.data?.users);
   const dispatch = useDispatch();
 
+  const { data } = useSelector((state) => state.empIssuesReducer);
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    const fetchAllData = async () => {
       try {
+        setIsLoading(true);
         const user = JSON.parse(localStorage.getItem("currUser"));
+        const userid = user.userid;
         setCurrUser(user);
 
-        console.log("user", user);
-
-        const userRole = user.role;
-        const userID = user.userid;
-        setRole(userRole);
-
-        let issueResponse;
-
-        if (userRole === "Client") {
-          issueResponse = await axios.get(
-            `/server/time_entry_management_application_function/clientissue/${userID}`
+        if (projectId) {
+          const response = await axios.get(
+            `/server/time_entry_management_application_function/projectIssues/${projectId}`
           );
+          setIssues(response.data.data);
         } else {
-          issueResponse = await axios.get(
-            `/server/time_entry_management_application_function/assignissue/${userID}`
-          );
+          if (!data || (Array.isArray(data) && data.length === 0)) {
+            const result = await dispatch(fetchEmpIssue(userid)).unwrap();
+            setIssues(result);
+          } else {
+            setIssues(data);
+          }
         }
-
-        console.log("response from issue", issueResponse);
-
-        const issueFromResponse = issueResponse.data.data.map((item) => ({
-          id: item.ROWID,
-          issueId: item.ROWID,
-          name: item.Issue_name,
-          projectId: item.Project_ID,
-          project_name: item.Project_Name,
-          assignTo: item.Assignee_Name,
-          assignToID: item.Assignee_ID,
-          status: item.Status,
-          severity: item.Severity,
-          dueDate: item.Due_Date,
-          description: item.Description,
-          reporter: item.Reporter_Name,
-          CreationTime: item.CREATEDTIME.split(" ")[0],
-        }));
-        console.log("response from issue ", issueFromResponse);
-        // if (projectId ) {
-        //   setTaskName(projectName);
-        // } else {
-        //   setTaskName("issue");
-        // }
-        setIssue(issueFromResponse);
+        setIsLoading(false);
       } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
+        console.error("Error loading data:", error);
       }
     };
-    fetchData();
-  }, []);
+
+    fetchAllData();
+  }, [dispatch, projectId, data]);
 
   const [anchorEl, setAnchorEl] = useState(null); // Manage Popover state
   const [selectedAssignees, setSelectedAssignees] = useState([]); // Store assignees
@@ -185,27 +167,6 @@ export const EmpIssues = () => {
     setAnchorEl(null);
   };
 
-  const validateForm = () => {
-    let newErrors = {};
-
-    if (!newIssue.Project) newErrors.projectId = "Project is required";
-    if (!newIssue.name) newErrors.name = "Task name is required";
-    if (!newIssue.assignToID)
-      newErrors.assignToID = "At least one user must be assigned";
-    if (!newIssue.status) newErrors.status = "Status is required";
-    if (!newIssue.startDate) newErrors.startDate = "Start date is required";
-    if (!newIssue.endDate) newErrors.endDate = "End date is required";
-    if (
-      newIssue.startDate &&
-      newIssue.endDate &&
-      newIssue.startDate > newIssue.endDate
-    )
-      newErrors.endDate = "End date cannot be before start date";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSearch = (event) => {
     setSearchQuery(event.target.value);
   };
@@ -219,8 +180,8 @@ export const EmpIssues = () => {
     setPage(0);
   };
 
-  const filteredissue = issue.filter((isue) =>
-    isue.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredissue = issues?.filter((isue) =>
+    isue?.Issue_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const paginatedissue = filteredissue.slice(
@@ -228,300 +189,179 @@ export const EmpIssues = () => {
     page * rowsPerPage + rowsPerPage
   );
 
-  const toggleDrawer = (open) => {
-    setDrawerOpen(open);
-  };
-
-  const handleInputChange = (event) => {
-    const { name, value } = event.target;
-
-    console.log("name", name);
-    console.log("value", value);
-
-    // Handle Project selection
-    if (name === "Project") {
-      const selectedOption = Projects.data.data.find(
-        (option) => option.ROWID === value
-      );
-      console.log("selected:", selectedOption);
-
-      if (selectedOption) {
-        setnewIssue((prev) => ({
-          ...prev,
-          Project_Name: selectedOption.Project_Name,
-          Project_ID: value,
-        }));
-      }
-    }
-
-    // Handle Assignee selection (multiple selection)
-    else if (name === "AssigneeID") {
-      const selectedAssignees = Employees.data.users.filter(
-        (employee) => value.includes(employee.user_id) // Check if the employee's user_id is selected
-      );
-
-      const assigneeIDs = selectedAssignees
-        .map((employee) => employee.user_id)
-        .join(","); // Join selected IDs as comma-separated string
-      const assigneeNames = selectedAssignees
-        .map((employee) => `${employee.first_name} ${employee.last_name}`)
-        .join(","); // Join selected names as comma-separated string
-
-      setnewIssue((prev) => ({
-        ...prev,
-        Assignee_Name: assigneeNames, // Store names as comma-separated string
-        Assignee_ID: assigneeIDs, // Store IDs as comma-separated string
-      }));
-    }
-
-    // For all other inputs, just update the state
-    else {
-      setnewIssue((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
   const handleUpdateIssue = async () => {
     console.log(currentIssue);
     const ROWID = currentIssue.id;
 
     const updateResponse = await axios.post(
       `/server/time_entry_management_application_function/issue/${ROWID}`,
-      {
-        Status: currentIssue.status,
-        Description: currentIssue.description,
-        Due_Date: currentIssue.dueDate,
-        Issue_name: currentIssue.name,
-        Project_ID: currentIssue.projectId,
-        Severity: currentIssue.severity,
-        Project_Name: currentIssue.project_name,
-        Assignee_ID: currentIssue.assignToID,
-        Assignee_Name: currentIssue.assignTo,
-      }
+      currentIssue
     );
 
     console.log("updateResponse", updateResponse);
-
-    setIssue((prev) =>
-      prev.map((task) => (task.id === currentIssue.id ? currentIssue : task))
-    );
+    if (updateResponse.status === 200) {
+      dispatch(issuesActions.updateIssue(updateResponse.data.data));
+      handleAlert("success", "Issue updated successfully");
+    }
     setCurrentIssue("");
     setEditModalOpen(false);
   };
 
   const handleEditInputChange = (event) => {
     const { name, value } = event.target;
-
-    if (name === "project") {
-      const selectedOption = Projects.data.data.find(
-        (option) => option.ROWID === value
-      );
-
-      if (selectedOption) {
-        setCurrentIssue((prev) => ({
-          ...prev,
-          project_name: selectedOption.Project_Name,
-          projectId: selectedOption.ROWID,
-        }));
-      }
-    } else if (name === "AssigneeID") {
-      const selectedValues = event.target.value;
-      const selectedUsernames = selectedValues
-        .map((id) => {
-          const user = Employees.data.users.find(
-            (option) => option.user_id === id
-          );
-          return user ? user.first_name + " " + user.last_name : "";
-        })
-        .filter((name) => name)
-        .join(",");
-
-      setCurrentIssue((prev) => ({
-        ...prev,
-        assignTo: selectedUsernames,
-        assignToID: selectedValues.join(","),
-      }));
-    } else {
-      setCurrentIssue((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleViewTask = (task) => {
-    setViewTask(task);
-    setViewModalOpen(true);
-  };
-
-  const handleAddIssue = async () => {
-    console.log("newIssue", newIssue);
-    newIssue.Reporter_ID = currUser.userid;
-    newIssue.Reporter_Name = `${currUser.firstName} ${currUser.lastName}`;
-
-    try {
-      const response = await axios.post(
-        "/server/time_entry_management_application_function/issue",
-        newIssue
-      );
-      console.log("Response Data:", response.data.data);
-      const item = response.data.data;
-
-      if (item) {
-        const newIssueResponse = {
-          id: item.ROWID || null, // Ensure ROWID exists
-          issueId: item.ROWID || null,
-          name: item.Issue_name || "",
-          projectId: item.Project_ID || "",
-          project_name: item.Project_Name || "",
-          assignTo: item.Assignee_Name || "", // Assign names from response
-          assignToID: item.Assignee_ID || "", // Assign IDs from response
-          status: item.Status || "",
-          severity: item.Severity || "",
-          dueDate: item.Due_Date || "",
-          description: item.Description || "",
-          reporter: item.Reporter_Name || "",
-          CreationTime: item.CREATEDTIME ? item.CREATEDTIME.split(" ")[0] : "",
-        };
-
-        // Add the new task to the issue list
-        const newIssueData = [newIssueResponse, ...issue];
-        setIssue(newIssueData);
-
-        // Close the form or clear inputs
-        handleCancel();
-
-        // Show success message
-        handleAlert("success", "Task added successfully");
-        // Optionally, dispatch a fetch action to refresh issues list
-        // dispatch(fetchissue());
-      } else {
-        throw new Error("Invalid response data received");
-      }
-    } catch (error) {
-      // Handle errors
-      console.error("Error adding task:", error);
-      handleAlert("error", error.message || "Error adding task");
-    }
+    setCurrentIssue((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAlert = (severity, message) => {
-    // setSnackbar({
-    //   open: true,
-    //   message,
-    //   severity,
-    // });
-    console.log("sucess", message);
-  };
-
-  const handleCloseViewModal = () => {
-    setViewTask(null);
-    setViewModalOpen(false);
-  };
-  const handleCancel = () => {
-    setnewIssue({
-      project: "",
-      name: "",
-      assignTo: "",
-      status: "",
-      startDate: "",
-      endDate: "",
-      description: "",
+    setSnackbar({
+      open: true,
+      message,
+      severity,
     });
-    toggleDrawer(false);
-  };
-  const handleSubmit = () => {
-    if (1 || validateForm()) {
-      handleAddIssue();
-    }
   };
 
-  const deleteIssue = async (issueId) => {
-    try {
-      const response = await axios.delete(
-        `/server/time_entry_management_application_function/issue/${issueId}`
-      );
-
-      console.log(response);
-      setIssue((prev) => prev.filter((issue) => issue.id !== issueId));
-    } catch (error) {
-      console.error("Error deleting issue:", error);
-    }
-  };
 
   const handleCloseEditModal = () => {
     setEditModalOpen(false);
   };
 
   const handleEdit = (isue) => {
-    console.log("name of the issue ", isue);
     setCurrentIssue(isue);
-    console.log("current isusue", currentIssue);
     setEditModalOpen(true);
+  };
+
+  const handleAssignModelOpen = (issue) => {
+    setAssignIssue(issue);
+    setAssignModelOpen(true);
+  };
+  function SlideTransition(props) {
+     return <Slide {...props} direction="down" />;
+   }
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+  const handleAssign = async () => {
+    console.log("issue", assignIssue);
+    console.log("currUser", currUser);
+    console.log("issues", issues);
+
+    const response = await axios.post(
+      "/server/time_entry_management_application_function/assignIssue/" +
+        assignIssue.ROWID,
+      {
+        Assignee_ID: currUser.userid,
+        Assignee_Name: currUser.firstName + " " + currUser.lastName,
+      }
+    );
+
+    if (response.status === 200) {
+      console.log("response", response);
+      dispatch(fetchEmpIssue(currUser.userid));
+
+      const updatedIssues = issues.map((item) => {
+        if (item.ROWID === assignIssue.ROWID) {
+          return {
+            ...item,
+            Assignee_ID: currUser.userid,
+            Assignee_Name: `${currUser.firstName} ${currUser.lastName}`,
+          };
+        }
+        return item;
+      });
+      setIssues(updatedIssues);
+      setAssignModelOpen(false);
+      handleAlert("success", "Issue assigned successfully");
+    }
   };
 
   return (
     <Box sx={{ padding: 3 }}>
-      <Box
+      <Card
+        elevation={0}
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 3,
+          mb: 4,
+          borderRadius: "16px",
+          background: `linear-gradient(135deg, ${colors.primary}88, ${colors.info}88)`,
+          color: "white",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <Typography variant="h4">Issues</Typography>
-      </Box>
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            opacity: 0.05,
+            backgroundImage:
+              'url("data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%23ffffff" fill-opacity="1" fill-rule="evenodd"/%3E%3C/svg%3E")',
+            backgroundSize: "15px",
+          }}
+        />
+        <CardContent sx={{ py: 4, px: 3, position: "relative" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              rowGap: 2,
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              <Avatar
+                sx={{
+                  bgcolor: colors.primary,
+                  width: 60,
+                  height: 60,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                }}
+              >
+                <BugReportIcon fontSize="large" />
+              </Avatar>
+              <Box sx={{ ml: 2 }}>
+                <Typography variant="h4" fontWeight="bold">
+                  Issues
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 2,
+                alignItems: "center",
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              <TextField
+                label="Search Issues"
+                variant="outlined"
+                size="small"
+                sx={{ width: { xs: "100%", sm: "250px" } }}
+                value={searchQuery}
+                onChange={handleSearch}
+              />
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
 
       <Grid container spacing={3}>
         <Grid item xs={12}>
-          <Card>
-            <CardContent
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              {loading ? (
-                <>
-                  <Skeleton
-                    variant="rectangular"
-                    width="40%"
-                    height={40}
-                    sx={{ borderRadius: 1 }}
-                  />
-                  <Skeleton
-                    variant="rectangular"
-                    width={120}
-                    height={40}
-                    sx={{ borderRadius: 1 }}
-                  />
-                </>
-              ) : (
-                <TextField
-                  label="Search Issues"
-                  variant="outlined"
-                  size="small"
-                  // value={searchQuery}
-                  // onChange={handleSearch}
-                  sx={{ width: "40%" }}
-                />
-              )}
-
-              {role === "Client" ? (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => toggleDrawer(true)}
-                >
-                  Submit Issue
-                </Button>
-              ) : (
-                <></>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12}>
-          {loading ? (
+          {isLoading ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -635,7 +475,7 @@ export const EmpIssues = () => {
                 </TableRow>
               </TableBody>
             </Table>
-          ) : issue.length === 0 ? (
+          ) : issues?.length === 0 ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -811,7 +651,7 @@ export const EmpIssues = () => {
                   </TableRow>
                 </TableHead>
 
-                {loading ? (
+                {isLoading ? (
                   <TableBody>
                     <TableRow>
                       <TableCell
@@ -963,25 +803,29 @@ export const EmpIssues = () => {
                   </TableBody>
                 ) : (
                   <TableBody>
-                    {paginatedissue.map((isue) => (
-                      <TableRow key={isue.id}>
+                    {paginatedissue?.map((isue) => (
+                      <TableRow key={isue.ROWID}>
                         <TableCell>
-                          {"I" + isue.id.substr(isue.id.length - 4)}
+                          {"I" + isue.ROWID?.substr(isue.ROWID?.length - 4)}
                         </TableCell>
-                        <TableCell>{isue.name}</TableCell>
-                        <TableCell>{isue.reporter}</TableCell>
-                        <TableCell>{isue.CreationTime}</TableCell>
+                        <TableCell>{isue.Issue_name || "N/A"}</TableCell>
+                        <TableCell>{isue.Reporter_Name || "N/A"}</TableCell>
+                        <TableCell>
+                          {isue.CREATEDTIME
+                            ? isue.CREATEDTIME.split(" ")[0]
+                            : "N/A"}
+                        </TableCell>
                         <TableCell>
                           <Chip
-                            label={isue.status}
+                            label={isue.Status || "Unknown"}
                             size="small"
                             sx={{
                               backgroundColor:
-                                statusConfig[isue.status]?.backgroundColor ||
+                                statusConfig[isue.Status]?.backgroundColor ||
                                 "#f5f5f5",
                               color:
-                                statusConfig[isue.status]?.color || "#757575",
-                              border: `1px solid ${statusConfig[isue.status]?.borderColor || "#e0e0e0"}`,
+                                statusConfig[isue.Status]?.color || "#757575",
+                              border: `1px solid ${statusConfig[isue.Status]?.borderColor || "#e0e0e0"}`,
                               fontWeight: 500,
                               fontSize: "0.75rem",
                               height: "24px",
@@ -997,13 +841,23 @@ export const EmpIssues = () => {
                             <IconButton
                               size="small"
                               onClick={(e) =>
-                                handleAssigneeClick(e, isue.assignTo)
+                                handleAssigneeClick(e, isue.Assignee_Name || "")
                               }
                               sx={{ color: theme.palette.primary.main }}
                             >
-                              <FaUsers />
+                              <FaUsers
+                                style={{
+                                  color: !isue.Assignee_Name?.trim()
+                                    ? "red"
+                                    : theme.palette.primary.main,
+                                }}
+                              />
                               <Typography variant="body2" sx={{ ml: 1 }}>
-                                {isue.assignTo.split(",").length}
+                                {isue.Assignee_Name?.trim()
+                                  ? isue.Assignee_Name.split(",").filter(
+                                      (name) => name.trim() !== ""
+                                    ).length
+                                  : 0}
                               </Typography>
                             </IconButton>
                           </Tooltip>
@@ -1040,38 +894,45 @@ export const EmpIssues = () => {
                                   borderBottom: `1px solid ${theme.palette.divider}`,
                                 }}
                               >
-                                Assigned Users
+                                {!selectedAssignees?.some((a) => a.trim())
+                                  ? "No Assign User Yet"
+                                  : "Assigned User"}
                               </Typography>
-                              {selectedAssignees.map((assignee, index) => (
-                                <ListItem key={index} sx={{ py: 0.5 }}>
-                                  <ListItemText
-                                    primary={assignee}
-                                    primaryTypographyProps={{
-                                      variant: "body2",
-                                    }}
-                                  />
-                                </ListItem>
-                              ))}
+
+                              {selectedAssignees
+                                ?.filter((a) => a.trim())
+                                .map((assignee, index) => (
+                                  <ListItem key={index} sx={{ py: 0.5 }}>
+                                    <ListItemText
+                                      primary={assignee}
+                                      primaryTypographyProps={{
+                                        variant: "body2",
+                                      }}
+                                    />
+                                  </ListItem>
+                                ))}
                             </List>
                           </Popover>
                         </TableCell>
 
-                        {/* <TableCell>{isue.assignTo}</TableCell> */}
-                        <TableCell>{isue.dueDate}</TableCell>
+                        <TableCell>{isue.Due_Date || "N/A"}</TableCell>
 
                         <TableCell>
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleEdit(isue)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => deleteIssue(isue.id)}
-                          >
-                            {role === "Client" ? <DeleteIcon /> : <></>}
-                          </IconButton>
+                          {!isue.Assignee_Name?.trim() ? (
+                            <IconButton
+                              color="primary"
+                              onClick={() => handleAssignModelOpen(isue)}
+                            >
+                              <AssignmentIndIcon />
+                            </IconButton>
+                          ) : (
+                            <IconButton
+                              color="primary"
+                              onClick={() => handleEdit(isue)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1096,175 +957,45 @@ export const EmpIssues = () => {
         </Grid>
       </Grid>
 
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => toggleDrawer(false)}
+      <Dialog
+        open={assignModelOpen}
+        onClose={() => setAssignModelOpen(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        PaperProps={{
+          sx: {
+            width: "100%",
+            maxWidth: "500px",
+            borderRadius: "8px",
+          },
+        }}
       >
-        <Box
-          sx={{
-            width: 400,
-            padding: 2,
-            position: "relative",
-            maxHeight: "90vh",
-            overflowY: "auto",
-            marginTop: "70px",
-          }}
-        >
-          <Typography variant="h5" sx={{ marginBottom: 3 }}>
-            Add Issue
-          </Typography>
-
-          <TextField
-            select
-            fullWidth
-            label="Project"
-            name="Project"
-            value={newIssue.Project_ID}
-            onChange={handleInputChange}
-            sx={{ mb: 2 }}
-            error={!!errors.Project}
-            helperText={errors.Project}
+        <DialogTitle id="alert-dialog-title" sx={{ pb: 1 }}>
+          Assign Issue
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Are you sure you want to assign this issue to yourself?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button
+            onClick={() => setAssignModelOpen(false)}
+            variant="outlined"
+            color="primary"
           >
-            {Projects.data.data.map((project) => (
-              <MenuItem key={project.ROWID} value={project.ROWID}>
-                {project.Project_Name}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <TextField
-            label="Add Issue"
-            name="Issue_name"
-            fullWidth
-            value={newIssue.Issue_name}
-            onChange={handleInputChange}
-            sx={{ marginBottom: 2 }}
-            error={!!errors.name}
-            helperText={errors.name}
-          />
-
-          <Autocomplete
-            multiple
-            options={Employees.data.users}
-            getOptionLabel={(option) =>
-              `${option.first_name} ${option.last_name}`
-            } // Show full name of the employee
-            value={Employees.data.users.filter((employee) =>
-              Array.isArray(newIssue.Assignee_ID)
-                ? newIssue.Assignee_ID.includes(employee.user_id) // If Assignee_ID is an array
-                : typeof newIssue.Assignee_ID === "string"
-                  ? newIssue.Assignee_ID.split(",").includes(employee.user_id) // If Assignee_ID is a comma-separated string
-                  : []
-            )}
-            onChange={(event, newValue) => {
-              const selectedValues = newValue; // Array of selected employees
-
-              const selectedIDs = selectedValues.map(
-                (option) => option.user_id
-              ); // Collect user IDs
-              const selectedNames = selectedValues.map(
-                (option) => `${option.first_name} ${option.last_name}`
-              ); // Collect employee names
-
-              // Update Assignee_ID with comma-separated user IDs
-              handleInputChange({
-                target: {
-                  name: "Assignee_ID",
-                  value: selectedIDs.join(","),
-                },
-              });
-
-              // Optionally, store the selected names as a comma-separated string if needed
-              handleInputChange({
-                target: {
-                  name: "Assignee_Name",
-                  value: selectedNames.join(","),
-                },
-              });
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Assignee"
-                name="AssigneeID"
-                fullWidth
-                error={!!errors.assignToID}
-                helperText={errors.assignToID}
-                sx={{ marginBottom: 2 }}
-              />
-            )}
-          />
-
-          <TextField
-            select
-            fullWidth
-            label="Status"
-            name="Status"
-            value={newIssue.Status}
-            onChange={handleInputChange}
-            sx={{ mb: 2 }}
-            error={!!errors.status}
-            helperText={errors.status}
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAssign}
+            variant="contained"
+            color="primary"
+            autoFocus
           >
-            {["Open", "Work In Progress", "Close"].map((status) => (
-              <MenuItem key={status} value={status}>
-                {status}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <TextField
-            label="Due Date"
-            name="Due_Date"
-            fullWidth
-            type="date"
-            value={newIssue.Due_Date}
-            onChange={handleInputChange}
-            InputLabelProps={{ shrink: true }}
-            sx={{ marginBottom: 2 }}
-            error={!!errors.endDate}
-            helperText={errors.endDate}
-          />
-
-          <TextField
-            select
-            fullWidth
-            label="Severity"
-            name="Severity"
-            value={newIssue.Severity}
-            onChange={handleInputChange}
-            sx={{ mb: 2 }}
-            error={!!errors.severity}
-            helperText={errors.severity}
-          >
-            <MenuItem value="Show stopper">Show stopper</MenuItem>
-            <MenuItem value="Critical">Critical</MenuItem>
-            <MenuItem value="Major">Major</MenuItem>
-            <MenuItem value="Minor">Minor</MenuItem>
-          </TextField>
-
-          <TextField
-            label="Add Description"
-            name="Description"
-            fullWidth
-            multiline
-            rows={4}
-            value={newIssue.Description}
-            onChange={handleInputChange}
-            sx={{ marginBottom: 3 }}
-          />
-
-          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Button variant="contained" color="primary" onClick={handleSubmit}>
-              Add
-            </Button>
-            <Button variant="outlined" color="error" onClick={handleCancel}>
-              Cancel
-            </Button>
-          </Box>
-        </Box>
-      </Drawer>
+            Assign
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Modal
         open={editModalOpen}
@@ -1291,62 +1022,12 @@ export const EmpIssues = () => {
 
           {currentIssue && (
             <>
-              {role === "Client" ? (
-                <>
-                  <TextField
-                    label="Issue Name"
-                    name="name"
-                    fullWidth
-                    value={currentIssue.name}
-                    onChange={handleEditInputChange}
-                    sx={{ mb: 2 }}
-                  />
-
-                  <TextField
-                    label="Project"
-                    name="project"
-                    fullWidth
-                    select
-                    value={currentIssue.projectId || ""}
-                    onChange={handleEditInputChange}
-                    sx={{ mb: 2 }}
-                  >
-                    {Projects.data.data.map((option) => (
-                      <MenuItem key={option.ROWID} value={option.ROWID}>
-                        {option.Project_Name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-
-                  <TextField
-                    label="Assignee"
-                    name="AssigneeID"
-                    fullWidth
-                    select
-                    SelectProps={{ multiple: true }}
-                    value={
-                      currentIssue.assignToID
-                        ? currentIssue.assignToID.split(",")
-                        : []
-                    }
-                    onChange={handleEditInputChange}
-                    sx={{ mb: 2 }}
-                  >
-                    {Employees.data.users.map((option) => (
-                      <MenuItem key={option.user_id} value={option.user_id}>
-                        {option.first_name} {option.last_name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </>
-              ) : null}
-
               <TextField
                 select
                 fullWidth
                 label="Status"
-                name="status"
-                value={currentIssue.status}
+                name="Status"
+                value={currentIssue.Status}
                 onChange={handleEditInputChange}
                 sx={{ mb: 2 }}
               >
@@ -1356,49 +1037,6 @@ export const EmpIssues = () => {
                   </MenuItem>
                 ))}
               </TextField>
-
-              {role == "Client" ? (
-                <>
-                  {" "}
-                  <TextField
-                    label="Due Date"
-                    name="dueDate"
-                    fullWidth
-                    type="date"
-                    value={currentIssue.dueDate}
-                    onChange={handleEditInputChange}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ mb: 2 }}
-                  />
-                  <TextField
-                    select
-                    fullWidth
-                    label="Severity"
-                    name="Severity"
-                    value={currentIssue.severity}
-                    onChange={handleInputChange}
-                    sx={{ mb: 2 }}
-                    error={!!errors.severity}
-                    helperText={errors.severity}
-                  >
-                    <MenuItem value="Show stopper">Show stopper</MenuItem>
-                    <MenuItem value="Critical">Critical</MenuItem>
-                    <MenuItem value="Major">Major</MenuItem>
-                    <MenuItem value="Minor">Minor</MenuItem>
-                  </TextField>
-                  <TextField
-                    label="Add Description"
-                    name="description"
-                    fullWidth
-                    multiline
-                    rows={4}
-                    value={currentIssue.description}
-                    onChange={handleEditInputChange}
-                    sx={{ marginBottom: 3 }}
-                  />
-                </>
-              ) : null}
-
               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                 <Button
                   variant="contained"
@@ -1419,6 +1057,36 @@ export const EmpIssues = () => {
           )}
         </Box>
       </Modal>
+
+       <Snackbar
+              open={snackbar.open}
+              autoHideDuration={3000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+              TransitionComponent={SlideTransition}
+            >
+              <Alert
+                onClose={handleCloseSnackbar}
+                severity={snackbar.severity}
+                variant="filled"
+                sx={{
+                  width: "100%",
+                  "&.MuiAlert-standardSuccess": {
+                    backgroundColor: "#4caf50",
+                    color: "#fff",
+                  },
+                  "&.MuiAlert-standardError": {
+                    backgroundColor: "#f44336",
+                    color: "#fff",
+                  },
+                  "& .MuiAlert-icon": {
+                    color: "#fff",
+                  },
+                }}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
     </Box>
   );
 };

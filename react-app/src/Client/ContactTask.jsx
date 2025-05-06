@@ -16,6 +16,7 @@ import {
   Paper,
   TableFooter,
   TablePagination,
+  Avatar,
   IconButton,
   Drawer,
   MenuItem,
@@ -29,11 +30,15 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import CircularProgress from "@mui/material/CircularProgress";
 import axios from "axios";
 import { TimeEntry } from "./TimeEntry";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import { FaTasks } from "react-icons/fa";
 import { useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { fetchContactData } from "../redux/contacts/contactSlice";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
 import { fetchEmpTask } from "../redux/EmpTask/EmpTaskSlice";
+import { fetchContactTask } from "../redux/contacts/contactTaskSlice";
 const statusOptions = ["Open", "In Progress", "Completed"];
 
 const statusConfig = {
@@ -67,6 +72,20 @@ const statusConfig = {
 function Task() {
   const theme = useTheme();
 
+  const colors = {
+    primary: theme.palette.primary.main,
+    primaryLight: theme.palette.primary.light,
+    secondary: theme.palette.secondary.main,
+    success: theme.palette.success.main,
+    successLight: theme.palette.success.light,
+    warning: theme.palette.warning.main,
+    warningLight: theme.palette.warning.light,
+    error: theme.palette.error.main,
+    errorLight: theme.palette.error.light,
+    info: theme.palette.info.main,
+    infoLight: theme.palette.info.light,
+  };
+
   const location = useLocation();
   const { projectId } = location.state || {};
   const { projectName } = location.state || {}; // Access projectId from state
@@ -82,7 +101,7 @@ function Task() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewTask, setViewTask] = useState(null);
   const [assignOptions, setAssignOptions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [TaskName, setTaskName] = useState("");
 
   const [newTask, setNewTask] = useState({
@@ -101,6 +120,11 @@ function Task() {
   // const Task = useSelector((state) => state.empTaskReducer);
   const dispatch = useDispatch();
 
+  const {data} = useSelector((state)=> state.contactReducer);
+  const {data:TaskData, isLoading} = useSelector((state)=> state.contactTaskReducer);
+  
+  console.log("reoeeoe",TaskData);
+
   console.log("task", Task);
   useEffect(() => {
     const fetchData = async () => {
@@ -110,48 +134,65 @@ function Task() {
         setCurrUser(user);
         const userid = user.userid;
 
-        const contactRes = await axios.get(
-          `/server/time_entry_management_application_function/contactData/${userid}`
-        );
+         let contactDataResult = data;
+                  console.log("datat lenght",data);
+                  if (!data || data.length === 0) {
+                    console.log("datat lenght",data);
+                    const resultAction = await dispatch(fetchContactData(userid)).unwrap();
+                    contactDataResult = resultAction;
+                  }
+                    console.log("api caleed ");
+                  if (!contactDataResult || contactDataResult.length === 0) return;
+            
+        // const contactRes = await axios.get(
+        //   `/server/time_entry_management_application_function/contactData/${userid}`
+        // );
 
-        const orgId = contactRes?.data?.data?.[0]?.Client_Contact?.OrgID;
-        if (!orgId)
+        const contactDetail = contactDataResult[0]?.Client_Contact;
+        const orgId = contactDetail?.OrgID;
+     if (!orgId)
           throw new Error("Organization ID not found in contact data");
 
-        const TaskResponse = await axios.get(
-          `/server/time_entry_management_application_function/contact/tasks/${orgId}`
-        );
 
-        console.log("TaskResponse", TaskResponse.data.data);
+       
+     if(!TaskData || (Array.isArray(TaskData) && TaskData.length === 0)){
+       await dispatch(fetchContactTask(orgId)).unwrap();
+     
+     }
 
-        const ProjectResponse = await axios.get(
-          "/server/time_entry_management_application_function/projects"
-        );
-        const tasksFromResponse = TaskResponse.data.data
-          .filter((item) => (projectId ? item.Project_ID === projectId : true))
-          .map((item) => ({
-            id: item.ROWID,
-            taskid: item.ROWID,
-            name: item.Task_Name,
-            projectId: item.Project_ID,
-            project_name: item.Project_Name,
-            assignTo: item.Assign_To,
-            assignToID: item.Assign_To_ID,
-            status: item.Status,
-            startDate: item.Start_Date,
-            endDate: item.End_Date,
-            description: item.Description,
-          }));
-        if (projectId) {
-          setTaskName(projectName);
-        } else {
-          setTaskName("Tasks");
-        }
-        setTasks(tasksFromResponse);
-        const filteredProjects = ProjectResponse.data.data.filter(
-          (project) => project.Assigned_To_Id === userid
-        );
-        setProjects(filteredProjects);
+    //  const TaskResponse = await axios.get(
+    //       `/server/time_entry_management_application_function/contact/tasks/${orgId}`
+    //     );
+
+        // console.log("TaskResponse", TaskResponse.data.data);
+
+        // const ProjectResponse = await axios.get(
+        //   "/server/time_entry_management_application_function/projects"
+        // );
+        // const tasksFromResponse = TaskData?.filter((item) => (projectId ? item.Project_ID === projectId : true))
+        //   .map((item) => ({
+        //     id: item.ROWID,
+        //     taskid: item.ROWID,
+        //     name: item.Task_Name,
+        //     projectId: item.Project_ID,
+        //     project_name: item.Project_Name,
+        //     assignTo: item.Assign_To,
+        //     assignToID: item.Assign_To_ID,
+        //     status: item.Status,
+        //     startDate: item.Start_Date,
+        //     endDate: item.End_Date,
+        //     description: item.Description,
+        //   }));
+        // if (projectId) {
+        //   setTaskName(projectName);
+        // } else {
+        //   setTaskName("Tasks");
+        // }
+        // setTasks(tasksFromResponse);
+        // const filteredProjects = ProjectResponse.data.data.filter(
+        //   (project) => project.Assigned_To_Id === userid
+        // );
+        // setProjects(filteredProjects);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -174,11 +215,16 @@ function Task() {
     setPage(0);
   };
 
-  const filteredTasks = tasks.filter((task) =>
-    task.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTasks = TaskData?.filter((task) => {
+    
+  const matchesSearch = task.Task_Name.toLowerCase().includes(searchQuery.toLowerCase());
+ 
+  const matchesProject = projectId ? task.ProjectID === projectId : true;
+  return matchesSearch && matchesProject;
+});
 
-  const paginatedTasks = filteredTasks.slice(
+
+  const paginatedTasks = filteredTasks?.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -285,56 +331,68 @@ function Task() {
 
   return (
     <Box sx={{ padding: 3 }}>
-      <Box
+      <Card
+        elevation={0}
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 3,
+          mb: 4,
+          borderRadius: "16px",
+          background: `linear-gradient(135deg, ${colors.primary}88, ${colors.info}88)`,
+          color: "white",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <Typography variant="h4">{TaskName}</Typography>
-      </Box>
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            opacity: 0.05,
+            backgroundImage:
+              'url("data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%23ffffff" fill-opacity="1" fill-rule="evenodd"/%3E%3C/svg%3E")',
+            backgroundSize: "15px",
+          }}
+        />
+        <CardContent sx={{ py: 4, px: 3, position: "relative" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Avatar
+                sx={{
+                  bgcolor: colors.primary,
+                  width: 60,
+                  height: 60,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                }}
+              >
+                <AssignmentIcon fontSize="large" />
+              </Avatar>
+              <Box sx={{ ml: 2 }}>
+                <Typography variant="h4" fontWeight="bold">
+                  Tasks
+                </Typography>
+              </Box>
+            </Box>
+            <TextField
+              label="Search Tasks"
+              variant="outlined"
+              size="small"
+              value={searchQuery}
+              onChange={handleSearch}
+              sx={{ width: "40%" }}
+            />
+          </Box>
+        </CardContent>
+      </Card>
 
       <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              {loading ? (
-                <>
-                  <Skeleton
-                    variant="rectangular"
-                    width="40%"
-                    height={40}
-                    sx={{ borderRadius: 1 }}
-                  />
-                  <Skeleton
-                    variant="rectangular"
-                    width={120}
-                    height={40}
-                    sx={{ borderRadius: 1 }}
-                  />
-                </>
-              ) : (
-                <TextField
-                  label="Search Tasks"
-                  variant="outlined"
-                  size="small"
-                  value={searchQuery}
-                  onChange={handleSearch}
-                  sx={{ width: "40%" }}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
         <Grid item xs={12}>
           {loading ? (
             <Table>
@@ -442,7 +500,7 @@ function Task() {
                 </TableRow>
               </TableBody>
             </Table>
-          ) : tasks.length === 0 ? (
+          ) : paginatedTasks.length === 0 ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -754,23 +812,23 @@ function Task() {
                 ) : (
                   <TableBody>
                     {paginatedTasks.map((task) => (
-                      <TableRow key={task.id}>
+                      <TableRow key={task.ROWID}>
                         <TableCell>
-                          {"T" + task.id.substr(task.id.length - 4)}
+                          {"T" + task.ROWID.substr(task.ROWID.length - 4)}
                         </TableCell>
-                        <TableCell>{task.name}</TableCell>
-                        <TableCell>{task.project_name}</TableCell>
+                        <TableCell>{task.Task_Name}</TableCell>
+                        <TableCell>{task.Project_Name}</TableCell>
                         <TableCell>
                           <Chip
-                            label={task.status}
+                            label={task.Status}
                             size="small"
                             sx={{
                               backgroundColor:
-                                statusConfig[task.status]?.backgroundColor ||
+                                statusConfig[task.Status]?.backgroundColor ||
                                 "#f5f5f5",
                               color:
-                                statusConfig[task.status]?.color || "#757575",
-                              border: `1px solid ${statusConfig[task.status]?.borderColor || "#e0e0e0"}`,
+                                statusConfig[task.Status]?.color || "#757575",
+                              border: `1px solid ${statusConfig[task.Status]?.borderColor || "#e0e0e0"}`,
                               fontWeight: 500,
                               fontSize: "0.75rem",
                               height: "24px",
@@ -780,17 +838,19 @@ function Task() {
                             }}
                           />
                         </TableCell>
-                        <TableCell>{task.startDate}</TableCell>
-                        <TableCell>{task.endDate}</TableCell>
+                        <TableCell>{task.Start_Date}</TableCell>
+                        <TableCell>{task.End_Date}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            color="primary"
+                        <AccessTimeIcon
+                          fontSize="large" // Use 'small', 'medium', 'large', or set via style
+                          style={{
+                            color: theme.palette.primary.main,
+                            fontSize: 30, // You can increase this number as needed (e.g., 36, 40)
+                            cursor: "pointer",
+                          }}
                             onClick={() => handleViewTask(task)}
-                          >
-                            View
-                          </Button>
+                         />
+                          
                         </TableCell>
                       </TableRow>
                     ))}

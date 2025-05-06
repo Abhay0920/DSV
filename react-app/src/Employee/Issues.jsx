@@ -121,43 +121,43 @@ export const Issues = () => {
         console.log(user);
         const userid = user.userid;
         //  const TaskResponse = null;
-        const issueResponse = await axios.get(
-          "/server/time_entry_management_application_function/issue"
-        );
+        // const issueResponse = await axios.get(
+        //   "/server/time_entry_management_application_function/issue"
+        // );
 
         // const issueResponse = await axios.get(
         //   "/server/time_entry_management_application_function/clientissue/1380000001199250"
         // );
 
-        // const issueResponse = await axios.get(
-        //   "/server/time_entry_management_application_function/assignissue/1380000001199250"
-        // );
+        const issueResponse = await axios.get(
+          "/server/time_entry_management_application_function/assignissue/1380000001199250"
+        );
 
         console.log("issue", issueResponse);
 
         console.log("response from issue");
-        const issueFromResponse = issueResponse.data.data.map((item) => ({
-          id: item.ROWID,
-          issueId: item.ROWID,
-          name: item.Issue_name,
-          projectId: item.Project_ID,
-          project_name: item.Project_Name,
-          assignTo: item.Assignee_Name,
-          assignToID: item.Assignee_ID,
-          status: item.Status,
-          severity: item.Severity,
-          dueDate: item.Due_Date,
-          description: item.Description,
-          reporter: item.Reporter_Name,
-          CreationTime: item.CREATEDTIME.split(" ")[0],
-        }));
-        console.log("response from issue ", issueFromResponse);
+        // const issueFromResponse = issueResponse.data.data.map((item) => ({
+        //   id: item.ROWID,
+        //   issueId: item.ROWID,
+        //   name: item.Issue_name,
+        //   projectId: item.Project_ID,
+        //   project_name: item.Project_Name,
+        //   assignTo: item.Assignee_Name,
+        //   assignToID: item.Assignee_ID,
+        //   status: item.Status,
+        //   severity: item.Severity,
+        //   dueDate: item.Due_Date,
+        //   description: item.Description,
+        //   reporter: item.Reporter_Name,
+        //   CreationTime: item.CREATEDTIME.split(" ")[0],
+        // }));
+        // console.log("response from issue ", issueFromResponse);
         // if (projectId ) {
         //   setTaskName(projectName);
         // } else {
         //   setTaskName("issue");
         // }
-        setIssue(issueFromResponse);
+        // setIssue(issueFromResponse);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -215,7 +215,7 @@ export const Issues = () => {
     setPage(0);
   };
 
-  const filteredissue = issue.filter((isue) =>
+  const filteredissue = issue?.filter((isue) =>
     isue.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -257,10 +257,10 @@ export const Issues = () => {
       );
 
       const assigneeIDs = selectedAssignees
-        .map((employee) => employee.user_id)
+        ?.map((employee) => employee.user_id)
         .join(","); // Join selected IDs as comma-separated string
       const assigneeNames = selectedAssignees
-        .map((employee) => `${employee.first_name} ${employee.last_name}`)
+        ?.map((employee) => `${employee.first_name} ${employee.last_name}`)
         .join(","); // Join selected names as comma-separated string
 
       setnewIssue((prev) => ({
@@ -955,7 +955,7 @@ export const Issues = () => {
                   </TableBody>
                 ) : (
                   <TableBody>
-                    {paginatedissue.map((isue) => (
+                    {paginatedissue?.map((isue) => (
                       <TableRow key={isue.id}>
                         <TableCell>
                           {"I" + isue.id.substr(isue.id.length - 4)}
@@ -1034,7 +1034,7 @@ export const Issues = () => {
                               >
                                 Assigned Users
                               </Typography>
-                              {selectedAssignees.map((assignee, index) => (
+                              {selectedAssignees?.map((assignee, index) => (
                                 <ListItem key={index} sx={{ py: 0.5 }}>
                                   <ListItemText
                                     primary={assignee}
@@ -1088,7 +1088,7 @@ export const Issues = () => {
         </Grid>
       </Grid>
 
-      <Drawer
+      {/* <Drawer
         anchor="right"
         open={drawerOpen}
         onClose={() => toggleDrawer(false)}
@@ -1118,9 +1118,9 @@ export const Issues = () => {
             error={!!errors.Project}
             helperText={errors.Project}
           >
-            {Projects.data.data.map((project) => (
+            {Projects?.data?.data?.map((project) => (
               <MenuItem key={project.ROWID} value={project.ROWID}>
-                {project.Project_Name}
+                {project?.Project_Name}
               </MenuItem>
             ))}
           </TextField>
@@ -1142,7 +1142,7 @@ export const Issues = () => {
             getOptionLabel={(option) =>
               `${option.first_name} ${option.last_name}`
             } // Show full name of the employee
-            value={Employees.data.users.filter((employee) =>
+            value={Employees?.data?.users?.filter((employee) =>
               Array.isArray(newIssue.Assignee_ID)
                 ? newIssue.Assignee_ID.includes(employee.user_id) // If Assignee_ID is an array
                 : typeof newIssue.Assignee_ID === "string"
@@ -1152,10 +1152,10 @@ export const Issues = () => {
             onChange={(event, newValue) => {
               const selectedValues = newValue; // Array of selected employees
 
-              const selectedIDs = selectedValues.map(
+              const selectedIDs = selectedValues?.map(
                 (option) => option.user_id
               ); // Collect user IDs
-              const selectedNames = selectedValues.map(
+              const selectedNames = selectedValues?.map(
                 (option) => `${option.first_name} ${option.last_name}`
               ); // Collect employee names
 
@@ -1256,7 +1256,7 @@ export const Issues = () => {
             </Button>
           </Box>
         </Box>
-      </Drawer>
+      </Drawer> */}
 
       <Modal
         open={editModalOpen}

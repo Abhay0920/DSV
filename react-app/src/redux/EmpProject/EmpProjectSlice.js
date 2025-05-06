@@ -18,8 +18,8 @@ export const fetchEmpProject = createAsyncThunk(
       const url = `/server/time_entry_management_application_function/projects/${user.userid}`;
       const response = await axios.get(url, { withCredentials: true });
 
-      console.log("API Response:", response.data);
-      return response.data;  
+  
+      return response.data.data;  
     } catch (error) {
       console.error("Error in fetchEmpProject:", error);
       throw new Error("Failed to fetch data of Emp Project");
@@ -32,7 +32,7 @@ export const empProjectSlice = createSlice({
   name: "empProject",
   initialState: {
     isLoading: false,
-    data: null,  // Default to null
+    data: [],  // Default to null
     isError: false,
   },
   reducers: {},

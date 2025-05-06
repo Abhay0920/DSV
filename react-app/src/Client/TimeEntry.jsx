@@ -83,7 +83,7 @@ export const TimeEntry = ({
         // Fetch time entry data
         setIsLoading(true);
         const TimeEntryResponse = await axios.get(
-          `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
+          `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
         );
 
         const userProfile = {};

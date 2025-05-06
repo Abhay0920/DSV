@@ -42,6 +42,9 @@ import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import { BugReport } from "@mui/icons-material";
 import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
 
+
+const profile = require("../../public/contactProfile.png");
+
 // import userAvatar from "../../public/user-avatar.png"; // Add the path to your avatar image here
 
 export default function Layout1() {
@@ -127,6 +130,7 @@ export default function Layout1() {
 
   return (
     <ThemeProvider theme={theme}>
+     
       <Box sx={{ display: "flex", height: "100vh", flexDirection: "column" }}>
         {/* Top Navbar */}
 
@@ -172,7 +176,7 @@ export default function Layout1() {
             {/* Avatar instead of Login Button */}
             <Avatar
               alt="User Avatar"
-              src={userProfile} // Path to the avatar image
+              src={profile} // Path to the avatar image
               sx={{ width: 40, height: 40, cursor: "pointer" }} // Adjust size and make it clickable
               onClick={handleAvatarClick} // Open the menu when clicked
             />
@@ -230,7 +234,7 @@ export default function Layout1() {
           {!isMobile && (
             <Box
               sx={{
-                width: open ? "320px" : "64px",
+                width: open ? "270px" : "64px",
 
                 bgcolor: theme.palette.background.paper, // Match sidebar color with content
                 color: "primary.main",

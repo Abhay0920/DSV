@@ -14,6 +14,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  alpha,
   IconButton,
   TableFooter,
   TablePagination,
@@ -21,17 +22,34 @@ import {
   MenuItem,
   Modal,
   Chip,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import TaskIcon from "@mui/icons-material/Task";
+import InfoIcon from "@mui/icons-material/Info";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import PersonIcon from "@mui/icons-material/Person";
+import BusinessIcon from "@mui/icons-material/Business";
+import EventIcon from "@mui/icons-material/Event";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import TrackChangesIcon from "@mui/icons-material/TrackChanges";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import axios from "axios";
+import { BugReport } from "@mui/icons-material";
+
 import Skeleton from "@mui/material/Skeleton";
 import { FaProjectDiagram } from "react-icons/fa";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from 'react-redux';
- import { fetchEmpProject } from "../redux/EmpProject/EmpProjectSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { Avatar } from "@mui/material";
+import { fetchEmpProject } from "../redux/EmpProject/EmpProjectSlice";
 const statusConfig = {
   Open: {
     color: "#f0ad4e",
@@ -59,10 +77,23 @@ const statusConfig = {
     borderColor: "#f5c2c7",
   },
 };
+const getStatusColor = (status) => {
+  switch (status) {
+    case "Close":
+      return "success";
+    case "Work In Process":
+      return "warning";
+    case "Open":
+      return "error";
+    default:
+      return "default";
+  }
+};
+
 
 function Project() {
   const [assignOptions, setAssignOptions] = useState([]);
-  const [projects, setProjects] = useState([]);
+  // const [projects, setProjects] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -70,14 +101,16 @@ function Project() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [currentEditProject, setCurrentEditProject] = useState(null);
   const [currUser, setCurrUser] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+    const [projectDetail, setprojectdetail] = useState(null);
+  
+  // const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-
-  const state = useSelector((state) => state.empProjectReducer);
-    //const employeeState = useSelector((state) => state.employeeReducer);
-  
-    const dispatch = useDispatch();
+  const {data :projects,isLoading} = useSelector((state) => state.empProjectReducer);
+  //const employeeState = useSelector((state) => state.employeeReducer);
+  console.log("emp project in project section", projects);
+  const dispatch = useDispatch();
   // Drawer State
   const [newProject, setNewProject] = useState({
     id: "",
@@ -93,48 +126,16 @@ function Project() {
   });
 
   const theme = useTheme();
+  useEffect(()=>{
+    const fetchAllData = async () => {
+      if (!Array.isArray(projects) || projects.length === 0) {
+      dispatch(fetchEmpProject())
+      };
+    }
+    fetchAllData();
+  },[dispatch]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const user = JSON.parse(localStorage.getItem("currUser"));
-      setCurrUser(user);
-      const userid = user.userid;
-
-      if (!user?.userid) {
-        alert("something went wrong");
-        return;
-      }
-      try {
-       
-        const ProjectResponse = state;
-        console.log("dasdasdasd", ProjectResponse);
-
-     
-      
-            //console.log("dssdsada", ProjectResponse.data.data);
-
-            const formattedProjects = ProjectResponse.data.data.map(
-              (project, index) => ({
-                id: project.Projects.ROWID,
-                name: project.Projects.Project_Name,
-                status: project.Projects.Status,
-                owner: project.Projects.Owner,
-                startDate: project.Projects.Start_Date,
-                endDate: project.Projects.End_Date,
-                assignedToID: project.Projects.Assigned_To_Id,
-              })
-            );
-            setProjects(formattedProjects);
-          
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  
 
   const handleSearch = (event) => {
     setSearchQuery(event.target.value);
@@ -151,10 +152,10 @@ function Project() {
 
   const filteredProjects = projects.filter(
     (project) =>
-      project.name &&
-      project.name.toLowerCase().includes(searchQuery.toLowerCase())
+      project.Projects.Project_Name &&
+      project.Projects.Project_Name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
+ 
   const paginatedProjects = filteredProjects.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
@@ -186,53 +187,133 @@ function Project() {
     }
   };
 
+  const handlefiltetActive = (project) => {
+    console.log("Project = ", project);
 
-  const handlefiltetActive = (project)=>{
-    console.log("Project = ", project.id)
+    navigate("/task", {
+      state: { projectId: project.Projects.ROWID, projectName: project.Projects.Project_Name},
+    });
+    const pathname = "/tasks";
+  };
 
-    navigate("/task", { state: { projectId: project.id , projectName:project.name} });
-    const pathname = "/tasks"
+  const handleShowIssue = (project)=>{
+    navigate("/bug", {
+      state: { projectId: project.Projects.ROWID,},
+    });
   }
+  const handleCloseDrawer = () => {
+    setOpen(false);
+  };
+  const colors = {
+    primary: theme.palette.primary.main,
+    primaryLight: theme.palette.primary.light,
+    secondary: theme.palette.secondary.main,
+    success: theme.palette.success.main,
+    successLight: theme.palette.success.light,
+    warning: theme.palette.warning.main,
+    warningLight: theme.palette.warning.light,
+    error: theme.palette.error.main,
+    errorLight: theme.palette.error.light,
+    info: theme.palette.info.main,
+    infoLight: theme.palette.info.light,
+  };
+  const fields = [
+    [
+      "Project ID",
+      "P" + projectDetail?.ROWID?.slice(-4),
+      <InfoIcon color="primary" />,
+    ],
+    [
+      "Project Name",
+      projectDetail?.Project_Name,
+      <AssignmentIcon color="primary" />,
+    ],
+    ["Assigned To", projectDetail?.Assigned_To, <PersonIcon color="primary" />],
+    [
+      "Client Name",
+      projectDetail?.Client_Name ?? "Internal Project",
+      <BusinessIcon color="primary" />,
+    ]
+    ,
+    ["Start Date", projectDetail?.Start_Date, <EventIcon color="primary" />],
+    ["End Date", projectDetail?.End_Date, <ScheduleIcon color="primary" />],
+    ["Status", projectDetail?.Status, <TrackChangesIcon color="primary" />],
+    ["Owner", projectDetail?.Owner, <EmojiEventsIcon color="primary" />],
+  ];
+  const handleDetailDrwaer = (e, project) => {
+    setOpen(true);
+    console.log("name of the project", project);
+    setprojectdetail(project);
+  };
   return (
     <Box sx={{ padding: 3 }}>
-      {/* Header */}
-      <Box
+    
+      <Card
+        elevation={0}
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 3,
+          mb: 4,
+          borderRadius: "16px",
+          background: `linear-gradient(135deg, ${colors.primary}88, ${colors.info}88)`,
+          color: "white",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <Typography variant="h4">Projects</Typography>
-      </Box>
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            opacity: 0.05,
+            backgroundImage:
+              'url("data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%23ffffff" fill-opacity="1" fill-rule="evenodd"/%3E%3C/svg%3E")',
+            backgroundSize: "15px",
+          }}
+        />
+        <CardContent sx={{ py: 4, px: 3, position: "relative" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Avatar
+                sx={{
+                  bgcolor: colors.primary,
+                  width: 60,
+                  height: 60,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                }}
+              >
+                <AssignmentIcon fontSize="large" />
+              </Avatar>
+              <Box sx={{ ml: 2 }}>
+                <Typography variant="h4" fontWeight="bold">
+                  Projects
+                </Typography>
+              </Box>
+            </Box>
+
+            <TextField
+              label="Search Projects"
+              variant="outlined"
+              size="small"
+              value={searchQuery}
+              onChange={handleSearch}
+              sx={{ width: "40%" }}
+            />
+          </Box>
+        </CardContent>
+      </Card>
 
       <Grid container spacing={3}>
-        {/* Header with Search and New Project Button */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <TextField
-                label="Search Projects"
-                variant="outlined"
-                size="small"
-                value={searchQuery}
-                onChange={handleSearch}
-                sx={{ width: "40%" }}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
-
         {/* Table */}
         <Grid item xs={12}>
-          {loading ? (
+          {isLoading ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -289,6 +370,14 @@ function Project() {
                   >
                     Tasks
                   </TableCell>
+                  <TableCell
+                    sx={{
+                      color: theme.palette.primary.contrastText,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Issues
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -331,7 +420,7 @@ function Project() {
                 </TableRow>
               </TableBody>
             </Table>
-          ) : projects.length === 0 ? (
+          ) : paginatedProjects.length === 0 ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -434,14 +523,17 @@ function Project() {
                       End Date
                     </TableCell>
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
-                     Tasks
+                      Tasks
+                    </TableCell>
+                    <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                      Issues
                     </TableCell>
                   </TableRow>
                 </TableHead>
 
-                {loading ? (
+                {isLoading ? (
                   <TableBody>
-                    <TableRow  >
+                    <TableRow>
                       <TableCell colSpan={6} sx={{ p: 0 }}>
                         <Box
                           sx={{
@@ -520,23 +612,25 @@ function Project() {
                 ) : (
                   <TableBody>
                     {paginatedProjects.map((project) => (
-                      <TableRow key={project.id} >
+                      <TableRow key={project.Projects.ROWID}
+                      onClick={(e) => handleDetailDrwaer(e, project.Projects)}
+                      >
                         <TableCell>
-                          {"P" + project.id.substr(project.id.length - 4)}
+                          {"P" + project.Projects.ROWID.substr(project.Projects.ROWID.length - 4)}
                         </TableCell>
-                        <TableCell>{project.name}</TableCell>
+                        <TableCell>{project.Projects.Project_Name}</TableCell>
                         <TableCell>
                           <Chip
-                            label={project.status}
+                            label={project.Projects.Status}
                             size="small"
                             sx={{
                               backgroundColor:
-                                statusConfig[project.status]?.backgroundColor ||
+                                statusConfig[project.Projects.Status]?.backgroundColor ||
                                 "#f5f5f5",
                               color:
-                                statusConfig[project.status]?.color ||
+                                statusConfig[project.Projects.Status]?.color ||
                                 "#757575",
-                              border: `1px solid ${statusConfig[project.status]?.borderColor || "#e0e0e0"}`,
+                              border: `1px solid ${statusConfig[project.Projects.Status]?.borderColor || "#e0e0e0"}`,
                               fontWeight: 500,
                               fontSize: "0.75rem",
                               height: "24px",
@@ -546,19 +640,38 @@ function Project() {
                             }}
                           />
                         </TableCell>
-                        <TableCell>{project.owner}</TableCell>
-                        <TableCell>{project.startDate}</TableCell>
-                        <TableCell>{project.endDate}</TableCell>
+                        <TableCell>{project.Projects.Owner}</TableCell>
+                        <TableCell>{project.Projects.Start_Date}</TableCell>
+                        <TableCell>{project.Projects.End_Date}</TableCell>
                         <TableCell>
-                          <Button
-                           variant="outlined"
-                           size="small"
-                          color="primary"
-                          onClick={() => handlefiltetActive(project)}
-                           >
-                           Tasks
-                           </Button>
-                          </TableCell>
+                        <TaskIcon
+                           fontSize="large"
+                           sx={{
+                             color: theme.palette.primary.main,
+                             fontSize: 30,
+                             cursor: "pointer",
+                           }}
+                            onClick={(e) => 
+                            {  e.stopPropagation();
+                              handlefiltetActive(project)}}
+                          />
+                         
+                        </TableCell>
+                        <TableCell>
+                        <BugReport
+                           fontSize="large"
+                           sx={{
+                             color: theme.palette.primary.main,
+                             fontSize: 30,
+                             cursor: "pointer",
+                           }}
+                            onClick={(e) => 
+                            {  e.stopPropagation();
+                               handleShowIssue(project)}
+                              }
+                          />
+                         
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -581,6 +694,86 @@ function Project() {
           )}
         </Grid>
       </Grid>
+
+
+      <Drawer anchor="right" open={open} onClose={handleCloseDrawer}>
+        <Box
+          sx={{
+            width: 420,
+            mt: "65px",
+            maxHeight: "90vh",
+            overflowY: "auto",
+          }}
+        >
+          <Paper
+            elevation={4}
+            sx={{
+              borderRadius: 0,
+              height: "100%",
+            }}
+          >
+            <Box
+              sx={{
+                backgroundColor: "primary.main",
+                color: "#fff",
+                px: 3,
+                py: 2,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                position: "sticky", // Sticky position for header
+                top: 0, // Stick to the top
+                zIndex: 1, // Ensure it stays above content
+              }}
+            >
+              <Typography variant="h6">Project Details</Typography>
+              <IconButton onClick={handleCloseDrawer} sx={{ color: "#fff" }}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            {isLoading ? (
+              <Box px={3} py={2}>
+                <Typography>Loading project details...</Typography>
+              </Box>
+            ) : (
+              <List disablePadding>
+                {fields.map(([label, value, icon], index) => (
+                  <React.Fragment key={index}>
+                    <ListItem sx={{ px: 3, py: 1.5 }}>
+                      <ListItemIcon sx={{ color: "primary.main" }}>
+                        {icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {label}
+                          </Typography>
+                        }
+                        secondary={
+                          label === "Status" ? (
+                            <Chip
+                              label={value}
+                              color={getStatusColor(value)}
+                              size="small"
+                              sx={{ mt: 0.5 }}
+                            />
+                          ) : (
+                            <Typography color="text.secondary">
+                              {value}
+                            </Typography>
+                          )
+                        }
+                      />
+                    </ListItem>
+                    {index !== fields.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+          </Paper>
+        </Box>
+      </Drawer>
     </Box>
   );
 }

@@ -19,16 +19,22 @@ import {
   TablePagination,
   Drawer,
   MenuItem,
-  Modal,
-  Chip,
+  alpha,
+  Avatar,
   Snackbar,
   Alert,
   FormControlLabel,
   Switch,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  
 } from "@mui/material";
 import Skeleton from "@mui/material/Skeleton";
 import { useTheme } from "@mui/material/styles";
-import { FaProjectDiagram } from "react-icons/fa";
+
 import CloseIcon from "@mui/icons-material/Close";
 import Slide from "@mui/material/Slide";
 import ConnectWithoutContactIcon from "@mui/icons-material/ConnectWithoutContact";
@@ -37,20 +43,21 @@ import {
   fetchClientContact,
   clientContactActions,
   setFilteredClientContact,
+  updateClientContactStatusLocally ,
 } from "../redux/Client/contacts";
 import axios from "axios";
 import { fetchClientData } from "../redux/Client/clientSlice";
 import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useLocation } from "react-router-dom";
+import { resolve } from "url";
 export const ClientStaff = () => {
+  const location = useLocation();
 
-    const location = useLocation();
-    
-    const { Org_Id } = location.state || {}; 
-    const { Org_Name } = location.state || {}; 
-   
-    console.log("organization:",Org_Name);
+  const { Org_Id } = location.state || {};
+  const { Org_Name } = location.state || {};
+
+  console.log("organization:", Org_Name);
 
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -58,11 +65,14 @@ export const ClientStaff = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  
   const [staff, setStaff] = useState([]);
   const [show, setShow] = useState(false);
   const [alertLabel, setAlertLabel] = useState("");
   const [alerttype, setalerttype] = useState("");
+  const [ContactToDelete, setContactoDelete] = useState(null);
+
   const [newClientStaff, setNewClientStaff] = useState({
     firstName: "",
     lastName: "",
@@ -76,7 +86,7 @@ export const ClientStaff = () => {
     message: "",
     severity: "success",
   });
-   const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({});
   const [org, setorg] = useState([]);
   const theme = useTheme();
 
@@ -84,14 +94,18 @@ export const ClientStaff = () => {
   const { data, isLoading } = useSelector(
     (state) => state.clientContactReducer
   );
+  console.log("client contact data:", data);
   const { data: client } = useSelector((state) => state.clientReducer);
- 
 
   useEffect(() => {
+    if (!Array.isArray(data) || data.length === 0) {
       dispatch(fetchClientContact());
-      dispatch(fetchClientData());
+    }
 
-  }, [dispatch]);
+    if (!Array.isArray(client) || client.length === 0) {
+      dispatch(fetchClientData());
+    }
+  }, []);
 
   const handleSearch = (event) => {
     setSearchQuery(event?.target?.value);
@@ -223,43 +237,170 @@ export const ClientStaff = () => {
       newErrors.firstName = "First name is required";
     if (!newClientStaff.email) newErrors.email = "email  is required";
 
-    if (!newClientStaff.organization) newErrors.organization = "organization is required";
-    if (!newClientStaff.mobile)
-      newErrors.mobile = "mobile type  is required";
-  
+    if (!newClientStaff.organization)
+      newErrors.organization = "organization is required";
+    if (!newClientStaff.mobile) newErrors.mobile = "mobile type  is required";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = () => {
     if (validateForm()) {
-    handleAddClientStaff(newClientStaff);
+      handleAddClientStaff(newClientStaff);
       toggleDrawer(false);
     }
 
     console.log("adding the staff");
   };
 
+  const toggleUserActive = async (userID, status, ROWID) => {
+    console.log(userID, status);
+    try {
+      const newStatus = status ? "DISABLED" : "ACTIVE";
+      console.log("Updating Employee Status:", newStatus, userID);
+      const response = await axios.post(
+        "/server/time_entry_management_application_function/updateClientContactStatus",
+        {
+          status: status,
+          ROWID: ROWID,
+          USERID: userID,
+        }
+      );
+      console.log("response:", response);
+      if(response.status === 200) {
+        dispatch(updateClientContactStatusLocally({
+          userID,
+          status
+        }));
+      }
+
+
+      
+
+      //console.log(response);
+      // const updatedEmployee = employees.map((employee) => {
+      //   if (employee.user_id === userID) {
+      //     employee.status = active === "ACTIVE" ? "DISABLED" : "ACTIVE";
+      //   }
+      //   return employee;
+      // });
+
+      if (newStatus !== "ACTIVE") {
+        handleAlert("success", "Employee is Active now..");
+      } else {
+        handleAlert("error", "Employee is Inactive");
+      }
+      // setEmployees(updatedEmployee);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+    setContactoDelete(null);
+  };
+
+  const handleDeleteClick = (data) => {
+    console.log("hello hello hi ",data); 
+    setContactoDelete(data);
+    setDeleteConfirmOpen(true);
+  };
+   const handleDeleteConfirm = async () => {
+     if (ContactToDelete) {
+       try {
+        const { ROWID, UserID } = ContactToDelete; 
+         const response = await axios.delete(
+          `/server/time_entry_management_application_function/contact`,
+          {
+            data: {
+              ROWID: ROWID,
+              USERID: UserID
+            }
+          }
+        );
+        
+         console.log("deleted project", response);
+         if (response.status === 200) {
+           // Remove the project from the local state
+          //  dispatch(projectActions.deleteProjecttData(projectToDelete.ROWID));
+           handleAlert("success", "Project deleted successfully");
+         } else {
+           handleAlert("error", "Failed to delete project");
+         }
+       } catch (error) {
+         console.error("Error deleting project:", error);
+         handleAlert("error", error.message || "Error deleting project");
+       } finally {
+         setDeleteConfirmOpen(false);
+         setContactoDelete(null);
+       }
+     }
+   };
+
   return (
     <>
       <Box sx={{ padding: 3 }}>
-        <Box
+        <Paper
+          elevation={0}
           sx={{
+            mb: 4,
+            p: { xs: 2, sm: 3 },
+            borderRadius: 3,
+            background: `linear-gradient(135deg, ${alpha(
+              theme.palette.primary.main,
+              0.08
+            )} 0%, ${alpha(theme.palette.primary.light, 0.15)} 100%)`,
+            boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
             display: "flex",
-            justifyContent: "space-between",
+            flexDirection: { xs: "column", md: "row" },
             alignItems: "center",
-            marginBottom: 3,
+            justifyContent: "space-between",
+            gap: 2,
           }}
         >
-          <Typography variant="h4">Client Contacts</Typography>
-        </Box>
-
-        <Card sx={{ mb: 3 }}>
-          <CardContent
+          {/* Left Side: Avatar + Typography */}
+          <Box
             sx={{
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
+              gap: 2,
+              width: { xs: "100%", md: "auto" },
+            }}
+          >
+            <Avatar
+              sx={{
+                bgcolor: theme.palette.primary.main,
+                width: 50,
+                height: 50,
+              }}
+            >
+              <AccountCircleIcon sx={{ color: "#fff" }} fontSize="large" />
+            </Avatar>
+
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                color: "transparent",
+                fontSize: { xs: "1.5rem", sm: "2rem" },
+              }}
+            >
+              Client Contacts
+            </Typography>
+          </Box>
+
+          {/* Right Side: Search Bar + Button */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              width: { xs: "100%", md: "auto" },
+              flexDirection: { xs: "column", sm: "row" },
             }}
           >
             <TextField
@@ -268,19 +409,23 @@ export const ClientStaff = () => {
               size="small"
               value={searchQuery}
               onChange={handleSearch}
-              sx={{ width: "40%" }}
+              sx={{
+                width: { xs: "100%", sm: "60%", md: "250px" },
+              }}
             />
             <Button
               variant="contained"
               color="primary"
               onClick={() => toggleDrawer(true)}
+              sx={{ width: { xs: "100%", sm: "auto" } }}
             >
-              Add ClientStaff
+              Add Client
             </Button>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
+
         <Grid item xs={12}>
-          {data.length == 0 ? (
+          {isLoading ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -387,7 +532,7 @@ export const ClientStaff = () => {
                 </TableRow>
               </TableBody>
             </Table>
-          ) : paginatedStaff?.length === 0 ? (
+          ) : paginatedStaff?.length === 0 && !isLoading ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -498,7 +643,7 @@ export const ClientStaff = () => {
                   </TableRow>
                 </TableHead>
 
-                {data.length === 0 ? (
+                {isLoading ? (
                   <TableBody>
                     <TableRow>
                       <TableCell colSpan={6} sx={{ p: 0 }}>
@@ -595,17 +740,23 @@ export const ClientStaff = () => {
                             <FormControlLabel
                               control={
                                 <Switch
-                                // checked={employee.status === "ACTIVE"}
-                                // onChange={() => toggleUserActive(employee.user_id, employee.status)}
+                                  checked={data.status}
+                                  onChange={() =>
+                                    toggleUserActive(
+                                      data.UserID,
+                                      !data.status,
+                                      data.ROWID
+                                    )
+                                  } // Toggle the status
                                 />
                               }
-                              // label={employee.status === "ACTIVE" ? "Active" : "Inactive"}
+                              // label={data.status ? true : false} // Display label based on status
                             />
 
                             {/* Delete Icon */}
                             <IconButton
                               color="error"
-                              // onClick={() => handleDeleteClick(project)}
+                               onClick={() => handleDeleteClick(data)}
                             >
                               <DeleteIcon />
                             </IconButton>
@@ -704,16 +855,14 @@ export const ClientStaff = () => {
               select
               onChange={handleInputChange}
               sx={{ marginBottom: 2 }}
-              error={!!errors. organization}
-              helperText={errors. organization}
+              error={!!errors.organization}
+              helperText={errors.organization}
             >
               {client?.map((organization) => (
                 <MenuItem key={organization.ROWID} value={organization.ROWID}>
                   {organization.Org_Name}
                 </MenuItem>
               ))}
-             
-             
             </TextField>
 
             <TextField
@@ -775,6 +924,46 @@ export const ClientStaff = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+        <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleDeleteCancel}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        PaperProps={{
+          sx: {
+            width: "100%",
+            maxWidth: "500px",
+            borderRadius: "8px",
+          },
+        }}
+      >
+        <DialogTitle id="alert-dialog-title" sx={{ pb: 1 }}>
+          {"Delete Project"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Are you sure you want to delete project{" "}
+            <strong>{ContactToDelete?.First_Name} {ContactToDelete?.Last_Name}</strong>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button
+            onClick={handleDeleteCancel}
+            variant="outlined"
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            variant="contained"
+            color="error"
+            autoFocus
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
       </Box>
     </>
   );

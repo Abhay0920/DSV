@@ -64,6 +64,37 @@ const getAllIssues = async (req, res) => {
   }
 };
 
+const projectIssues = async (req, res) => {
+  let id = req.params.userID;
+
+  console.log("Fetching issues for project", id);
+
+  try {
+    const catalystApp = req.catalystApp;
+    const zcql = catalystApp.zcql();
+
+    const query = `SELECT * FROM Issues WHERE Project_ID = ${id}`;
+    const response = await zcql.executeZCQLQuery(query);
+
+    const formattedResponse = response.map((issues) => {
+      return issues.Issues;
+    });
+
+    console.log("Issues fetched successfully for projects", formattedResponse);
+
+    res.status(200).json({
+      success: true,
+      data: formattedResponse, // flatten in case each resp is an array
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      error: error.message,
+    });
+  }
+};
+
 const getAllAssignIssues = async (req, res) => {
   const id = req.params.userID; // Assuming userID is passed in the request params
 
@@ -228,11 +259,49 @@ const deleteIssue = async (req, res) => {
   }
 };
 
+const assignIssue = async (req, res) => {
+  const id = req.params.ROWID;
+  const { Assignee_ID, Assignee_Name } = req.body;
+
+  if (!id) {
+    return res.status(400).json({
+      success: false,
+      message: "No issue ID provided",
+    });
+  }
+
+  try {
+    const catalystApp = req.catalystApp;
+    const datastore = catalystApp.datastore();
+    const table = datastore.table("Issues");
+
+    const updatedIssue = await table.updateRow({
+      ROWID: id,
+      Assignee_ID,
+      Assignee_Name,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Issue assigned successfully",
+      data: updatedIssue,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to assign issue",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllIssues,
+  projectIssues,
   getAllAssignIssues,
   getAllClientIssues,
   createIssue,
   updateIssue,
   deleteIssue,
+  assignIssue,
 };

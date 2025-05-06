@@ -3,24 +3,20 @@ import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom"; // Import useNavigate
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import AppBar from "@mui/material/AppBar";
+import { Tooltip } from "@mui/material";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import WorkIcon from "@mui/icons-material/Work";
 import AssignmentIcon from "@mui/icons-material/Assignment";
-import { GrTask } from "react-icons/gr";
 import ForumIcon from "@mui/icons-material/Forum";
 import GroupIcon from "@mui/icons-material/Group";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import FeedbackIcon from "@mui/icons-material/Feedback";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
-import Brightness4Icon from "@mui/icons-material/Brightness4";
-import Brightness7Icon from "@mui/icons-material/Brightness7";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import Avatar from "@mui/material/Avatar";
 import Menu from "@mui/material/Menu";
@@ -32,22 +28,20 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Button from "@mui/material/Button";
-import LogoutIcon from "@mui/icons-material/Logout";
 import Drawer from "@mui/material/Drawer";
-import { Modal } from "@mui/material";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import { BugReport } from "@mui/icons-material";
-import Person4Icon from '@mui/icons-material/Person4';
-import ConnectWithoutContactIcon from '@mui/icons-material/ConnectWithoutContact';
-
-// import userAvatar from "../../public/user-avatar.png"; // Add the path to your avatar image here
+import Person4Icon from "@mui/icons-material/Person4";
+import ConnectWithoutContactIcon from "@mui/icons-material/ConnectWithoutContact";
 
 export default function Layout1() {
   const [open, setOpen] = React.useState(true);
-  const [darkMode, setDarkMode] = React.useState(false);
+  const [darkMode, setDarkMode] = React.useState(
+    localStorage.getItem("darkMode") === "true"
+  );
   const [anchorEl, setAnchorEl] = React.useState(null); // State to manage dropdown menu anchor
   const [userProfile, setUserProfile] = useState();
   const location = useLocation();
@@ -57,7 +51,10 @@ export default function Layout1() {
   const isMobile = useMediaQuery("(max-width:600px)");
 
   const toggleMenu = () => setOpen(!open);
-  const toggleTheme = () => setDarkMode(!darkMode);
+  const toggleTheme = () => {
+    localStorage.setItem("darkMode", !darkMode);
+    setDarkMode(!darkMode);
+  };
 
   const theme = createTheme({
     palette: {
@@ -85,15 +82,18 @@ export default function Layout1() {
     { text: "Issues", icon: <BugReport />, path: "/bug" },
 
     { text: "client", icon: <Person4Icon />, path: "/client" },
-    { text: "Client Staff", icon: <ConnectWithoutContactIcon />, path: "/clientStaff" },
+    {
+      text: "Client Staff",
+      icon: <ConnectWithoutContactIcon />,
+      path: "/clientStaff",
+    },
     { text: "Feedback", icon: <ForumIcon />, path: "/feedback" },
-
-
   ];
-  const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   useEffect(() => {
     const profile = localStorage.getItem("profileData");
+
     console.log("profile", profile);
     setUserProfile(profile);
   });
@@ -114,6 +114,27 @@ export default function Layout1() {
       console.error("Catalyst is not initialized. Cannot log out.");
     }
   };
+
+
+  //Testing Notifications Functionality
+
+  // useEffect(() => {
+  //   const waitForCatalyst = () => {
+  //     if (window.catalyst) {
+  //       window.catalyst.notification.enableNotification().then((resp) => {
+  //         window.catalyst.notification.messageHandler = (msg) => {
+  //           console.log('Notification received: ', msg);
+  //         };
+  //       });
+  //     } else {
+  //       // Try again after some delay if not ready yet
+  //       setTimeout(waitForCatalyst, 100);
+  //     }
+  //   };
+  
+  //   waitForCatalyst();
+  // }, []);
+  
 
   const handleAvatarClick = (event) => {
     setAnchorEl(event.currentTarget); // Set the menu anchor element
@@ -234,65 +255,80 @@ export default function Layout1() {
             <Box
               sx={{
                 width: open ? "270px" : "64px",
-                bgcolor: theme.palette.background.paper, // Match sidebar color with content
+                bgcolor: theme.palette.background.paper,
                 color: "primary.main",
                 transition: "width 0.3s ease-in-out",
                 boxShadow: open ? "2px 20px 10px rgba(0,0,0,0.1)" : "none",
-                borderRight: `0.5px solid ${theme.palette.grey[300]}`, // Using the theme's grey color for the border
               }}
             >
               <List>
                 {menuItems.map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
-                    <ListItem
-                      button
+                    <Tooltip
+                      title={!open ? item.text : ""}
+                      placement="right"
+                      arrow
                       key={item.text}
-                      component={Link}
-                      to={item.path}
-                      sx={{
-                        padding: "10px",
-
-                        bgcolor: isActive
-                          ? theme.palette.mode === "light"
-                            ? "rgb(229, 236, 248)" // Light background color for active item in light mode
-                            : "rgb(48, 48, 48)" // Dark background color for active item in dark mode
-                          : "transparent", // Transparent background for inactive items
-                        color: isActive
-                          ? theme.palette.mode === "light"
-                            ? "black" // Black text for active item in light mode
-                            : "white" // White text for active item in dark mode
-                          : theme.palette.mode === "light"
-                            ? "black" // Black text for inactive item in light mode
-                            : "white", // White text for inactive item in dark mode
-                        borderRadius: "10px",
+                      componentsProps={{
+                        tooltip: {
+                          sx: {
+                            fontSize: "0.8rem", // ⬅️ Increase tooltip text size
+                            padding: "6px 10px",
+                            fontWeight: 400,
+                          },
+                        },
                       }}
                     >
-                      {React.cloneElement(item.icon, {
-                        sx: {
-                          width: "1em",
-                          height: "1em",
-                          display: isMobile ? "none" : "inline-block", // Hide in mobile view
-                          flexShrink: 0,
+                      <ListItem
+                        button
+                        component={Link}
+                        to={item.path}
+                        sx={{
+                          paddingY: "10px",
+                          paddingX: open ? "10px" : "16px", // keeps icon centered when collapsed
+                          display: "flex",
+                          alignItems: "center",
+                           justifyContent: open ? "flex-start" : "center", 
+                          bgcolor: isActive
+                            ? theme.palette.mode === "light"
+                              ? "rgb(229, 236, 248)"
+                              : "rgb(48, 48, 48)"
+                            : "transparent",
                           color: isActive
-                            ? theme.palette.mode === "dark"
-                              ? "#1976d2" // Blue for active state in dark mode
-                              : "#1976d2" // Blue for active state in light mode
-                            : theme.palette.mode === "dark"
-                              ? "white" // White for inactive state in dark mode
-                              : "grey",
-
-                          fontSize: "1.5rem",
-                          marginLeft: "10px",
-                        },
-                      })}
-                      {open && (
-                        <ListItemText
-                          primary={item.text}
-                          sx={{ ml: 2, fontSize: "1.2rem" }}
-                        />
-                      )}
-                    </ListItem>
+                            ? theme.palette.mode === "light"
+                              ? "black"
+                              : "white"
+                            : theme.palette.mode === "light"
+                              ? "black"
+                              : "white",
+                          borderRadius: "10px",
+                          minHeight: "48px",
+                        }}
+                      >
+                        {React.cloneElement(item.icon, {
+                          sx: {
+                            width: "1em",
+                            height: "1em",
+                            display: isMobile ? "none" : "inline-block",
+                            flexShrink: 0,
+                            color: isActive
+                              ? "#1976d2"
+                              : theme.palette.mode === "dark"
+                                ? "white"
+                                : "grey",
+                            fontSize: "1.5rem",
+                            marginLeft: "10px",
+                          },
+                        })}
+                        {open && (
+                          <ListItemText
+                            primary={item.text}
+                            sx={{ ml: 2, fontSize: "1.2rem" }}
+                          />
+                        )}
+                      </ListItem>
+                    </Tooltip>
                   );
                 })}
               </List>

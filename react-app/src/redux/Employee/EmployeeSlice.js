@@ -14,7 +14,7 @@ export const fetchEmployees = createAsyncThunk(
         });
         console.log("response",response.data);
         // Axios automatically parses the JSON, so we can directly return the response data
-        return response.data;
+        return response.data.users;
         
   
       } catch (error) {
@@ -35,16 +35,37 @@ export const fetchEmployees = createAsyncThunk(
   
     initialState: {
       isLoading: false,
-      data: null,
+      data: [],
       isError: false,
+     
     },
-    reducers: {},
+    reducers: {
+      setEmployeeProfilePics: (state, action) => {
+        const profileData = action.payload; // Array of { user_id, profile_pic }
+      
+        console.log("Before update:", state.data);
+      
+        // Update each employee's profile_pic in state.data
+        state.data = state.data.map((employee) => {
+          const updated = profileData.find((p) => p.user_id === employee.user_id);
+          return updated
+            ? { ...employee, profile_pic: updated.profile_pic }
+            : employee;
+        });
+      
+        console.log("After update: sbcsied", state.data);
+      },
+      
+    },
+    
     extraReducers: (builder) => {
   
       builder.addCase(fetchEmployees.pending, (state) => {
         state.isLoading = true;
       }).addCase(fetchEmployees.fulfilled, (state, action) => {
         state.isLoading = false;
+        console.log("Payload = ", action.payload);
+        
         state.data = action.payload;
       }).addCase(fetchEmployees.rejected, (state, action) => {
         console.log("Error", action.payload);
@@ -52,5 +73,5 @@ export const fetchEmployees = createAsyncThunk(
       });
     },
   });
-
+  export const { setEmployeeProfilePics } = EmployeeSlice.actions;
   export default EmployeeSlice.reducer;

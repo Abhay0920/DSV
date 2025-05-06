@@ -15,15 +15,23 @@ import {
   Select,
   InputLabel,
   Chip,
+  alpha,
+  useTheme,
+  Paper,
   Tooltip,
   Skeleton,
   Avatar,
   FormControlLabel,
   Switch,
 } from "@mui/material";
+import PeopleIcon from "@mui/icons-material/People";
+import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount";
+import { fetchEmployees, setEmployeeProfilePic, } from "../redux/Employee/EmployeeSlice";
+import { useDispatch,useSelector } from "react-redux";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FormControl from "@mui/material/FormControl";
+
 import axios from "axios";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
@@ -63,6 +71,22 @@ function Employees() {
     },
   });
 
+  const theme = useTheme();
+  const dispatch = useDispatch();
+  const colors = {
+    primary: theme.palette.primary.main,
+    primaryLight: theme.palette.primary.light,
+    secondary: theme.palette.secondary.main,
+    success: theme.palette.success.main,
+    successLight: theme.palette.success.light,
+    warning: theme.palette.warning.main,
+    warningLight: theme.palette.warning.light,
+    error: theme.palette.error.main,
+    errorLight: theme.palette.error.light,
+    info: theme.palette.info.main,
+    infoLight: theme.palette.info.light,
+  };
+
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [relatedTasks, setRelatedTasks] = useState([]);
@@ -74,12 +98,14 @@ function Employees() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const [employeeData, setEmployeeData] = useState({
-    first_name: "",
-    last_name: "",
-    email_id: "",
-    role: "",
-  });
+  // const [employeeData, setEmployeeData] = useState({
+  //   first_name: "",
+  //   last_name: "",
+  //   email_id: "",
+  //   role: "",
+  // });
+    const { data: employeeData, profilePics } = useSelector((state) => state.employeeReducer);
+
 
   const [errors, setErrors] = useState({});
 
@@ -98,60 +124,79 @@ function Employees() {
     }, 100); // Small delay ensures re-triggering
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      // setLoading(true);
-      try {
-        // Fetch the list of employees
-        const userResponse = await axios.get(
-          "/server/time_entry_management_application_function/employee"
-        );
+  const placeholderURL =
+  "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
 
-        const userEmployee = userResponse.data.users;
-
-        // Set all employees initially with placeholder profile images
-        const employeesWithPlaceholders = userEmployee.map((employee) => ({
-          ...employee,
-          profile_pic:
-            "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541", // Placeholder
-        }));
-
-        // Immediately set the state to show the list with placeholder images
-        setEmployees(employeesWithPlaceholders);
-        setLoading(false);
-
-        // Fetch profile pictures for each employee
-        const updatedEmployees = await Promise.all(
-          userEmployee.map(async (employee) => {
-            try {
-              const response = await axios.get(
-                `/server/time_entry_management_application_function/userprofile/${employee.user_id}`
-              );
-              console.log("response", response.data.data);
-              if (response.data.data != null) {
-                employee.profile_pic = response.data.data;
-              }
-            } catch (error) {
-              console.error(
-                `Error fetching profile for user ${employee.user_id}:`,
-                error
-              );
-            }
-            return employee; // Return the updated employee object
-          })
-        );
-
-        // After all profiles are fetched, update the state with the full list of employees
-        setEmployees(updatedEmployees);
-      } catch (error) {
-        console.error("Error fetching employees data:", error);
-        setLoading(false);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      if (!Array.isArray(employeeData) || employeeData.length === 0) {
+        await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
       }
-    };
 
-    fetchData();
-  }, []);
+      const userEmployee = employeeData;
+      const filteredEmployees = userEmployee.filter(
+        (employee) => employee.role_details?.role_name !== "Contacts"
+      );
 
+      // Load placeholder employees for instant UI update
+      const employeesWithPlaceholders = filteredEmployees.map((employee) => ({
+        ...employee,
+        profile_pic: placeholderURL,
+      }));
+      setEmployees(employeesWithPlaceholders);
+      setLoading(false); // Stop loader after placeholders are shown
+
+      // Fetch actual profile pictures only if not already cached
+      // const updatedEmployees = await Promise.all(
+      //   filteredEmployees.map(async (employee) => {
+      //     const cachedPic = profilePics[employee.user_id];
+      //     if (cachedPic) {
+      //       return { ...employee, profile_pic: cachedPic };
+      //     }
+
+      //     try {
+      //       const response = await axios.get(
+      //         `/server/time_entry_management_application_function/userprofile/${employee.user_id}`
+      //       );
+      //       const pic = response.data.data || placeholderURL;
+
+      //       // Cache the image in Redux
+      //       // dispatch(
+      //       //   setEmployeeProfilePic({
+      //       //     userId: employee.user_id,
+      //       //     profile_pic: pic,
+      //       //   })
+      //       // );
+
+      //       return {
+      //         ...employee,
+      //         profile_pic: pic,
+      //       };
+      //     } catch (error) {
+      //       console.error(
+      //         `Error fetching profile for user ${employee.user_id}:`,
+      //         error
+      //       );
+      //       return {
+      //         ...employee,
+      //         profile_pic: placeholderURL,
+      //       };
+      //     }
+      //   })
+      // );
+
+      setEmployees(filteredEmployees);
+    } catch (error) {
+      console.error("Error fetching employees data:", error);
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [employeeData, dispatch]);
+
+ 
   useEffect(() => {
     const fetchEmployeeData = async () => {
       if (selectedEmployee) {
@@ -352,17 +397,20 @@ function Employees() {
     "Team Lead": 1380000001197471,
     // Add more roles as necessary
   };
-  
+
   const validateForm = () => {
     let tempErrors = {};
-    if (!newEmployee.first_name.trim()) tempErrors.first_name = "First Name is required";
-    if (!newEmployee.last_name.trim()) tempErrors.last_name = "Last Name is required";
+    if (!newEmployee.first_name.trim())
+      tempErrors.first_name = "First Name is required";
+    if (!newEmployee.last_name.trim())
+      tempErrors.last_name = "Last Name is required";
     if (!newEmployee.email_id.trim()) {
       tempErrors.email_id = "Email is required";
     } else if (!/^\S+@\S+\.\S+$/.test(newEmployee.email_id)) {
       tempErrors.email_id = "Enter a valid email";
     }
-    if (!newEmployee.role_details.role_name) tempErrors.role = "Role is required";
+    if (!newEmployee.role_details.role_name)
+      tempErrors.role = "Role is required";
 
     setErrors(tempErrors);
     return Object.keys(tempErrors).length === 0;
@@ -436,8 +484,6 @@ function Employees() {
       handleAlert("error", "Please fill all fields");
     }
   };
-
- 
 
   const handleTaskInput = (index, event) => {
     const selectedEmployeeId = event.target.value;
@@ -520,7 +566,6 @@ function Employees() {
     },
   };
 
-
   const handleSubmit = () => {
     if (validateForm()) {
       handleAddEmployee(newEmployee);
@@ -540,26 +585,129 @@ function Employees() {
           {alertLabel}
         </Alert>
       </Snackbar>
-
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 3,
-        }}
-      >
-        <Typography variant="h4">Employees</Typography>
-      </Box>
-
-      <Card sx={{ mb: 3 }}>
-        <CardContent
+      <Card
+          elevation={0}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            mb: 4,
+            borderRadius: "16px",
+            background: `linear-gradient(135deg, ${colors.primary}88, ${colors.info}88)`,
+            color: "white",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          <Box
+            sx={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              opacity: 0.05,
+              backgroundImage:
+                'url("data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%23ffffff" fill-opacity="1" fill-rule="evenodd"/%3E%3C/svg%3E")',
+              backgroundSize: "15px",
+            }}
+          />
+          <CardContent sx={{ py: 4, px: 3, position: "relative" }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                rowGap: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  width: { xs: "100%", sm: "auto" },
+                }}
+              >
+                <Avatar
+                  sx={{
+                    bgcolor: colors.primary,
+                    width: 60,
+                    height: 60,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  <SupervisorAccountIcon fontSize="large" />
+                </Avatar>
+                <Box sx={{ ml: 2 }}>
+                  <Typography variant="h4" fontWeight="bold">
+                    Employees
+                  </Typography>
+                </Box>
+              </Box>
+
+              <TextField
+                label="Search Client "
+                variant="outlined"
+                size="small"
+                value={searchQuery}
+                onChange={handleSearch}
+                sx={{ width: "40%" }}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      {/* <Paper
+        elevation={0}
+        sx={{
+          mb: 4,
+          p: { xs: 2, sm: 3 },
+          borderRadius: 3,
+          background: `linear-gradient(135deg, ${alpha(
+            theme.palette.primary.main,
+            0.08
+          )} 0%, ${alpha(theme.palette.primary.light, 0.15)} 100%)`,
+          boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          alignItems: { xs: "flex-start", md: "center" },
+          justifyContent: "space-between",
+          gap: 2,
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "flex-start", sm: "center" },
+            width: "100%",
+
+            gap: 2,
+          }}
+        >
+          <Avatar
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              width: 40,
+              height: 40,
+            }}
+          >
+            <PeopleIcon sx={{ color: "#fff" }} />
+          </Avatar>
+
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              mb: { xs: 1, sm: 0 },
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              color: "transparent",
+              display: "inline-block",
+              fontSize: { xs: "1.5rem", sm: "2rem" },
+            }}
+          >
+            Employees
+          </Typography>
+
           <TextField
             label="Search Employees"
             variant="outlined"
@@ -568,15 +716,8 @@ function Employees() {
             onChange={handleSearch}
             sx={{ width: "40%" }}
           />
-          {/* <Button
-            variant="contained"
-            color="primary"
-            onClick={() => toggleDrawer(true)}
-          >
-            Add Employee
-          </Button> */}
-        </CardContent>
-      </Card>
+        </Box>
+      </Paper> */}
 
       {loading ? (
         <Grid container spacing={3}>
@@ -801,77 +942,6 @@ function Employees() {
         />
       </Box>
 
-      {/* Edit Modal */}
-      {/* <Modal open={editModalOpen} onClose={handleEditCancel}>
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "60%", // Reduced width to 60%
-            maxHeight: "80vh", // Set max height to 80% of viewport height
-            overflowY: "auto", // Add scroll if content exceeds max height
-            padding: 4,
-            backgroundColor: (theme) => theme.palette.background.paper,
-            boxShadow: 24,
-            borderRadius: 2,
-          }}
-        >
-          <Typography variant="h5" sx={{ marginBottom: 2 }}>
-            Edit Employee Details
-          </Typography>
-          <TextField
-            label="First_Name"
-            name="first_name"
-            fullWidth
-            variant="outlined"
-            value={currentEmployee.first_name}
-            onChange={handleEditChange}
-            sx={{ marginBottom: 2 }}
-          />
-          <TextField
-            label="Last_Name"
-            name="last_name"
-            fullWidth
-            variant="outlined"
-            value={currentEmployee.last_name}
-            onChange={handleEditChange}
-            sx={{ marginBottom: 2 }}
-          />
-
-          <TextField
-            label="Email_Id"
-            name="email_id"
-            fullWidth
-            variant="outlined"
-            value={currentEmployee.email_id}
-            onChange={handleEditChange}
-            //  InputLabelProps={{ shrink: true }}
-            sx={{ marginBottom: 2 }}
-          />
-
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginTop: 3,
-            }}
-          >
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleUpdateEmployee}
-            >
-              Update
-            </Button>
-            <Button variant="outlined" color="error" onClick={handleEditCancel}>
-              Cancel
-            </Button>
-          </Box>
-        </Box>
-      </Modal> */}
-
       <Modal open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
         <Box
           sx={{
@@ -959,96 +1029,100 @@ function Employees() {
         </Box>
       </Modal>
 
-      <Drawer anchor="right" open={drawerOpen} onClose={() => toggleDrawer(false)}>
-      <Box
-        sx={{
-          width: 400,
-          padding: 2,
-          position: "relative",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          marginTop: "70px",
-        }}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => toggleDrawer(false)}
       >
         <Box
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 2,
+            width: 400,
+            padding: 2,
+            position: "relative",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            marginTop: "70px",
           }}
         >
-          <Typography variant="h5">Add New Employee</Typography>
-          <IconButton onClick={() => toggleDrawer(false)}>
-            <CloseIcon />
-          </IconButton>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 2,
+            }}
+          >
+            <Typography variant="h5">Add New Employee</Typography>
+            <IconButton onClick={() => toggleDrawer(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          <TextField
+            label="First Name"
+            name="first_name"
+            fullWidth
+            variant="outlined"
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.first_name}
+            helperText={errors.first_name}
+          />
+
+          <TextField
+            label="Last Name"
+            name="last_name"
+            fullWidth
+            variant="outlined"
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.last_name}
+            helperText={errors.last_name}
+          />
+
+          <TextField
+            label="Email"
+            name="email_id"
+            fullWidth
+            variant="outlined"
+            type="email"
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.email_id}
+            helperText={errors.email_id}
+          />
+
+          <TextField
+            label="Role"
+            name="role"
+            fullWidth
+            variant="outlined"
+            select
+            onChange={handleInputChange}
+            sx={{ marginBottom: 2 }}
+            error={!!errors.role}
+            helperText={errors.role}
+          >
+            {Object.keys(roleMapping).map((role) => (
+              <MenuItem key={role} value={role}>
+                {role}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: 3,
+            }}
+          >
+            <Button variant="contained" color="primary" onClick={handleSubmit}>
+              Add
+            </Button>
+          </Box>
         </Box>
-
-        <TextField
-          label="First Name"
-          name="first_name"
-          fullWidth
-          variant="outlined"
-          onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
-          error={!!errors.first_name}
-          helperText={errors.first_name}
-        />
-
-        <TextField
-          label="Last Name"
-          name="last_name"
-          fullWidth
-          variant="outlined"
-          onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
-          error={!!errors.last_name}
-          helperText={errors.last_name}
-        />
-
-        <TextField
-          label="Email"
-          name="email_id"
-          fullWidth
-          variant="outlined"
-          type="email"
-          onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
-          error={!!errors.email_id}
-          helperText={errors.email_id}
-        />
-
-        <TextField
-          label="Role"
-          name="role"
-          fullWidth
-          variant="outlined"
-          select
-          onChange={handleInputChange}
-          sx={{ marginBottom: 2 }}
-          error={!!errors.role}
-          helperText={errors.role}
-        >
-          {Object.keys(roleMapping).map((role) => (
-            <MenuItem key={role} value={role}>
-              {role}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: 3,
-          }}
-        >
-          <Button variant="contained" color="primary" onClick={handleSubmit}>
-            Add
-          </Button>
-        </Box>
-      </Box>
-    </Drawer>
+      </Drawer>
 
       <Modal
         open={profileModalOpen}
@@ -1194,9 +1268,12 @@ function Employees() {
                     >
                       Full Name
                     </Typography>
-                    <Typography variant="body1"  sx={(theme) => ({
+                    <Typography
+                      variant="body1"
+                      sx={(theme) => ({
                         color: theme.palette.text.secondary,
-                      })}>
+                      })}
+                    >
                       {selectedEmployee
                         ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
                         : ""}
@@ -1219,9 +1296,12 @@ function Employees() {
                     >
                       Email Address
                     </Typography>
-                    <Typography variant="body1"  sx={(theme) => ({
+                    <Typography
+                      variant="body1"
+                      sx={(theme) => ({
                         color: theme.palette.text.secondary,
-                      })} >
+                      })}
+                    >
                       {selectedEmployee?.email_id || ""}
                     </Typography>
                   </Box>
@@ -1242,9 +1322,12 @@ function Employees() {
                     >
                       Role
                     </Typography>
-                    <Typography variant="body1" sx={(theme) => ({
+                    <Typography
+                      variant="body1"
+                      sx={(theme) => ({
                         color: theme.palette.text.secondary,
-                      })}>
+                      })}
+                    >
                       {selectedEmployee?.role_details?.role_name || ""}
                     </Typography>
                   </Box>

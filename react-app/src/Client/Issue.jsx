@@ -17,21 +17,33 @@ import {
   TableFooter,
   TablePagination,
   IconButton,
+  Avatar,
   Drawer,
   MenuItem,
   useTheme,
   Chip,
   Modal,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Snackbar,
+  Alert,
 } from "@mui/material";
-
+import Slide from "@mui/material/Slide";
 import Skeleton from "@mui/material/Skeleton";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import axios from "axios";
 import { FaBug } from "react-icons/fa6";
 import { useLocation } from "react-router-dom";
+import BugReportIcon from "@mui/icons-material/BugReport";
 import { useDispatch, useSelector } from "react-redux";
-
+import { fetchContactData } from "../redux/contacts/contactSlice";
+import { fetchContactIssues, issuesActions } from "../redux/contacts/contactIssueSlice";
+import { fetchProjects } from "../redux/Project/ProjectSlice";
+import { fetchContactProject } from "../redux/contacts/contactProjectSlice";
 const statusConfig = {
   Open: {
     color: "#f0ad4e",
@@ -64,6 +76,20 @@ const ContactIssues = () => {
   const theme = useTheme();
   const location = useLocation();
 
+  const colors = {
+    primary: theme.palette.primary.main,
+    primaryLight: theme.palette.primary.light,
+    secondary: theme.palette.secondary.main,
+    success: theme.palette.success.main,
+    successLight: theme.palette.success.light,
+    warning: theme.palette.warning.main,
+    warningLight: theme.palette.warning.light,
+    error: theme.palette.error.main,
+    errorLight: theme.palette.error.light,
+    info: theme.palette.info.main,
+    infoLight: theme.palette.info.light,
+  };
+
   const { projectName } = location.state || {}; // Access projectId from state
   console.log("= ", projectName);
   const [issue, setIssue] = useState([]);
@@ -74,11 +100,18 @@ const ContactIssues = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [currentIssue, setCurrentIssue] = useState(null);
   const [project, setProject] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [orgID,setorgId]=useState('');
-  const [orgName,setOrgName]=useState('');
-
-
+  const [loading, setLoading] = useState(false);
+  const [orgID, setorgId] = useState("");
+  const [orgName, setOrgName] = useState("");
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+      const [issueToDelete, setIssueToDelete] = useState(null);
+    
+  
+ const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
   const [errors, setErrors] = useState({});
   const [role, setRole] = useState("");
 
@@ -96,77 +129,127 @@ const ContactIssues = () => {
     Assignee_Name: "",
   });
   const [currUser, setCurrUser] = useState({});
-  const Projects = useSelector((state) => state.projectReducer);
+  const {data:projectData} = useSelector((state)=> state.contactProjectReducer);
+console.log("faafs",projectData);
 
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    const {data} = useSelector((state)=> state.contactReducer);
+    const {data:issueData, isLoading} = useSelector((state)=> state.contactIssueReducer);
+    console.log("issseue",issueData);
 
-      try {
-        const user = JSON.parse(localStorage.getItem("currUser"));
-        setCurrUser(user);
-
-        console.log("user", user);
-
-        const userRole = user.role;
-        const userID = user.userid;
-
+   useEffect(() => {
+        const fetchAllData = async () => {
+          try {
+            const user = JSON.parse(localStorage.getItem("currUser"));
+            const userid = user.userid;
+            setCurrUser(user);
       
+            let contactDataResult = data;
+        
+            if (!data || data.length === 0) {
+            
+              const resultAction = await dispatch(fetchContactData(userid)).unwrap();
+              contactDataResult = resultAction;
+            }
+              console.log("api caleed ");
+            if (!contactDataResult || contactDataResult.length === 0) return;
+      
+            const contactDetail = contactDataResult[0]?.Client_Contact;
+            const orgId = contactDetail?.OrgID;
+            if (!orgId) return;
+            
+          setorgId(orgId);
+           setOrgName(contactDetail?.Org_Name);
+           
+            if (!issueData || (Array.isArray(issueData) && issueData.length === 0)) {
+              await dispatch(fetchContactIssues(orgId)).unwrap();
+              console.log("jsd")
+            }
 
-        setRole(userRole);
+            if (!projectData || (Array.isArray(projectData) && projectData.length === 0)) {
+                        await dispatch(fetchContactProject(orgId)).unwrap();
+                        
+                      }
+           
+              
+                     
+            
+            
+      
+          } catch (error) {
+            console.error("Error loading data:", error);
+          }
+        };
+      
+        fetchAllData();
+      }, [dispatch]);
 
-        const contactRes = await axios.get(
-          `/server/time_entry_management_application_function/contactData/${userID}`
-        );
-        const orgId = contactRes?.data?.data?.[0]?.Client_Contact?.OrgID;
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     setLoading(true);
 
-        setorgId( contactRes?.data?.data?.[0]?.Client_Contact?.OrgID);
-        setOrgName(contactRes?.data?.data?.[0]?.Client_Contact?.Org_Name);
+  //     try {
+  //       const user = JSON.parse(localStorage.getItem("currUser"));
+  //       setCurrUser(user);
 
-        const filterProject = Projects?.data?.data?.filter(
-          (project) => project.Client_ID === orgId
-        );
+  //       console.log("user", user);
 
-        setProject(filterProject);
+  //       const userRole = user.role;
+  //       const userID = user.userid;
 
-        const issueResponse = await axios.get(
-          `/server/time_entry_management_application_function/clientissue/${orgId}`
-        );
+  //       setRole(userRole);
 
-        console.log("response from issue", issueResponse);
+  //       const contactRes = await axios.get(
+  //         `/server/time_entry_management_application_function/contactData/${userID}`
+  //       );
+  //       const orgId = contactRes?.data?.data?.[0]?.Client_Contact?.OrgID;
 
-        const issueFromResponse = issueResponse.data.data.map((item) => ({
-          id: item.ROWID,
-          issueId: item.ROWID,
-          name: item.Issue_name,
-          projectId: item.Project_ID,
-          project_name: item.Project_Name,
-          assignTo: item.Assignee_Name,
-          assignToID: item.Assignee_ID,
-          status: item.Status,
-          severity: item.Severity,
-          dueDate: item.Due_Date,
-          description: item.Description,
-          reporter: item.Reporter_Name,
-          CreationTime: item.CREATEDTIME.split(" ")[0],
-        }));
-        console.log("response from issue ", issueFromResponse);
-        // if (projectId ) {
-        //   setTaskName(projectName);
-        // } else {
-        //   setTaskName("issue");
-        // }
-        setIssue(issueFromResponse);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  //       setorgId(contactRes?.data?.data?.[0]?.Client_Contact?.OrgID);
+  //       setOrgName(contactRes?.data?.data?.[0]?.Client_Contact?.Org_Name);
+
+  //       const filterProject = Projects?.data?.data?.filter(
+  //         (project) => project.Client_ID === orgId
+  //       );
+
+  //       setProject(filterProject);
+
+  //       const issueResponse = await axios.get(
+  //         `/server/time_entry_management_application_function/clientissue/${orgId}`
+  //       );
+
+  //       console.log("response from issue", issueResponse);
+
+  //       const issueFromResponse = issueResponse?.data?.data?.map((item) => ({
+  //         id: item.ROWID,
+  //         issueId: item.ROWID,
+  //         name: item.Issue_name,
+  //         projectId: item.Project_ID,
+  //         project_name: item.Project_Name,
+  //         assignTo: item.Assignee_Name,
+  //         assignToID: item.Assignee_ID,
+  //         status: item.Status,
+  //         severity: item.Severity,
+  //         dueDate: item.Due_Date,
+  //         description: item.Description,
+  //         reporter: item.Reporter_Name,
+  //         CreationTime: item.CREATEDTIME.split(" ")[0],
+  //       }));
+  //       console.log("response from issue ", issueFromResponse);
+  //       // if (projectId ) {
+  //       //   setTaskName(projectName);
+  //       // } else {
+  //       //   setTaskName("issue");
+  //       // }
+  //       setIssue(issueFromResponse);
+  //     } catch (error) {
+  //       console.error("Error fetching data:", error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+  //   fetchData();
+  // }, []);
 
   const [anchorEl, setAnchorEl] = useState(null); // Manage Popover state
   const [selectedAssignees, setSelectedAssignees] = useState([]); // Store assignees
@@ -181,23 +264,29 @@ const ContactIssues = () => {
   const handleClosePopover = () => {
     setAnchorEl(null);
   };
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+    
+  };
+    const handleCloseSnackbar = (event, reason) => {
+      if (reason === "clickaway") {
+        return;
+      }
+      setSnackbar((prev) => ({ ...prev, open: false }));
+    };
+    function SlideTransition(props) {
+      return <Slide {...props} direction="down" />;
+    }
 
   const validateForm = () => {
     let newErrors = {};
 
-    if (!newIssue.Project) newErrors.projectId = "Project is required";
-    if (!newIssue.name) newErrors.name = "Task name is required";
-    if (!newIssue.assignToID)
-      newErrors.assignToID = "At least one user must be assigned";
-    if (!newIssue.status) newErrors.status = "Status is required";
-    if (!newIssue.startDate) newErrors.startDate = "Start date is required";
-    if (!newIssue.endDate) newErrors.endDate = "End date is required";
-    if (
-      newIssue.startDate &&
-      newIssue.endDate &&
-      newIssue.startDate > newIssue.endDate
-    )
-      newErrors.endDate = "End date cannot be before start date";
+    if (!newIssue.Project_ID) newErrors.Project = "Project is required";
+    if (!newIssue.Issue_name) newErrors.Issue_name = "Issue name is required";
+   
+    if (!newIssue.Status) newErrors.Status = "Status is required";
+    if (!newIssue.Severity) newErrors.Severity = "Severity is required";
+    if (!newIssue.Due_Date) newErrors.Due_Date = "Due Date is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -216,11 +305,11 @@ const ContactIssues = () => {
     setPage(0);
   };
 
-  const filteredissue = issue.filter((isue) =>
-    isue.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredissue = issueData?.filter((isue) =>
+    isue.Issue_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const paginatedissue = filteredissue.slice(
+  const paginatedissue = filteredissue?.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -237,13 +326,13 @@ const ContactIssues = () => {
 
     // Handle Project selection
     if (name === "Project") {
-      const selectedOption = project.find((option) => option.ROWID === value);
+      const selectedOption = projectData?.find((option) => option.Projects.ROWID === value);
       console.log("selected:", selectedOption);
 
       if (selectedOption) {
         setnewIssue((prev) => ({
           ...prev,
-          Project_Name: selectedOption.Project_Name,
+          Project_Name: selectedOption.Projects.Project_Name,
           Project_ID: value,
         }));
       }
@@ -261,24 +350,18 @@ const ContactIssues = () => {
 
     const updateResponse = await axios.post(
       `/server/time_entry_management_application_function/issue/${ROWID}`,
-      {
-        Status: currentIssue.status,
-        Description: currentIssue.description,
-        Due_Date: currentIssue.dueDate,
-        Issue_name: currentIssue.name,
-        Project_ID: currentIssue.projectId,
-        Severity: currentIssue.severity,
-        Project_Name: currentIssue.project_name,
-        Assignee_ID: currentIssue.assignToID,
-        Assignee_Name: currentIssue.assignTo,
-      }
+      currentIssue
     );
 
     console.log("updateResponse", updateResponse);
+    if(updateResponse.status === 200){
+      handleAlert("success", "Issue  Edited successfully.");
+      dispatch(issuesActions.updateIssueData(updateResponse.data.data));
+    }
 
-    setIssue((prev) =>
-      prev.map((task) => (task.id === currentIssue.id ? currentIssue : task))
-    );
+    // setIssue((prev) =>
+    //   prev.map((task) => (task.id === currentIssue.id ? currentIssue : task))
+    // );
     setCurrentIssue("");
     setEditModalOpen(false);
   };
@@ -286,14 +369,17 @@ const ContactIssues = () => {
   const handleEditInputChange = (event) => {
     const { name, value } = event.target;
 
-    if (name === "project") {
-      const selectedOption = project.find((option) => option.ROWID === value);
+    console.log("name", name);
+    console.log("value", value);
 
+    if (name === "Project_Name") {
+      const selectedOption = projectData?.find((option) => option.Projects.ROWID === value);
+ console.log("selectedOption",selectedOption )
       if (selectedOption) {
         setCurrentIssue((prev) => ({
           ...prev,
-          project_name: selectedOption.Project_Name,
-          projectId: selectedOption.ROWID,
+          Project_Name: selectedOption.Projects.Project_Name,
+          Project_ID: selectedOption.Projects.ROWID,
         }));
       }
     } else {
@@ -302,94 +388,79 @@ const ContactIssues = () => {
   };
 
   const handleAddIssue = async () => {
-   
     newIssue.Reporter_ID = orgID;
     newIssue.Reporter_Name = orgName;
-
+  
     console.log("newIssue", newIssue);
-
-
+  
     try {
       const response = await axios.post(
         "/server/time_entry_management_application_function/issue",
         newIssue
       );
-      console.log("Response Data:", response.data.data);
-      const item = response.data.data;
-
-      if (item) {
-        const newIssueResponse = {
-          id: item.ROWID || null, // Ensure ROWID exists
-          issueId: item.ROWID || null,
-          name: item.Issue_name || "",
-          projectId: item.Project_ID || "",
-          project_name: item.Project_Name || "",
-          assignTo: item.Assignee_Name || "", // Assign names from response
-          assignToID: item.Assignee_ID || "", // Assign IDs from response
-          status: item.Status || "",
-          severity: item.Severity || "",
-          dueDate: item.Due_Date || "",
-          description: item.Description || "",
-          reporter: item.Reporter_Name || "",
-          CreationTime: item.CREATEDTIME ? item.CREATEDTIME.split(" ")[0] : "",
-        };
-
-        // Add the new task to the issue list
-        const newIssueData = [newIssueResponse, ...issue];
-        setIssue(newIssueData);
-
-        // Close the form or clear inputs
+  
+      console.log("Response Data:", response);
+  
+      if (response.status === 201 && response.data?.data) {
+        dispatch(issuesActions.addIssueData(response.data.data));
         handleCancel();
-
-        // Show success message
-        handleAlert("success", "Task added successfully");
-        // Optionally, dispatch a fetch action to refresh issues list
-        // dispatch(fetchissue());
+        handleAlert("success", "Issue added successfully");
       } else {
         throw new Error("Invalid response data received");
       }
     } catch (error) {
-      // Handle errors
       console.error("Error adding task:", error);
       handleAlert("error", error.message || "Error adding task");
     }
   };
+  
 
   const handleAlert = (severity, message) => {
-    // setSnackbar({
-    //   open: true,
-    //   message,
-    //   severity,
-    // });
-    console.log("sucess", message);
+    setSnackbar({
+      open: true,
+      message,
+      severity,
+    });
+   
   };
 
   const handleCancel = () => {
     setnewIssue({
-      project: "",
-      name: "",
-      assignTo: "",
-      status: "",
-      startDate: "",
-      endDate: "",
-      description: "",
+      Status: "",
+      Description: "",
+      Due_Date: "",
+      Issue_name: "",
+      Project_ID: "",
+      Severity: "",
+      Project_Name: " ",
+      Reporter_ID: "",
+      Assignee_ID: "",
+      Reporter_Name: " ",
+      Assignee_Name: "",
     });
     toggleDrawer(false);
   };
   const handleSubmit = () => {
-    if (1 || validateForm()) {
+    console.log("ffsd")
+    if (validateForm()) {
+    
       handleAddIssue();
     }
   };
 
-  const deleteIssue = async (issueId) => {
+  const deleteIssue = async () => {
     try {
       const response = await axios.delete(
-        `/server/time_entry_management_application_function/issue/${issueId}`
+        `/server/time_entry_management_application_function/issue/${issueToDelete}`
       );
 
       console.log(response);
-      setIssue((prev) => prev.filter((issue) => issue.id !== issueId));
+      if(response.status == 200){
+        dispatch(issuesActions.deleteIssueData(issueToDelete));
+        handleDeleteCancel()
+        handleAlert("success", "Issue  Deleted Successfully .");
+      }
+      // setIssue((prev) => prev.filter((issue) => issue.id !== issueId));
     } catch (error) {
       console.error("Error deleting issue:", error);
     }
@@ -398,6 +469,12 @@ const ContactIssues = () => {
   const handleCloseEditModal = () => {
     setEditModalOpen(false);
   };
+
+  const handleDeleteClick = (issueId) => {
+    setIssueToDelete(issueId);
+    setDeleteConfirmOpen(true);
+  };
+
 
   const handleEdit = (isue) => {
     console.log("name of the issue ", isue);
@@ -408,66 +485,98 @@ const ContactIssues = () => {
 
   return (
     <Box sx={{ padding: 3 }}>
-      <Box
+      <Card
+        elevation={0}
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 3,
+          mb: 4,
+          borderRadius: "16px",
+          background: `linear-gradient(135deg, ${colors.primary}88, ${colors.info}88)`,
+          color: "white",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <Typography variant="h4">Issues</Typography>
-      </Box>
-
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            opacity: 0.05,
+            backgroundImage:
+              'url("data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%23ffffff" fill-opacity="1" fill-rule="evenodd"/%3E%3C/svg%3E")',
+            backgroundSize: "15px",
+          }}
+        />
+        <CardContent sx={{ py: 4, px: 3, position: "relative" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              rowGap: 2,
+            }}
+          >
+            <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
                 alignItems: "center",
+                width: { xs: "100%", sm: "auto" },
               }}
             >
-              {loading ? (
-                <>
-                  <Skeleton
-                    variant="rectangular"
-                    width="40%"
-                    height={40}
-                    sx={{ borderRadius: 1 }}
-                  />
-                  <Skeleton
-                    variant="rectangular"
-                    width={120}
-                    height={40}
-                    sx={{ borderRadius: 1 }}
-                  />
-                </>
-              ) : (
-                <TextField
-                  label="Search Issues"
-                  variant="outlined"
-                  size="small"
-                  // value={searchQuery}
-                  // onChange={handleSearch}
-                  sx={{ width: "40%" }}
-                />
-              )}
+              <Avatar
+                sx={{
+                  bgcolor: colors.primary,
+                  width: 60,
+                  height: 60,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                }}
+              >
+                <BugReportIcon fontSize="large" />
+              </Avatar>
+              <Box sx={{ ml: 2 }}>
+                <Typography variant="h4" fontWeight="bold">
+                  Issues
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 2,
+                alignItems: "center",
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              <TextField
+                label="Search Issues"
+                variant="outlined"
+                size="small"
+                sx={{ width: { xs: "100%", sm: "250px" } }}
+                // value={searchQuery}
+                // onChange={handleSearch}
+              />
 
               <Button
                 variant="contained"
                 color="primary"
                 onClick={() => toggleDrawer(true)}
+                sx={{ width: { xs: "100%", sm: "auto" } }}
               >
                 Submit Issue
               </Button>
-            </CardContent>
-          </Card>
-        </Grid>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
 
+      <Grid container spacing={3}>
         <Grid item xs={12}>
-          {loading ? (
+          {isLoading ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -581,7 +690,7 @@ const ContactIssues = () => {
                 </TableRow>
               </TableBody>
             </Table>
-          ) : issue.length === 0 ? (
+          ) : paginatedissue?.length === 0 ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -718,15 +827,25 @@ const ContactIssues = () => {
                         fontWeight: "bold",
                       }}
                     >
-                      Creation Time
+                      Status
                     </TableCell>
+
                     <TableCell
                       sx={{
                         color: theme.palette.primary.contrastText,
                         fontWeight: "bold",
                       }}
                     >
-                      Status
+                      Severity
+                    </TableCell>
+
+                    <TableCell
+                      sx={{
+                        color: theme.palette.primary.contrastText,
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Creation Time
                     </TableCell>
 
                     <TableCell
@@ -749,7 +868,7 @@ const ContactIssues = () => {
                   </TableRow>
                 </TableHead>
 
-                {loading ? (
+                {isLoading ? (
                   <TableBody>
                     <TableRow>
                       <TableCell
@@ -901,25 +1020,25 @@ const ContactIssues = () => {
                   </TableBody>
                 ) : (
                   <TableBody>
-                    {paginatedissue.map((isue) => (
-                      <TableRow key={isue.id}>
+                    {paginatedissue?.map((isue) => (
+                      <TableRow key={isue.ROWID}>
                         <TableCell>
-                          {"I" + isue.id.substr(isue.id.length - 4)}
+                          {"I" + isue.ROWID.substr(isue.ROWID.length - 4)}
                         </TableCell>
-                        <TableCell>{isue.name}</TableCell>
-                        <TableCell>{isue.reporter}</TableCell>
-                        <TableCell>{isue.CreationTime}</TableCell>
+                        <TableCell>{isue.Issue_name}</TableCell>
+                        <TableCell>{isue.Reporter_Name}</TableCell>
+
                         <TableCell>
                           <Chip
-                            label={isue.status}
+                            label={isue.Status}
                             size="small"
                             sx={{
                               backgroundColor:
-                                statusConfig[isue.status]?.backgroundColor ||
+                                statusConfig[isue.Status]?.backgroundColor ||
                                 "#f5f5f5",
                               color:
-                                statusConfig[isue.status]?.color || "#757575",
-                              border: `1px solid ${statusConfig[isue.status]?.borderColor || "#e0e0e0"}`,
+                                statusConfig[isue.Status]?.color || "#757575",
+                              border: `1px solid ${statusConfig[isue.Status]?.borderColor || "#e0e0e0"}`,
                               fontWeight: 500,
                               fontSize: "0.75rem",
                               height: "24px",
@@ -929,9 +1048,9 @@ const ContactIssues = () => {
                             }}
                           />
                         </TableCell>
-
-                        {/* <TableCell>{isue.assignTo}</TableCell> */}
-                        <TableCell>{isue.dueDate}</TableCell>
+                        <TableCell>{isue.Severity}</TableCell>
+                        <TableCell>{isue.CREATEDTIME}</TableCell>
+                        <TableCell>{isue.Due_Date}</TableCell>
 
                         <TableCell>
                           <IconButton
@@ -942,9 +1061,9 @@ const ContactIssues = () => {
                           </IconButton>
                           <IconButton
                             color="error"
-                            onClick={() => deleteIssue(isue.id)}
+                            onClick={() => handleDeleteClick(isue.ROWID)}
                           >
-                            {role === "Client" ? <DeleteIcon /> : <></>}
+                            <DeleteIcon />
                           </IconButton>
                         </TableCell>
                       </TableRow>
@@ -956,7 +1075,7 @@ const ContactIssues = () => {
                   <TableRow>
                     <TablePagination
                       rowsPerPageOptions={[5, 10, 20]}
-                      count={filteredissue.length}
+                      count={filteredissue?.length}
                       rowsPerPage={rowsPerPage}
                       page={page}
                       onPageChange={handleChangePage}
@@ -1000,9 +1119,9 @@ const ContactIssues = () => {
             error={!!errors.Project}
             helperText={errors.Project}
           >
-            {project.map((project) => (
-              <MenuItem key={project.ROWID} value={project.ROWID}>
-                {project.Project_Name}
+            {projectData?.map((project) => (
+              <MenuItem key={project.Projects.ROWID} value={project.Projects.ROWID}>
+                {project.Projects.Project_Name}
               </MenuItem>
             ))}
           </TextField>
@@ -1014,8 +1133,8 @@ const ContactIssues = () => {
             value={newIssue.Issue_name}
             onChange={handleInputChange}
             sx={{ marginBottom: 2 }}
-            error={!!errors.name}
-            helperText={errors.name}
+            error={!!errors.Issue_name}
+            helperText={errors.Issue_name}
           />
 
           <TextField
@@ -1026,10 +1145,10 @@ const ContactIssues = () => {
             value={newIssue.Status}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
-            error={!!errors.status}
-            helperText={errors.status}
+            error={!!errors.Status}
+            helperText={errors.Status}
           >
-            {["Open", "Work In Progress", "Close"].map((status) => (
+            {["Open", "Work In Progress", "Close"]?.map((status) => (
               <MenuItem key={status} value={status}>
                 {status}
               </MenuItem>
@@ -1045,8 +1164,8 @@ const ContactIssues = () => {
             onChange={handleInputChange}
             InputLabelProps={{ shrink: true }}
             sx={{ marginBottom: 2 }}
-            error={!!errors.endDate}
-            helperText={errors.endDate}
+            error={!!errors.Due_Date}
+            helperText={errors.Due_Date}
           />
 
           <TextField
@@ -1057,8 +1176,8 @@ const ContactIssues = () => {
             value={newIssue.Severity}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
-            error={!!errors.severity}
-            helperText={errors.severity}
+            error={!!errors.Severity}
+            helperText={errors.Severity}
           >
             <MenuItem value="Show stopper">Show stopper</MenuItem>
             <MenuItem value="Critical">Critical</MenuItem>
@@ -1115,51 +1234,35 @@ const ContactIssues = () => {
             <>
               <TextField
                 label="Issue Name"
-                name="name"
+                name="Issue_name"
                 fullWidth
-                value={currentIssue.name}
+                value={currentIssue.Issue_name}
                 onChange={handleEditInputChange}
                 sx={{ mb: 2 }}
               />
 
               <TextField
                 label="Project"
-                name="project"
+                name="Project_Name"
                 fullWidth
                 select
-                value={currentIssue.projectId || ""}
+                value={currentIssue.Project_ID || ""}
                 onChange={handleEditInputChange}
                 sx={{ mb: 2 }}
               >
-                {project.map((option) => (
-                  <MenuItem key={option.ROWID} value={option.ROWID}>
-                    {option.Project_Name}
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                select
-                fullWidth
-                label="Status"
-                name="status"
-                value={currentIssue.status}
-                onChange={handleEditInputChange}
-                sx={{ mb: 2 }}
-              >
-                {["Open", "Work In Progress", "Closed"].map((status) => (
-                  <MenuItem key={status} value={status}>
-                    {status}
+                {projectData?.map((option) => (
+                  <MenuItem key={option.Projects.ROWID} value={option.Projects.ROWID}>
+                    {option.Projects.Project_Name}
                   </MenuItem>
                 ))}
               </TextField>
 
               <TextField
                 label="Due Date"
-                name="dueDate"
+                name="Due_Date"
                 fullWidth
                 type="date"
-                value={currentIssue.dueDate}
+                value={currentIssue.Due_Date}
                 onChange={handleEditInputChange}
                 InputLabelProps={{ shrink: true }}
                 sx={{ mb: 2 }}
@@ -1169,24 +1272,25 @@ const ContactIssues = () => {
                 fullWidth
                 label="Severity"
                 name="Severity"
-                value={currentIssue.severity}
-                onChange={handleInputChange}
+                value={currentIssue.Severity}
+                onChange={handleEditInputChange}
                 sx={{ mb: 2 }}
-                error={!!errors.severity}
-                helperText={errors.severity}
+                error={!!errors.Severity}
+                helperText={errors.Severity}
               >
                 <MenuItem value="Show stopper">Show stopper</MenuItem>
                 <MenuItem value="Critical">Critical</MenuItem>
                 <MenuItem value="Major">Major</MenuItem>
                 <MenuItem value="Minor">Minor</MenuItem>
               </TextField>
+
               <TextField
                 label="Add Description"
-                name="description"
+                name="Description"
                 fullWidth
                 multiline
                 rows={4}
-                value={currentIssue.description}
+                value={currentIssue.Description}
                 onChange={handleEditInputChange}
                 sx={{ marginBottom: 3 }}
               />
@@ -1211,6 +1315,77 @@ const ContactIssues = () => {
           )}
         </Box>
       </Modal>
+
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleDeleteCancel}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        PaperProps={{
+          sx: {
+            width: "100%",
+            maxWidth: "500px",
+            borderRadius: "8px",
+          },
+        }}
+      >
+        <DialogTitle id="alert-dialog-title" sx={{ pb: 1 }}>
+          {"Delete Issue"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Are you sure you want to delete Issue{" "}
+            {/* <strong>{projectToDelete?.name}</strong>? */}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button
+            onClick={handleDeleteCancel}
+            variant="outlined"
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={deleteIssue}
+            variant="contained"
+            color="error"
+            autoFocus
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+              open={snackbar.open}
+              autoHideDuration={3000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+              TransitionComponent={SlideTransition}
+            >
+              <Alert
+                onClose={handleCloseSnackbar}
+                severity={snackbar.severity}
+                variant="filled"
+                sx={{
+                  width: "100%",
+                  "&.MuiAlert-standardSuccess": {
+                    backgroundColor: "#4caf50",
+                    color: "#fff",
+                  },
+                  "&.MuiAlert-standardError": {
+                    backgroundColor: "#f44336",
+                    color: "#fff",
+                  },
+                  "& .MuiAlert-icon": {
+                    color: "#fff",
+                  },
+                }}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
     </Box>
   );
 };

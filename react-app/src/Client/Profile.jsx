@@ -31,11 +31,11 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import Slide from "@mui/material/Slide";
 import { Business } from "@mui/icons-material";
-
+import { useSelector,useDispatch } from "react-redux";
 import CloudDownloadSharpIcon from "@mui/icons-material/CloudDownloadSharp";
 import CloudUploadSharpIcon from "@mui/icons-material/CloudUploadSharp";
 import axios from "axios";
-
+import { fetchContactData } from "../redux/contacts/contactSlice";
 const profile = require("../../public/contactProfile.png");
 const coverImage = require("../../public/contactCover.png");
 
@@ -49,6 +49,10 @@ function Profile() {
     severity: "success",
   });
 
+  const {data} = useSelector((state)=> state.contactReducer);
+
+ const dispatch = useDispatch();
+
   useEffect(() => {
     const getUserDetail = async () => {
       const user = JSON.parse(localStorage.getItem("currUser"));
@@ -58,11 +62,16 @@ function Profile() {
       console.log("userDetail", userDetail);
 
       try {
-        const contactRes = await axios.get(
-          `/server/time_entry_management_application_function/contactData/${user.userid}`
-        );
+                   let contactDataResult = data;
+                   if (!data || data.length === 0) {
+                   
+                     const resultAction = await dispatch(fetchContactData(user.userid)).unwrap();
+                     contactDataResult = resultAction;
+                   }
+                   if (!contactDataResult || contactDataResult.length === 0) return;
+             
 
-        const contactData = contactRes.data.data[0].Client_Contact;
+        const contactData = contactDataResult[0].Client_Contact;
         console.log("contactData", contactData);
         setUserInfo(contactData);
         console.log("userInfo", userInfo);
@@ -92,7 +101,7 @@ function Profile() {
         sx={{
           position: "relative",
           height: 200,
-          backgroundImage: `url( "https://scontent-bom1-2.xx.fbcdn.net/v/t39.30808-6/367709073_722498016556740_2958855278498819119_n.png?_nc_cat=100&ccb=1-7&_nc_sid=cc71e4&_nc_ohc=x0wuewO_JNgQ7kNvwHDpy66&_nc_oc=AdkMce1FTBl9hyilycnVwl7gV2HS4x2T1-serW3F0DsK7bS18s7kpVo9pPH9necaCAs&_nc_zt=23&_nc_ht=scontent-bom1-2.xx&_nc_gid=P2i33bIlkd-PoLpWlfureQ&oh=00_AfH1KZ3ZX-VBjZwLLrKHL3i-aGgwwz7O6bvIsEXvwSPXOw&oe=67FD920B")`,
+          backgroundImage: "url('https://scontent-bom1-2.xx.fbcdn.net/v/t39.30808-6/367709073_722498016556740_2958855278498819119_n.png?_nc_cat=100&ccb=1-7&_nc_sid=cc71e4&_nc_ohc=aIMs2ucKim8Q7kNvwFeywat&_nc_oc=Adm1OXbZ8RSs1mUzG7MOsr0OZv8COAj3JBa6XEhQcip2oKfKm5rZ856upCuGjM-uYCA&_nc_zt=23&_nc_ht=scontent-bom1-2.xx&_nc_gid=GEeeQOrADbdB6z-3D0b5Rg&oh=00_AfG5faFkXMFv1beXsKukB5GwS_8m09U3l8Wx0Ow3GqikJw&oe=6806944B')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           borderRadius: 2,

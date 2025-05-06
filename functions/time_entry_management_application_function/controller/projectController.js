@@ -17,8 +17,12 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Initialize Catalyst app
-app.use((req, res, next) => {
-  req.catalystApp = catalyst.initialize(req);
+app.use(async (req, res, next) => {
+  const catalystApp = catalyst.initialize(req);
+  let userManagement = catalystApp.userManagement();
+  let user = await userManagement.getCurrentUser();
+  req.catalystApp = catalystApp;
+  req.user = user;
   next();
 });
 
@@ -43,6 +47,7 @@ const getAllProjects = async (req, res) => {
     });
   }
 };
+
 // Get projects by user ID
 const getProjectsByUserId = async (req, res) => {
   try {

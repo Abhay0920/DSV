@@ -2,6 +2,8 @@ import * as React from "react";
 import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom"; // Import useNavigate
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { Tooltip } from "@mui/material";
+
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
@@ -45,7 +47,9 @@ import { BugReport } from "@mui/icons-material";
 
 export default function Layout1() {
   const [open, setOpen] = React.useState(true);
-  const [darkMode, setDarkMode] = React.useState(false);
+  const [darkMode, setDarkMode] = React.useState(
+     localStorage.getItem("darkMode") === "true"
+   );
   const [anchorEl, setAnchorEl] = React.useState(null); // State to manage dropdown menu anchor
   const [userProfile, setUserProfile] = useState();
   const location = useLocation();
@@ -55,8 +59,10 @@ export default function Layout1() {
   const isMobile = useMediaQuery("(max-width:600px)");
 
   const toggleMenu = () => setOpen(!open);
-  const toggleTheme = () => setDarkMode(!darkMode);
-
+  const toggleTheme = () => {
+    localStorage.setItem("darkMode", !darkMode);
+    setDarkMode(!darkMode);
+  };
   const theme = createTheme({
     palette: {
       mode: darkMode ? "dark" : "light",
@@ -224,66 +230,83 @@ export default function Layout1() {
           {/* Sidebar */}
 
           {!isMobile && (
-            <Box
-              sx={{
-                width: open ? "320px" : "64px",
-
-                bgcolor: theme.palette.background.paper, // Match sidebar color with content
-                color: "primary.main",
-                transition: "width 0.3s ease-in-out",
-                boxShadow: open ? "2px 0px 10px rgba(0,0,0,0.1)" : "none",
-                borderRight: "0.5px solid   #D0D0D0",
-              }}
-            >
-              <List>
-                {menuItems.map((item) => {
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <ListItem
-                      button
-                      key={item.text}
-                      component={Link}
-                      to={item.path}
-                      sx={{
-                        padding: "10px",
-
-                        bgcolor: isActive
-                          ? theme.palette.mode === "light"
-                            ? "rgb(229, 236, 248)" // Light background color for active item in light mode
-                            : "rgb(48, 48, 48)" // Dark background color for active item in dark mode
-                          : "transparent", // Transparent background for inactive items
-                        color: isActive
-                          ? theme.palette.mode === "light"
-                            ? "black" // Black text for active item in light mode
-                            : "white" // White text for active item in dark mode
-                          : theme.palette.mode === "light"
-                            ? "black" // Black text for inactive item in light mode
-                            : "white", // White text for inactive item in dark mode
-                        borderRadius: "10px",
-                      }}
-                    >
-                      {React.cloneElement(item.icon, {
-                        sx: {
-                          width: "1em",
-                          height: "1em",
-                          display: isMobile ? "none" : "inline-block", // Hide in mobile view
-                          flexShrink: 0,
-                          color: isActive ? "#1976d2" : "grey",
-                          fontSize: "1.5rem",
-                          marginLeft: "10px",
-                        },
-                      })}
-                      {open && (
-                        <ListItemText
-                          primary={item.text}
-                          sx={{ ml: 2, fontSize: "1.2rem" }}
-                        />
-                      )}
-                    </ListItem>
-                  );
-                })}
-              </List>
-            </Box>
+             <Box
+             sx={{
+               width: open ? "270px" : "64px",
+               bgcolor: theme.palette.background.paper,
+               color: "primary.main",
+               transition: "width 0.3s ease-in-out",
+               boxShadow: open ? "2px 20px 10px rgba(0,0,0,0.1)" : "none",
+              
+             }}
+           >
+             <List>
+               {menuItems.map((item) => {
+                 const isActive = location.pathname === item.path;
+                 return (
+                   <Tooltip
+   title={!open ? item.text : ""}
+   placement="right"
+   arrow
+   key={item.text}
+   componentsProps={{
+     tooltip: {
+       sx: {
+         fontSize: "0.8rem", // ⬅️ Increase tooltip text size
+         padding: "6px 10px",
+         fontWeight: 400,
+       },
+     },
+   }}
+ >
+                     <ListItem
+                       button
+                       component={Link}
+                       to={item.path}
+                       sx={{
+                         padding: "10px",
+                         bgcolor: isActive
+                           ? theme.palette.mode === "light"
+                             ? "rgb(229, 236, 248)"
+                             : "rgb(48, 48, 48)"
+                           : "transparent",
+                         color: isActive
+                           ? theme.palette.mode === "light"
+                             ? "black"
+                             : "white"
+                           : theme.palette.mode === "light"
+                             ? "black"
+                             : "white",
+                         borderRadius: "10px",
+                       }}
+                     >
+                       {React.cloneElement(item.icon, {
+                         sx: {
+                           width: "1em",
+                           height: "1em",
+                           display: isMobile ? "none" : "inline-block",
+                           flexShrink: 0,
+                           color: isActive
+                             ? "#1976d2"
+                             : theme.palette.mode === "dark"
+                               ? "white"
+                               : "grey",
+                           fontSize: "1.5rem",
+                           marginLeft: "10px",
+                         },
+                       })}
+                       {open && (
+                         <ListItemText
+                           primary={item.text}
+                           sx={{ ml: 2, fontSize: "1.2rem" }}
+                         />
+                       )}
+                     </ListItem>
+                   </Tooltip>
+                 );
+               })}
+             </List>
+           </Box>
           )}
 
           {/* Main Content */}

@@ -15,7 +15,7 @@ export const fetchEmpTask = createAsyncThunk(
         });
        
         // Axios automatically parses the JSON, so we can directly return the response data
-        return response.data;
+        return response.data.data;
   
       } catch (error) {
         // Handling errors from the axios request
@@ -35,7 +35,7 @@ export const fetchEmpTask = createAsyncThunk(
       
         initialState: {
           isLoading: false,
-          data: null,
+          data: [],
           isError: false,
         },
         reducers: {},

@@ -24,36 +24,96 @@ app.use((req, res, next) => {
   next();
 });
 
-
 const updateProfile = async (req, res) => {
   const user_ID = req.params.user_ID;
-  const profileURL = req.body.profileLink;
-  console.log("backend", user_ID, profileURL);
+  console.log("Received profile update request for user:", user_ID);
+
+  if (!req.files || !req.files.profile) {
+    return res.status(400).json({
+      success: false,
+      message: "No profile file uploaded.",
+    });
+  }
+
+  const file = req.files.profile;
 
   try {
     const catalystApp = req.catalystApp;
-    const zcql = catalystApp.zcql();
-    const query = `UPDATE Users SET Users.Profile_Link = '${profileURL}' WHERE Users.User_Id = '${user_ID}'`;
-    const queryResp = await zcql.executeZCQLQuery(query);
+    const stratus = catalystApp.stratus();
+    const bucket = stratus.bucket("dsv365");
 
-    res.status(200).json({
-      success: "true",
-      data: queryResp,
+    const timestamp = Date.now();
+    const uniqueFileName = `${timestamp}_${file.name}`;
+    const uploadPath = `dsv365/profile/${uniqueFileName}`;
+    const tempFilePath = path.join(os.tmpdir(), file.name);
+
+    // Move file to temporary location
+    await file.mv(tempFilePath);
+
+    // Upload file to Catalyst Stratus
+    await bucket.putObject(uploadPath, fs.createReadStream(tempFilePath));
+
+    const uploadedObject = bucket.object(uploadPath);
+    const objectDetails = await uploadedObject.getDetails();
+    const profileURL = objectDetails.object_url;
+
+    console.log("File successfully uploaded to Catalyst Stratus:", profileURL);
+
+    // Update user's profile link in database
+    const zcql = catalystApp.zcql();
+    const updateQuery = `UPDATE Users SET Users.Profile_Link = '${profileURL}' WHERE User_Id = '${user_ID}'`;
+
+    const updateResult = await zcql.executeZCQLQuery(updateQuery);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      profileURL,
+      result: updateResult,
     });
-  } catch (err) {
-    res.status(200).json({
-      success: "false",
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while updating the profile.",
+      error: error.message,
     });
   }
 };
 
 const updateCover = async (req, res) => {
   const user_ID = req.params.user_ID;
-  const coverURL = req.body.coverLink;
-  console.log("backend", user_ID, coverURL);
+  console.log("backend", user_ID);
+
+  if (!req.files || !req.files.cover) {
+    return res.status(400).json({
+      success: false,
+      message: "No profile file uploaded.",
+    });
+  }
+
+  const file = req.files.cover;
 
   try {
     const catalystApp = req.catalystApp;
+    const stratus = catalystApp.stratus();
+    const bucket = stratus.bucket("dsv365");
+    const timestamp = Date.now();
+    const uniqueFileName = `${timestamp}_${file.name}`;
+    const uploadPath = `dsv365/cover/${uniqueFileName}`;
+    const tempFilePath = path.join(os.tmpdir(), file.name);
+    // Move file to temporary location
+    await file.mv(tempFilePath);
+
+    // Upload file to Catalyst Stratus
+    await bucket.putObject(uploadPath, fs.createReadStream(tempFilePath));
+
+    const uploadedObject = bucket.object(uploadPath);
+    const objectDetails = await uploadedObject.getDetails();
+    const coverURL = objectDetails.object_url;
+
+    console.log("File successfully uploaded to Catalyst Stratus:", coverURL);
+
     const zcql = catalystApp.zcql();
     const query = `UPDATE Users SET Users.Cover_Link = '${coverURL}' WHERE Users.User_Id = '${user_ID}'`;
     const queryResp = await zcql.executeZCQLQuery(query);
@@ -80,7 +140,7 @@ const getProfile = async (req, res) => {
     const queryResp = await zcql.executeZCQLQuery(query);
     const profileURL = queryResp[0].Users.Profile_Link;
 
-    console.log("seew", queryResp);
+    // console.log("seew", queryResp);
 
     res.status(200).json({
       success: "true",
@@ -92,6 +152,8 @@ const getProfile = async (req, res) => {
     });
   }
 };
+
+
 
 const getCover = async (req, res) => {
   const user_ID = req.params.user_ID;
@@ -114,6 +176,7 @@ const getCover = async (req, res) => {
     });
   }
 };
+
 const updateProfileData = async (req, res) => {
   const id = req.params.id;
   console.log("Received userId:", id);
@@ -180,6 +243,49 @@ const getProfileData = async (req, res) => {
   }
 };
 
+
+const batchProfileData = async (req, res) => {
+  const employeeData = req.body;
+
+  try {
+    const catalystApp = req.catalystApp;
+    const zcql = catalystApp.zcql();
+
+    // 1. Collect all user_ids
+    const userIds = employeeData.map(emp => `'${emp.user_id}'`).join(',');
+
+    // 2. Query all profiles at once using IN clause
+    const query = `SELECT User_Id, Profile_Link FROM Users WHERE User_Id IN (${userIds})`;
+    const queryResp = await zcql.executeZCQLQuery(query);
+
+    // 3. Build a map of user_id => profile_link
+    const profileMap = {};
+    queryResp.forEach(entry => {
+      const { User_Id, Profile_Link } = entry.Users;
+      profileMap[User_Id] = Profile_Link;
+    });
+
+    // 4. Merge profile links into employeeData
+    const updatedEmployees = employeeData.map(emp => ({
+      ...emp,
+      profile_pic: profileMap[emp.user_id] || null, // fallback to null or default if not found
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: updatedEmployees,
+    });
+  } catch (error) {
+    console.error("Batch profile error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch profile pics",
+      error: error.message,
+    });
+  }
+};
+
+
 module.exports = {
   updateProfile,
   updateCover,
@@ -187,4 +293,5 @@ module.exports = {
   getCover,
   updateProfileData,
   getProfileData,
+  batchProfileData
 };

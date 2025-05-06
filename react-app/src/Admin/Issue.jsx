@@ -14,6 +14,8 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Avatar,
+  alpha,
   TableFooter,
   TablePagination,
   IconButton,
@@ -38,11 +40,11 @@ import {
 } from "@mui/material";
 import { FaUsers } from "react-icons/fa";
 import Slide from "@mui/material/Slide";
-import { FormControl, InputLabel, Select } from '@mui/material';
-
+import { FormControl, InputLabel, Select } from "@mui/material";
 
 import Skeleton from "@mui/material/Skeleton";
 import EditIcon from "@mui/icons-material/Edit";
+import BugReportIcon from "@mui/icons-material/BugReport";
 import DeleteIcon from "@mui/icons-material/Delete";
 import axios from "axios";
 import { FaBug } from "react-icons/fa6";
@@ -50,6 +52,8 @@ import { useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchIssueData } from "../redux/Client/issueSlice";
 import { issuesActions } from "../redux/Client/issueSlice";
+import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
+import { fetchProjects } from "../redux/Project/ProjectSlice";
 const statusOptions = ["Open", "In Progress", "Completed"];
 
 const statusConfig = {
@@ -68,12 +72,12 @@ const statusConfig = {
     backgroundColor: "#d1e7dd",
     borderColor: "#badbcc",
   },
-  "Work In Process": {
+  "Work In Progress": {
     color: "#0d6efd",
     backgroundColor: "#cfe2ff",
     borderColor: "#b6d4fe",
   },
-  Close: {
+  Closed: {
     color: "#dc3545",
     backgroundColor: "#f8d7da",
     borderColor: "#f5c2c7",
@@ -128,15 +132,23 @@ export const Issues = () => {
 
   const Projects = useSelector((state) => state.projectReducer);
   const Employees = useSelector((state) => state.employeeReducer);
+  console.log("assadsa", Employees);
 
-  console.log("Employee", Employees?.data?.users);
   const dispatch = useDispatch();
 
   const { data, isLoading } = useSelector((state) => state.issueReducer);
   console.log("issuedata", data);
 
   useEffect(() => {
-    dispatch(fetchIssueData());
+    if (!Array.isArray(data) || data.length === 0) {
+      dispatch(fetchIssueData());
+    }
+    if (!Array.isArray(Employees.data) || Employees.data.length === 0) {
+      dispatch(fetchEmployees());
+    }
+    if (!Array.isArray(Projects.data) || Projects.data.length === 0) {
+      dispatch(fetchProjects());
+    }
   }, [dispatch]);
 
   // useEffect(() => {
@@ -200,7 +212,7 @@ export const Issues = () => {
   const handleFilterChange = (event) => {
     setFilter(event.target.value);
   };
-  
+
   // Close the Popover
   const handleClosePopover = () => {
     setAnchorEl(null);
@@ -244,14 +256,17 @@ export const Issues = () => {
   //   isue?.Issue_name?.toLowerCase().includes(searchQuery?.toLowerCase() || "")
   // );
   const filteredissue = data?.filter((issue) => {
-    const matchesSearch = issue?.Issue_name?.toLowerCase().includes(searchQuery?.toLowerCase() || "");
-  
+    const matchesSearch = issue?.Issue_name?.toLowerCase().includes(
+      searchQuery?.toLowerCase() || ""
+    );
+
     const matchesAssignee =
-      filter === "all" ? true : !issue?.Assignee_Name || issue?.Assignee_Name === "";
-  
+      filter === "all"
+        ? true
+        : !issue?.Assignee_Name || issue?.Assignee_Name === "";
+
     return matchesSearch && matchesAssignee;
   });
-  
 
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") {
@@ -280,7 +295,7 @@ export const Issues = () => {
 
     // Handle Project selection
     if (name === "Project") {
-      const selectedOption = Projects.data.data.find(
+      const selectedOption = Projects?.data?.find(
         (option) => option.ROWID === value
       );
       console.log("selected:", selectedOption);
@@ -296,15 +311,15 @@ export const Issues = () => {
 
     // Handle Assignee selection (multiple selection)
     else if (name === "AssigneeID") {
-      const selectedAssignees = Employees?.data?.users.filter(
+      const selectedAssignees = Employees?.data?.filter(
         (employee) => value.includes(employee.user_id) // Check if the employee's user_id is selected
       );
 
       const assigneeIDs = selectedAssignees
-        .map((employee) => employee.user_id)
+        ?.map((employee) => employee.user_id)
         .join(","); // Join selected IDs as comma-separated string
       const assigneeNames = selectedAssignees
-        .map((employee) => `${employee.first_name} ${employee.last_name}`)
+        ?.map((employee) => `${employee.first_name} ${employee.last_name}`)
         .join(","); // Join selected names as comma-separated string
 
       setnewIssue((prev) => ({
@@ -357,7 +372,7 @@ export const Issues = () => {
     console.log("name:", name);
     console.log("value:", value);
     if (name === "Project_Name") {
-      const selectedOption = Projects.data.data.find(
+      const selectedOption = Projects?.data?.find(
         (option) => option.ROWID === value
       );
 
@@ -371,10 +386,8 @@ export const Issues = () => {
     } else if (name === "Assignee_ID") {
       const selectedValues = event.target.value;
       const selectedUsernames = selectedValues
-        .map((id) => {
-          const user = Employees?.data?.users.find(
-            (option) => option.user_id === id
-          );
+        ?.map((id) => {
+          const user = Employees?.data?.find((option) => option.user_id === id);
           return user ? user.first_name + " " + user.last_name : "";
         })
         .filter((name) => name)
@@ -500,77 +513,101 @@ export const Issues = () => {
 
   return (
     <Box sx={{ padding: 3 }}>
-      <Box
+      <Paper
+        elevation={0}
         sx={{
+          mb: 4,
+          p: { xs: 2, sm: 3 },
+          borderRadius: 3,
+          background: `linear-gradient(135deg, ${alpha(
+            theme.palette.primary.main,
+            0.08
+          )} 0%, ${alpha(theme.palette.primary.light, 0.15)} 100%)`,
+          boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
           display: "flex",
-          justifyContent: "space-between",
+          flexDirection: { xs: "column", md: "row" },
           alignItems: "center",
-          marginBottom: 3,
+          justifyContent: "space-between",
+          gap: 2,
         }}
       >
-        <Typography variant="h4">Issues</Typography>
-      </Box>
+        {/* Left Side: Avatar + Typography */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            width: { xs: "100%", md: "auto" },
+          }}
+        >
+          <Avatar
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              width: 50,
+              height: 50,
+            }}
+          >
+            <BugReportIcon sx={{ color: "#fff" }} fontSize="large" />
+          </Avatar>
+
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              color: "transparent",
+              fontSize: { xs: "1.5rem", sm: "2rem" },
+            }}
+          >
+            Issues
+          </Typography>
+        </Box>
+
+        {/* Right Side: Search Bar + Button */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            width: { xs: "100%", md: "auto" },
+            flexDirection: { xs: "column", sm: "row" },
+          }}
+        >
+          <TextField
+            label="Search Issues"
+            variant="outlined"
+            size="small"
+            // value={searchQuery}
+            // onChange={handleSearch}
+            sx={{
+              width: { xs: "100%", sm: "60%", md: "250px" },
+            }}
+          />
+
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Filter</InputLabel>
+            <Select label="Filter" value={filter} onChange={handleFilterChange}>
+              <MenuItem value="all">All Issues</MenuItem>
+              <MenuItem value="unassigned">Unassigned Only</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => toggleDrawer(true)}
+            sx={{ width: { xs: "100%", sm: "auto" } }}
+          >
+            Submit Issue
+          </Button>
+        </Box>
+      </Paper>
 
       <Grid container spacing={3}>
         <Grid item xs={12}>
-          <Card>
-            <CardContent
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              {loading ? (
-                <>
-                  <Skeleton
-                    variant="rectangular"
-                    width="40%"
-                    height={40}
-                    sx={{ borderRadius: 1 }}
-                  />
-                  <Skeleton
-                    variant="rectangular"
-                    width={120}
-                    height={40}
-                    sx={{ borderRadius: 1 }}
-                  />
-                </>
-              ) : (
-                <TextField
-                  label="Search Issues"
-                  variant="outlined"
-                  size="small"
-                  // value={searchQuery}
-                  // onChange={handleSearch}
-                  sx={{ width: "40%" }}
-                />
-              )}
-               <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Filter</InputLabel>
-          <Select
-            label="Filter"
-            value={filter}
-            onChange={handleFilterChange}
-          >
-            <MenuItem value="all">All Issues</MenuItem>
-            <MenuItem value="unassigned">Unassigned Only</MenuItem>
-          </Select>
-        </FormControl>
-
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => toggleDrawer(true)}
-              >
-                Submit Issue
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12}>
-          {data.length == 0 ? (
+          {isLoading ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -665,7 +702,7 @@ export const Issues = () => {
                         gap: 2,
                       }}
                     >
-                      {[...Array(6)].map((_, index) => (
+                      {[...Array(6)]?.map((_, index) => (
                         <Box
                           key={index}
                           sx={{
@@ -692,7 +729,7 @@ export const Issues = () => {
                 </TableRow>
               </TableBody>
             </Table>
-          ) : data.length === 0 ? (
+          ) : filteredissue.length == 0 ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -1038,7 +1075,7 @@ export const Issues = () => {
                   </TableBody>
                 ) : (
                   <TableBody>
-                    {paginatedissue.map((isue) => (
+                    {paginatedissue?.map((isue) => (
                       <TableRow
                         key={isue.id}
                         // sx={{
@@ -1064,11 +1101,11 @@ export const Issues = () => {
                             size="small"
                             sx={{
                               backgroundColor:
-                                statusConfig[isue.status]?.backgroundColor ||
+                                statusConfig[isue.Status]?.backgroundColor ||
                                 "#f5f5f5",
                               color:
-                                statusConfig[isue.status]?.color || "#757575",
-                              border: `1px solid ${statusConfig[isue.status]?.borderColor || "#e0e0e0"}`,
+                                statusConfig[isue.Status]?.color || "#757575",
+                              border: `1px solid ${statusConfig[isue.Status]?.borderColor || "#e0e0e0"}`,
                               fontWeight: 500,
                               fontSize: "0.75rem",
                               height: "24px",
@@ -1089,10 +1126,11 @@ export const Issues = () => {
                               sx={{ color: theme.palette.primary.main }}
                             >
                               <FaUsers
-                              
                                 style={{
                                   color:
-                                    isue.Assignee_Name.length === 0 ? "red": theme.palette.primary.main,
+                                    isue.Assignee_Name.length === 0
+                                      ? "red"
+                                      : theme.palette.primary.main,
                                 }}
                               />
                               <Typography variant="body2" sx={{ ml: 1 }}>
@@ -1137,10 +1175,13 @@ export const Issues = () => {
                                   borderBottom: `1px solid ${theme.palette.divider}`,
                                 }}
                               >
-                              {selectedAssignees.length === 1 && selectedAssignees[0]==="" ? "Please Assigne User": "Assigned User"}
-                               {console.log("seleee",selectedAssignees)}
+                                {selectedAssignees.length === 1 &&
+                                selectedAssignees[0] === ""
+                                  ? "Please Assigne User"
+                                  : "Assigned User"}
+                                {console.log("seleee", selectedAssignees)}
                               </Typography>
-                              {selectedAssignees.map((assignee, index) => (
+                              {selectedAssignees?.map((assignee, index) => (
                                 <ListItem key={index} sx={{ py: 0.5 }}>
                                   <ListItemText
                                     primary={assignee}
@@ -1224,7 +1265,7 @@ export const Issues = () => {
             error={!!errors.Project_ID}
             helperText={errors.Project_ID}
           >
-            {Projects.data.data.map((project) => (
+            {Projects?.data?.map((project) => (
               <MenuItem key={project.ROWID} value={project.ROWID}>
                 {project.Project_Name}
               </MenuItem>
@@ -1244,11 +1285,11 @@ export const Issues = () => {
 
           <Autocomplete
             multiple
-            options={Employees?.data?.users}
+            options={Employees?.data}
             getOptionLabel={(option) =>
               `${option.first_name} ${option.last_name}`
             } // Show full name of the employee
-            value={Employees?.data?.users?.filter((employee) =>
+            value={Employees?.data?.filter((employee) =>
               Array.isArray(newIssue.Assignee_ID)
                 ? newIssue.Assignee_ID.includes(employee.user_id) // If Assignee_ID is an array
                 : typeof newIssue.Assignee_ID === "string"
@@ -1258,10 +1299,10 @@ export const Issues = () => {
             onChange={(event, newValue) => {
               const selectedValues = newValue; // Array of selected employees
 
-              const selectedIDs = selectedValues.map(
+              const selectedIDs = selectedValues?.map(
                 (option) => option.user_id
               ); // Collect user IDs
-              const selectedNames = selectedValues.map(
+              const selectedNames = selectedValues?.map(
                 (option) => `${option.first_name} ${option.last_name}`
               ); // Collect employee names
 
@@ -1407,7 +1448,7 @@ export const Issues = () => {
                 onChange={handleEditInputChange}
                 sx={{ mb: 2 }}
               >
-                {Projects.data.data.map((option) => (
+                {Projects?.data?.map((option) => (
                   <MenuItem key={option.ROWID} value={option.ROWID}>
                     {option.Project_Name}
                   </MenuItem>
@@ -1428,7 +1469,7 @@ export const Issues = () => {
                 onChange={handleEditInputChange}
                 sx={{ mb: 2 }}
               >
-                {Employees?.data?.users?.map((option) => (
+                {Employees?.data?.map((option) => (
                   <MenuItem key={option.user_id} value={option.user_id}>
                     {option.first_name} {option.last_name}
                   </MenuItem>

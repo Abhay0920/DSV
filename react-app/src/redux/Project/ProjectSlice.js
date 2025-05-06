@@ -16,7 +16,7 @@ export const fetchProjects = createAsyncThunk(
         });
          console.log("okkresponse",response.data);
         // Axios automatically parses the JSON, so we can directly return the response data
-        return response.data;
+        return response.data.data;
   
       } catch (error) {
         // Handling errors from the axios request
@@ -82,7 +82,32 @@ export const ProjectSlice = createSlice({
     data: [],
     isError: false,
   },
-  reducers: {},
+  reducers: {
+    addProjectData: (state, action) => {
+      // Log the state before and after the update
+      // Directly mutate the state.data array without checking type (Immer will handle this)
+      state.data.push(action.payload);
+
+    },
+    updateProjectData: (state, action) => {
+      const updatedProject = action.payload;
+      console.log("updatedProject",updatedProject)
+      const index = state.data.findIndex(client => client.ROWID === updatedProject.ROWID);
+    
+      if (index !== -1) {
+        state.data[index] = { ...state.data[index], ...updatedProject };
+        console.log("Client updated:", state.data[index]);
+      } else {
+        console.warn("Client not found for update:", updatedProject.ROWID);
+      }
+    },
+    deleteProjecttData: (state, action) => {
+      const rowIdToDelete = action.payload;
+      console.log("Deleting client with ROWID:", rowIdToDelete);
+      state.data = state.data.filter(client => client.ROWID !== rowIdToDelete);
+      console.log("After deletion:", state.data);
+    },
+  },
   extraReducers: (builder) => {
 
     builder.addCase(fetchProjects.pending, (state) => {
@@ -116,3 +141,4 @@ export const ProjectSlice = createSlice({
 });
 
 export default ProjectSlice.reducer;
+ export const  projectActions  = ProjectSlice.actions;

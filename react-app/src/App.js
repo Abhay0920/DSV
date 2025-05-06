@@ -24,7 +24,10 @@ import axios from "axios";
 
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProjects } from "./redux/Project/ProjectSlice";
-import { fetchEmployees } from "./redux/Employee/EmployeeSlice";
+import {
+  fetchEmployees,
+  setEmployeeProfilePics,
+} from "./redux/Employee/EmployeeSlice";
 import { fetchTasks } from "./redux/Tasks/TaskSlice";
 import { fetchProfile } from "./redux/Profile/Profile";
 import { fetchFeedback } from "./redux/Feedback/Feedback";
@@ -35,36 +38,27 @@ import { EmpIssues } from "./Employee/EmpIssues";
 import { Issues } from "./Admin/Issue";
 import { Client } from "./Admin/Client";
 import { ClientStaff } from "./Admin/ClientStaff";
-
-import { ContactDashboard } from "./Client/Dashboard";
+import EmpEnhancedDashboard from "./Employee/EnhancedDashboard";
+import ContactDashboard from "./Client/ContactDashboard";
 import CustomerLayout from "./Client/Layout1";
 import ContactTask from "./Client/ContactTask";
 import ContactProjects from "./Client/Project";
 import ContactIssues from "./Client/Issue";
 import Contacts from "./Client/Contacts";
 import ContactProfile from "./Client/Profile";
-
-
+import EnhancedDashboard from "./Admin/EnhancedDashboard";
+import { dividerClasses } from "@mui/material";
 function App() {
   const [userRole, setUserRole] = useState(null);
   const [currUser, setCurrUser] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const dispatch = useDispatch();
-
-  useEffect(() => {
-    //  const user = localStorage.getItem("currUser");
-    //  const parsedUser = JSON.parse(user);
-
-    //  const id = parsedUser.userid;
-    dispatch(fetchProjects());
-    dispatch(fetchEmployees());
-    dispatch(fetchTasks());
-    dispatch(fetchProfile());
-    dispatch(fetchFeedback());
-    // dispatch(fetchEmpProject());
-    // dispatch(fetchEmpTask());
-  }, [dispatch]);
+  const { data: employeesData, profilePics } = useSelector(
+    (state) => state.employeeReducer
+  );
+  const placeholderURL =
+    "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -137,6 +131,38 @@ function App() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (userRole === "Contacts") return;
+    const fetchData = async () => {
+      try {
+        const employeeResponse = await dispatch(fetchEmployees()).unwrap(); // wait until employees are fetched
+
+        // const employeesWithPlaceholders = employeeResponse?.map((employee) => ({
+        //   ...employee,
+        //   profile_pic: placeholderURL,
+        // }));
+
+        // dispatch(setEmployeeProfilePics(employeesWithPlaceholders));
+
+         console.log("Employees with placeholders", employeeResponse);
+
+        const result = await axios.post(
+          "/server/time_entry_management_application_function/batchProfile",
+          employeeResponse
+        );
+        const updatedEmployees = result.data.data;
+         console.log("batch profile result",updatedEmployees)
+
+         dispatch(setEmployeeProfilePics(updatedEmployees));
+      } catch (error) {
+        console.error("Error fetching employees or profiles", error);
+      }
+    };
+
+    fetchData();
+  }, [dispatch,userRole, isAuthenticated]);
+
   if (isCheckingAuth) {
     return (
       <div
@@ -175,7 +201,7 @@ function App() {
 
       {userRole === "Super Admin" || userRole === "Admin" ? (
         <Route path="/" element={<Layout1 />}>
-          <Route index element={<Dashboard />} />
+          <Route index element={<EnhancedDashboard />} />
           <Route path="projects" element={<Project currUser={currUser} />} />
           <Route path="task" element={<Task />} />
           <Route path="employees" element={<Employees />} />
@@ -184,39 +210,39 @@ function App() {
           {/* <Route path="feedback" element={<ProjectReport/>}/> */}
           <Route path="bug" element={<Issues />} />
           <Route path="feedback" element={<Feedback />} />
-          <Route path="client" element={<Client/>} />
-          <Route path="clientStaff" element={<ClientStaff/>} />
-
+          <Route path="client" element={<Client />} />
+          <Route path="clientStaff" element={<ClientStaff />} />
         </Route>
       ) : (
         <>
-        {userRole === "Contacts" ? (
-          <Route path="/" element={<CustomerLayout />}>
-            <Route index element={<ContactDashboard />} />
-            <Route
-              path="projects"
-              element={<ContactProjects currUser={currUser} />}
-            />
-            <Route path="task" element={<ContactTask />} />
-            <Route path="bug" element={<ContactIssues />} />
-            <Route path="Contacts" element={<Contacts />} />
-            <Route path="profile" element={<ContactProfile />} />
-          </Route>
-        ) : (
-          <Route path="/" element={<EmpLayout />}>
-            <Route index element={<EmpDashboard />} />
-            <Route
-              path="projects"
-              element={<EmpProject currUser={currUser} />}
-            />
-            <Route path="task" element={<EmpTask />} />
-            <Route path="bug" element={<EmpIssues />} />
-            <Route path="employees" element={<Emp />} />
-            <Route path="profile" element={<EmpProfile />} />
-            <Route path="feedback" element={<EmpFeedback />} />
-          </Route>
-        )}
-      </>
+          {userRole === "Contacts" ? (
+            <Route path="/" element={<CustomerLayout />}>
+              <Route index element={<ContactDashboard />} />
+              <Route
+                path="projects"
+                element={<ContactProjects currUser={currUser} />}
+              />
+              <Route path="task" element={<ContactTask />} />
+              <Route path="bug" element={<ContactIssues />} />
+              <Route path="Contacts" element={<Contacts />} />
+              <Route path="profile" element={<ContactProfile />} />
+            </Route>
+          ) : (
+            <Route path="/" element={<EmpLayout />}>
+              {/* <Route index element={<EmpDashboard />} /> */}
+              <Route index element={<EmpEnhancedDashboard />} />
+              <Route
+                path="projects"
+                element={<EmpProject currUser={currUser} />}
+              />
+              <Route path="task" element={<EmpTask />} />
+              <Route path="bug" element={<EmpIssues />} />
+              <Route path="employees" element={<Emp />} />
+              <Route path="profile" element={<EmpProfile />} />
+              <Route path="feedback" element={<EmpFeedback />} />
+            </Route>
+          )}
+        </>
       )}
     </Routes>
   );
