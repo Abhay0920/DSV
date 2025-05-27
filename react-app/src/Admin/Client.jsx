@@ -25,16 +25,19 @@ import {
   DialogContentText,
   DialogTitle,
   CardHeader,
+  Tooltip,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+
 import Slide from "@mui/material/Slide";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+
 import DeleteIcon from "@mui/icons-material/Delete";
 import ApartmentIcon from "@mui/icons-material/Apartment";
 import EmailIcon from "@mui/icons-material/Email";
 import PersonIcon from "@mui/icons-material/Person";
 import BadgeIcon from "@mui/icons-material/Badge";
 import PhoneIcon from "@mui/icons-material/Phone";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import axios from "axios";
 import Person4Icon from "@mui/icons-material/Person4";
 import { useDispatch, useSelector } from "react-redux";
@@ -44,7 +47,6 @@ import { clientActions } from "../redux/Client/clientSlice";
 import BusinessIcon from "@mui/icons-material/Business";
 import { useTheme } from "@mui/material/styles";
 import EditIcon from "@mui/icons-material/Edit";
-import { useNavigate } from "react-router-dom";
 
 const CardActions = styled(Box)({
   display: "flex",
@@ -86,7 +88,7 @@ export const Client = () => {
     severity: "success",
   });
 
-  const navigate = useNavigate();
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -98,7 +100,7 @@ export const Client = () => {
     if (!Array.isArray(data) || data.length === 0) {
       fetchData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+ 
   }, []);
 
   const toggleDrawer = (open) => {
@@ -195,16 +197,7 @@ export const Client = () => {
     page * rowsPerPage + rowsPerPage
   );
 
-  const handleImageChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result); // Store the image preview
-      };
-      reader.readAsDataURL(file); // Convert image to base64
-    }
-  };
+
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -224,14 +217,6 @@ export const Client = () => {
     if (!newClient.client_type)
       newErrors.client_type = "Organization type  is required";
     if (!newClient.email) newErrors.email = "email is required";
-
-    // if (
-    //   newIssue.startDate &&
-    //   newIssue.endDate &&
-    //   newIssue.startDate > newIssue.endDate
-    // )
-    //   newErrors.endDate = "End date cannot be before start date";
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -281,34 +266,33 @@ export const Client = () => {
       dispatch(clientActions.updateClientData(currentClient));
       handleAlert("success", "Issue updated and confirmed.");
     }
-
-    // setIssue((prev) =>
-    //   prev.map((task) => (task.id === currentIssue.ROWID ? currentIssue : task))
-    // );
     setCurrentClient("");
     setEditModalOpen(false);
   };
   const handleDeleteCancel = () => {
     setDeleteConfirmOpen(false);
-    // setProjectToDelete(null);
+  
   };
   const handleDeleteClick = (data) => {
     setclientToDelete(data);
+    console.log(clientToDelete);
     setDeleteConfirmOpen(true);
   };
   const handleDeleteConfirm = async () => {
     try {
-      // const response = await axios.delete(
-      //   `/server/time_entry_management_application_function/issue/${clientToDelete}`
-      // );
-
-      // console.log("response",response);
-      console.log("ccccc", clientToDelete);
-      //  if(response.status === 200){
+       const id = clientToDelete.ROWID;
+      const response = await axios.delete(
+        `/server/time_entry_management_application_function/org/${id}`
+      );
+         if(response.data.success === false ){
+          handleAlert("error",response.data.message);
+          setDeleteConfirmOpen(false);
+        }
+       if(response.status === 200 && response.data.success){
       handleAlert("success", "Issue  Deleted and confirmed.");
       dispatch(clientActions.deleteClientData(clientToDelete.ROWID));
       setDeleteConfirmOpen(false);
-      //  }
+       }
     } catch (error) {
       handleAlert("error", "something went wrong");
       console.error("Error deleting issue:", error);
@@ -570,7 +554,8 @@ export const Client = () => {
                       color="text.secondary"
                       gutterBottom
                     >
-                      <strong>ROWID:</strong> {data.ROWID}
+                      <strong>ROWID:</strong>{" "}
+                      {"C" + data.ROWID.substr(data.ROWID.length - 4)}
                     </Typography>
                   </CardContent>
 
@@ -639,13 +624,36 @@ export const Client = () => {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: 2,
+                mb: 2,
+                px: 2,
+                py: 1.5,
+                borderRadius: 2,
+                background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+                boxShadow: 3,
               }}
             >
-              <Typography variant="h5">Add New Client</Typography>
-              <IconButton onClick={() => toggleDrawer(false)}>
-                <CloseIcon />
-              </IconButton>
+              <Box
+                sx={{ display: "flex", alignItems: "center", color: "#fff" }}
+              >
+                <AccountCircleIcon sx={{ mr: 1 }} />
+                <Typography variant="h6" fontWeight="bold">
+                  Add New Client
+                </Typography>
+              </Box>
+              <Tooltip title="Close">
+                <IconButton
+                  onClick={() => toggleDrawer(false)}
+                  sx={{
+                    color: "#fff",
+                    transition: "transform 0.2s ease",
+                    "&:hover": {
+                      transform: "scale(1.2)",
+                    },
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </Tooltip>
             </Box>
             <TextField
               label="Client Name"
@@ -720,40 +728,7 @@ export const Client = () => {
               sx={{ marginBottom: 2 }}
             />
 
-            <Box sx={{ marginBottom: 2 }}>
-              <Typography variant="body1" sx={{ marginBottom: 1 }}>
-                Upload Image
-              </Typography>
-
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<PhotoCameraIcon />}
-              >
-                Upload
-                <input
-                  hidden
-                  accept="image/*"
-                  type="file"
-                  onChange={handleImageChange} // You’ll define this below
-                />
-              </Button>
-
-              {image && (
-                <Box sx={{ marginTop: 2 }}>
-                  <Typography variant="body2">Preview:</Typography>
-                  <img
-                    src={image}
-                    alt="Preview"
-                    style={{
-                      width: "100%",
-                      maxWidth: "300px",
-                      marginTop: "8px",
-                    }}
-                  />
-                </Box>
-              )}
-            </Box>
+           
 
             <Box
               sx={{
@@ -766,6 +741,7 @@ export const Client = () => {
                 variant="contained"
                 color="primary"
                 onClick={handleSubmit}
+                sx={{ width: 100 }}
               >
                 Add
               </Button>
@@ -894,12 +870,40 @@ export const Client = () => {
             }}
           >
             <Box
-              sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+                px: 2,
+                py: 1.5,
+                borderRadius: 2,
+                background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+                boxShadow: 3,
+              }}
             >
-              <Typography variant="h5">Client Contact Detail</Typography>
-              <IconButton onClick={handleCloseDrawer}>
-                <CloseIcon />
-              </IconButton>
+              <Box
+                sx={{ display: "flex", alignItems: "center", color: "#fff" }}
+              >
+                <AccountCircleIcon sx={{ mr: 1 }} />
+                <Typography variant="h6" fontWeight="bold">
+                  Client Contact Detail
+                </Typography>
+              </Box>
+              <Tooltip title="Close">
+                <IconButton
+                  onClick={handleCloseDrawer}
+                  sx={{
+                    color: "#fff",
+                    transition: "transform 0.2s ease",
+                    "&:hover": {
+                      transform: "scale(1.2)",
+                    },
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </Tooltip>
             </Box>
 
             {loading ? (

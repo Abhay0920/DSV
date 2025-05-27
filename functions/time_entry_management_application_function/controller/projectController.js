@@ -34,6 +34,10 @@ const getAllProjects = async (req, res) => {
     const table = datastore.table("Projects");
     const records = await table.getAllRows();
 
+    records.sort((a, b) => {
+      return new Date(b.CREATEDTIME) - new Date(a.CREATEDTIME);
+    });
+
     res.status(200).json({
       success: true,
       data: records,
@@ -50,6 +54,7 @@ const getAllProjects = async (req, res) => {
 
 // Get projects by user ID
 const getProjectsByUserId = async (req, res) => {
+  console.log("req,",req.params)
   try {
     const userID = req.params.userid;
     if (!userID) {
@@ -58,6 +63,7 @@ const getProjectsByUserId = async (req, res) => {
         message: "User ID is required",
       });
     }
+    console.log("userId",userID);
 
     const catalystApp = req.catalystApp;
     const zcql = catalystApp.zcql();
@@ -66,13 +72,6 @@ const getProjectsByUserId = async (req, res) => {
     const tasksResp = await zcql.executeZCQLQuery(
       `SELECT ProjectID, Assign_To_ID FROM Tasks`
     );
-
-    if (!tasksResp || tasksResp.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No tasks found",
-      });
-    }
 
     // Filter tasks where userID exists in the comma-separated string
     const relevantTasks = tasksResp.filter((task) => {
@@ -83,8 +82,9 @@ const getProjectsByUserId = async (req, res) => {
     });
 
     if (relevantTasks.length === 0) {
-      return res.status(404).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
+        data:[],
         message: "No tasks found for this user",
       });
     }

@@ -151,7 +151,7 @@ export const EmpIssues = () => {
     };
 
     fetchAllData();
-  }, [dispatch, projectId, data]);
+  }, [dispatch, projectId]);
 
   const [anchorEl, setAnchorEl] = useState(null); // Manage Popover state
   const [selectedAssignees, setSelectedAssignees] = useState([]); // Store assignees

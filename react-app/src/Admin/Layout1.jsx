@@ -71,22 +71,21 @@ export default function Layout1() {
 
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, path: "/" },
-    { text: "Project", icon: <AssignmentIcon />, path: "/projects" },
+    { text: "Projects", icon: <AssignmentIcon />, path: "/projects" },
     {
-      text: "Task",
+      text: "Tasks",
       icon: <FormatListBulletedIcon />,
       path: "/task",
     },
-    { text: "Employees", icon: <GroupIcon />, path: "/employees" },
-    { text: "Profile", icon: <AccountCircleIcon />, path: "/profile" },
     { text: "Issues", icon: <BugReport />, path: "/bug" },
+    { text: "Accounts", icon: <Person4Icon />, path: "/client" },
 
-    { text: "client", icon: <Person4Icon />, path: "/client" },
-    {
-      text: "Client Staff",
-      icon: <ConnectWithoutContactIcon />,
-      path: "/clientStaff",
-    },
+    {text: "Contacts", icon: <ConnectWithoutContactIcon />,path: "/clientStaff",},
+    { text: "Employees", icon: <GroupIcon />, path: "/employees" },
+    // { text: "Profile", icon: <AccountCircleIcon />, path: "/profile" },
+   
+
+  
     { text: "Feedback", icon: <ForumIcon />, path: "/feedback" },
   ];
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -114,27 +113,6 @@ export default function Layout1() {
       console.error("Catalyst is not initialized. Cannot log out.");
     }
   };
-
-
-  //Testing Notifications Functionality
-
-  // useEffect(() => {
-  //   const waitForCatalyst = () => {
-  //     if (window.catalyst) {
-  //       window.catalyst.notification.enableNotification().then((resp) => {
-  //         window.catalyst.notification.messageHandler = (msg) => {
-  //           console.log('Notification received: ', msg);
-  //         };
-  //       });
-  //     } else {
-  //       // Try again after some delay if not ready yet
-  //       setTimeout(waitForCatalyst, 100);
-  //     }
-  //   };
-  
-  //   waitForCatalyst();
-  // }, []);
-  
 
   const handleAvatarClick = (event) => {
     setAnchorEl(event.currentTarget); // Set the menu anchor element
@@ -289,7 +267,7 @@ export default function Layout1() {
                           paddingX: open ? "10px" : "16px", // keeps icon centered when collapsed
                           display: "flex",
                           alignItems: "center",
-                           justifyContent: open ? "flex-start" : "center", 
+                          justifyContent: open ? "flex-start" : "center",
                           bgcolor: isActive
                             ? theme.palette.mode === "light"
                               ? "rgb(229, 236, 248)"
@@ -346,7 +324,7 @@ export default function Layout1() {
               bgcolor: theme.palette.background.default, // Set content area background to match theme
               color: "text.primary", // Ensure text color adapts
               overflowY: "auto",
-              minHeight: "90vh", // Ensure it covers full height
+              minHeight: "93vh", // Ensure it covers full height
             }}
           >
             <Dialog
@@ -428,7 +406,7 @@ export default function Layout1() {
               </Drawer>
             )}
 
-            <Outlet />
+            <Outlet context={{ setUserProfile }} />
           </Box>
         </Box>
       </Box>

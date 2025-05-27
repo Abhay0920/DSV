@@ -48,9 +48,9 @@ export const fetchIssueData = createAsyncThunk(
           // Log the state before and after the update
           console.log("addClientData Reducer - Before Update:", state.data);
           console.log("New Data to Add:", action.payload);
-          state.isLoading = true
+          
           // Directly mutate the state.data array without checking type (Immer will handle this)
-          state.data.push(action.payload);
+          state.data.unshift(action.payload);
     
           console.log("addClientData Reducer - After Update:", state.data);
         },

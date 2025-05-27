@@ -78,15 +78,15 @@ export default function Layout1() {
 
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, path: "/" },
-    { text: "Project", icon: <AssignmentIcon />, path: "/projects" },
+    { text: "Projects", icon: <AssignmentIcon />, path: "/projects" },
     {
-      text: "Task",
+      text: "Tasks",
       icon: <FormatListBulletedIcon />,
       path: "/task",
     },
     { text: "Issues", icon: <BugReport />, path: "/bug" },
     { text: "Employees", icon: <GroupIcon />, path: "/employees" },
-    { text: "Profile", icon: <AccountCircleIcon />, path: "/profile" },
+    // { text: "Profile", icon: <AccountCircleIcon />, path: "/profile" },
     { text: "Feedback", icon: <ForumIcon />, path: "/feedback" },
   ];
   const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
@@ -319,7 +319,7 @@ export default function Layout1() {
               bgcolor: theme.palette.background.default, // Set content area background to match theme
               color: "text.primary", // Ensure text color adapts
               overflowY: "auto",
-              minHeight: "90vh", // Ensure it covers full height
+              minHeight: "93vh", // Ensure it covers full height
             }}
           >
             <Dialog
@@ -405,7 +405,8 @@ export default function Layout1() {
               </Drawer>
             )}
 
-            <Outlet />
+           
+          <Outlet context={{ setUserProfile }} />
           </Box>
         </Box>
       </Box>

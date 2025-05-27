@@ -5,8 +5,6 @@ import {
   Typography,
   Button,
   TextField,
-  Card,
-  CardContent,
   Table,
   TableBody,
   TableCell,
@@ -41,20 +39,19 @@ import {
 import { FaUsers } from "react-icons/fa";
 import Slide from "@mui/material/Slide";
 import { FormControl, InputLabel, Select } from "@mui/material";
-
 import Skeleton from "@mui/material/Skeleton";
 import EditIcon from "@mui/icons-material/Edit";
 import BugReportIcon from "@mui/icons-material/BugReport";
 import DeleteIcon from "@mui/icons-material/Delete";
 import axios from "axios";
 import { FaBug } from "react-icons/fa6";
-import { useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchIssueData } from "../redux/Client/issueSlice";
 import { issuesActions } from "../redux/Client/issueSlice";
 import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 import { fetchProjects } from "../redux/Project/ProjectSlice";
-const statusOptions = ["Open", "In Progress", "Completed"];
+import CloseIcon from "@mui/icons-material/Close";
+import { BugReport } from "@mui/icons-material";
 
 const statusConfig = {
   Open: {
@@ -86,27 +83,15 @@ const statusConfig = {
 
 export const Issues = () => {
   const theme = useTheme();
-  const location = useLocation();
-  const { projectId } = location.state || {};
-  const { projectName } = location.state || {}; // Access projectId from state
-
-  const [issue, setIssue] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [currentIssue, setCurrentIssue] = useState(null);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [viewTask, setViewTask] = useState(null);
-  const [assignOptions, setAssignOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [issueToDelete, setIssueToDelete] = useState(null);
-
-  const [TaskName, setTaskName] = useState("");
   const [errors, setErrors] = useState({});
-  const [role, setRole] = useState("");
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -138,8 +123,12 @@ export const Issues = () => {
 
   const { data, isLoading } = useSelector((state) => state.issueReducer);
   console.log("issuedata", data);
+  console.log("loding state ", isLoading);
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("currUser"));
+    setCurrUser(user);
+
     if (!Array.isArray(data) || data.length === 0) {
       dispatch(fetchIssueData());
     }
@@ -220,7 +209,6 @@ export const Issues = () => {
 
   const validateForm = () => {
     let newErrors = {};
-
     if (!newIssue.Project_ID) newErrors.Project_ID = "Project is required";
     if (!newIssue.Issue_name) newErrors.Issue_name = "issue name is required";
     if (!newIssue.Assignee_ID)
@@ -403,11 +391,6 @@ export const Issues = () => {
     }
   };
 
-  const handleViewTask = (task) => {
-    setViewTask(task);
-    setViewModalOpen(true);
-  };
-
   const handleDeleteClick = (issueId) => {
     setIssueToDelete(issueId);
     setDeleteConfirmOpen(true);
@@ -427,9 +410,7 @@ export const Issues = () => {
         "/server/time_entry_management_application_function/issue",
         newIssue
       );
-      console.log("Response Data:", response.data);
-      const item = response.data.data;
-      console.log("hiting cancel");
+
       handleCancel();
       if (response.data.success) {
         handleAlert("success", "Issue  Added and confirmed.");
@@ -454,10 +435,6 @@ export const Issues = () => {
     });
   };
 
-  const handleCloseViewModal = () => {
-    setViewTask(null);
-    setViewModalOpen(false);
-  };
   const handleCancel = () => {
     console.log("hiting cancel");
     setnewIssue({
@@ -579,8 +556,8 @@ export const Issues = () => {
             label="Search Issues"
             variant="outlined"
             size="small"
-            // value={searchQuery}
-            // onChange={handleSearch}
+            value={searchQuery}
+            onChange={handleSearch}
             sx={{
               width: { xs: "100%", sm: "60%", md: "250px" },
             }}
@@ -729,7 +706,7 @@ export const Issues = () => {
                 </TableRow>
               </TableBody>
             </Table>
-          ) : filteredissue.length == 0 ? (
+          ) : filteredissue.length === 0 ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -923,7 +900,7 @@ export const Issues = () => {
                   </TableRow>
                 </TableHead>
 
-                {loading ? (
+                {isLoading ? (
                   <TableBody>
                     <TableRow>
                       <TableCell
@@ -1091,7 +1068,27 @@ export const Issues = () => {
                         <TableCell>
                           {"I" + isue.ROWID.substr(isue.ROWID.length - 4)}
                         </TableCell>
-                        <TableCell>{isue.Issue_name}</TableCell>
+                        <TableCell>
+                          {isue.Issue_name.length > 30 ? (
+                            <Tooltip title={isue.Issue_name}>
+                              <Typography
+                                variant="body2"
+                                noWrap
+                                sx={{
+                                  maxWidth: 100,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {isue.Issue_name}
+                              </Typography>
+                            </Tooltip>
+                          ) : (
+                            <>{isue.Issue_name}</>
+                          )}
+                        </TableCell>
                         <TableCell>{isue.Project_Name}</TableCell>
                         <TableCell>{isue.Reporter_Name}</TableCell>
                         <TableCell>{isue.CREATEDTIME.split(" ")[0]}</TableCell>
@@ -1250,9 +1247,41 @@ export const Issues = () => {
             marginTop: "70px",
           }}
         >
-          <Typography variant="h5" sx={{ marginBottom: 3 }}>
-            Add Issue
-          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+              px: 2,
+              py: 1.5,
+              borderRadius: 2,
+              marginBottom: 2,
+              background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+              boxShadow: 3,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", color: "#fff" }}>
+              <BugReport sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                Add New Issue
+              </Typography>
+            </Box>
+            <Tooltip title="Close">
+              <IconButton
+                onClick={() => toggleDrawer(false)}
+                sx={{
+                  color: "#fff",
+                  transition: "transform 0.2s ease",
+                  "&:hover": {
+                    transform: "scale(1.2)",
+                  },
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
 
           <TextField
             select
@@ -1377,10 +1406,9 @@ export const Issues = () => {
             error={!!errors.Severity}
             helperText={errors.Severity}
           >
-            <MenuItem value="Show stopper">Show stopper</MenuItem>
-            <MenuItem value="Critical">Critical</MenuItem>
-            <MenuItem value="Major">Major</MenuItem>
-            <MenuItem value="Minor">Minor</MenuItem>
+            <MenuItem value="Low">Low</MenuItem>
+            <MenuItem value="Medium">Medium</MenuItem>
+            <MenuItem value="High">High</MenuItem>
           </TextField>
 
           <TextField
@@ -1395,7 +1423,12 @@ export const Issues = () => {
           />
 
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Button variant="contained" color="primary" onClick={handleSubmit}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmit}
+              sx={{ width: 100 }}
+            >
               Add
             </Button>
             <Button variant="outlined" color="error" onClick={handleCancel}>
@@ -1513,10 +1546,9 @@ export const Issues = () => {
                 error={!!errors.severity}
                 helperText={errors.severity}
               >
-                <MenuItem value="Show stopper">Show stopper</MenuItem>
-                <MenuItem value="Critical">Critical</MenuItem>
-                <MenuItem value="Major">Major</MenuItem>
-                <MenuItem value="Minor">Minor</MenuItem>
+                <MenuItem value="Low">Low</MenuItem>
+                <MenuItem value="Medium">Medium</MenuItem>
+                <MenuItem value="High">High</MenuItem>
               </TextField>
 
               <TextField

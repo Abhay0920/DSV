@@ -119,12 +119,13 @@ function Task() {
 
   const {data:Task,isLoading} = useSelector((state) => state.empTaskReducer);
   const dispatch = useDispatch();
-  console.log("taskResp=", Task);
+  console.log("taskResp=", isLoading);
 
   useEffect(() => {
     const fetchTasks = async () => {
       const currentUserId = JSON.parse(localStorage.getItem("currUser"));
       const id = currentUserId.userid
+     
       if (projectId) {
         try {
           const res = await axios.get('/server/time_entry_management_application_function/taskByProjectAndUser', {
@@ -174,13 +175,14 @@ function Task() {
   const filteredTasks = tasks?.filter((task) =>
     task.Task_Name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
+  console.log("filteredTask",filteredTasks.length)
 
   const paginatedTasks = filteredTasks?.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
 
+  console.log("pagination Task :",paginatedTasks.length)
   const toggleDrawer = (open) => {
     setDrawerOpen(open);
   };
@@ -453,7 +455,7 @@ function Task() {
                 </TableRow>
               </TableBody>
             </Table>
-          ) : paginatedTasks.length === 0 ? (
+          ) : paginatedTasks?.length === 0 ? (
             <Table>
               <TableHead>
                 <TableRow
@@ -678,7 +680,7 @@ function Task() {
                       </TableCell>
                     </TableRow>
                   </TableBody>
-                ) : paginatedTasks.length === 0 ? (
+                ) : paginatedTasks?.length === 0 ? (
                   <TableBody>
                     <TableRow>
                       <TableCell colSpan={7} sx={{ p: 0 }}>
@@ -814,7 +816,7 @@ function Task() {
                   <TableRow>
                     <TablePagination
                       rowsPerPageOptions={[5, 10, 20]}
-                      count={filteredTasks.length}
+                      count={filteredTasks?.length || 0}
                       rowsPerPage={rowsPerPage}
                       page={page}
                       onPageChange={handleChangePage}

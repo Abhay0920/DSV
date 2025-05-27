@@ -40,11 +40,16 @@ import WorkIcon from "@mui/icons-material/Work";
 import BadgeIcon from "@mui/icons-material/Badge";
 import TaskIcon from "@mui/icons-material/Task";
 import FolderIcon from "@mui/icons-material/Folder";
-import {useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import PeopleIcon from "@mui/icons-material/People";
 import "primereact/resources/themes/lara-light-cyan/theme.css";
-import { fetchEmployees, setEmployeeProfilePics, } from "../redux/Employee/EmployeeSlice";
-
+import {
+  fetchEmployees,
+  setEmployeeProfilePics,
+  addEmployeetData,
+} from "../redux/Employee/EmployeeSlice";
+import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
+import ContactMailIcon from "@mui/icons-material/ContactMail";
 import { SelectButton } from "primereact/selectbutton";
 
 function Employees() {
@@ -117,18 +122,20 @@ function Employees() {
       }, 2000); // Auto-hide after 2s
     }, 100); // Small delay ensures re-triggering
   };
-    const { data: employeesData, profilePics } = useSelector((state) => state.employeeReducer);
-    const placeholderURL =
+  const { data: employeesData, profilePics } = useSelector(
+    (state) => state.employeeReducer
+  );
+  const placeholderURL =
     "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
-  
+
   useEffect(() => {
     const fetchData = async () => {
       // setLoading(true);
       try {
         //Fetch the list of employees
         if (!Array.isArray(employeesData) || employeesData.length === 0) {
-               await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
-              }
+          await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
+        }
 
         // const userResponse = employee;
 
@@ -136,7 +143,6 @@ function Employees() {
         const filteredEmployees = userEmployee.filter(
           (employee) => employee.role_details?.role_name !== "Contacts"
         );
-  
 
         // Set all employees initially with placeholder profile images
         const employeesWithPlaceholders = filteredEmployees.map((employee) => ({
@@ -153,13 +159,13 @@ function Employees() {
         //     if (cachedPic) {
         //       return { ...employee, profile_pic: cachedPic };
         //     }
-  
+
         //     try {
         //       const response = await axios.get(
         //         `/server/time_entry_management_application_function/userprofile/${employee.user_id}`
         //       );
         //       const pic = response.data.data || placeholderURL;
-  
+
         //       // Cache the image in Redux
         //       // dispatch(
         //       //   setEmployeeProfilePics({
@@ -167,7 +173,7 @@ function Employees() {
         //       //     profile_pic: pic,
         //       //   })
         //       // );
-  
+
         //       return {
         //         ...employee,
         //         profile_pic: pic,
@@ -195,7 +201,7 @@ function Employees() {
     };
 
     fetchData();
-  }, [employeesData,dispatch])
+  }, [employeesData, dispatch]);
 
   useEffect(() => {
     const fetchEmployeeData = async () => {
@@ -343,7 +349,7 @@ function Employees() {
         {
           email_id: currentEmployee.email_id,
           last_name: currentEmployee.last_name,
-          org_id: "10095488403",
+          org_id: "50026358236",
           role_id: currentEmployee.role_details?.role_id || "", // Handle undefined role_id
           first_name: currentEmployee.first_name,
         }
@@ -396,13 +402,13 @@ function Employees() {
     setDrawerOpen(open);
   };
   const roleMapping = {
-    Intern: 1380000001197461,
-    Developer: 1380000001197476,
-    Manager: 1380000001197466,
-    Admin: 1380000001197451,
-    "Team Lead": 1380000001197471,
-    Client: 1380000001278009,
-    "Business Analyst": 1380000001287027,
+    Interns: "17682000000035343",
+    Developer: "17682000000035358",
+    Manager: "17682000000035348",
+    Admin: "17682000000035329",
+    "Team Lead": "17682000000035353",
+    Client: "17682000000035363",
+    "Business Analyst": "17682000000035368",
 
     // Add more roles as necessary
   };
@@ -427,6 +433,7 @@ function Employees() {
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     if (name === "role") {
+      console.log(value, roleMapping[value]);
       setNewEmployee((prev) => ({
         ...prev,
         role_details: {
@@ -434,14 +441,14 @@ function Employees() {
           role_id: roleMapping[value],
         },
       }));
+      console.log("value and name", name, value);
     } else setNewEmployee((prev) => ({ ...prev, [name]: value }));
   };
   const handleAddEmployee = async () => {
     if (
       newEmployee.first_name &&
       newEmployee.email_id &&
-      newEmployee.role_details?.role_id &&
-      newEmployee.last_name
+      newEmployee.role_details?.role_id
     ) {
       console.log("Adding Employee:", newEmployee);
 
@@ -452,7 +459,7 @@ function Employees() {
             first_name: newEmployee.first_name,
             last_name: newEmployee.last_name,
             email_id: newEmployee.email_id,
-            org_id: 50024670540,
+            org_id: 50026358236,
             role_id: newEmployee.role_details.role_id,
           }
         );
@@ -471,6 +478,7 @@ function Employees() {
           console.log("Updated Employees List:", updatedEmployees);
           return updatedEmployees;
         });
+        dispatch(addEmployeetData(userDetails));
 
         // Show success alert
         handleAlert("success", "Employee Added and confirmed.");
@@ -578,6 +586,33 @@ function Employees() {
     if (validateForm()) {
       handleAddEmployee(newEmployee);
       toggleDrawer(false);
+    }
+  };
+
+  const handleReinvite = async (employee) => {
+    try {
+      console.log("Reinvite", employee);
+
+      const response = await axios.post(
+        "/server/time_entry_management_application_function/reInviteEmployees",
+        {
+          first_name: employee.first_name,
+          last_name: employee.last_name,
+          email_id: employee.email_id,
+          user_id: employee.user_id,
+          role_id: employee.role_id,
+        }
+      );
+
+      console.log("Reinvite response:", response.data);
+      if (response.status) {
+        handleAlert("success", "send Reinvitation Successfully");
+      }
+      // You can show a success message here if needed
+    } catch (error) {
+      console.error("Error during reinvite:", error);
+      handleAlert("error", "Reinvitation not send ");
+      // You can show an error message to the user here
     }
   };
 
@@ -737,11 +772,15 @@ function Employees() {
                   display: "flex",
                   flexDirection: "column",
                   transition: "transform 0.2s, box-shadow 0.2s",
+                  cursor: "pointer",
                   "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: 4,
+                    backgroundColor:
+                      theme.palette.mode === "light"
+                        ? "#e3f2fd"
+                        : theme.palette.primary.dark,
                   },
                 }}
+                onClick={() => handleProfileClick(employee)}
               >
                 <CardContent>
                   {/* Employee Header */}
@@ -756,7 +795,7 @@ function Employees() {
                         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                       }}
                       imgProps={{ loading: "lazy" }} // Add this line
-                      onClick={() => handleProfileClick(employee)}
+                      // onClick={() => handleProfileClick(employee)}
                     />
                     <Box>
                       <Typography variant="h6">
@@ -859,9 +898,10 @@ function Employees() {
                       control={
                         <Switch
                           checked={employee.status === "ACTIVE"}
-                          onChange={() =>
-                            toggleUserActive(employee.user_id, employee.status)
-                          }
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            toggleUserActive(employee.user_id, employee.status);
+                          }}
                         />
                       }
                       label={
@@ -870,15 +910,33 @@ function Employees() {
                     />
                   </Box>
                   <Box>
+                    {!employee.is_confirmed && (
+                      <IconButton
+                        color="primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReinvite(employee);
+                        }}
+                      >
+                        <ContactMailIcon />
+                      </IconButton>
+                    )}
+
                     <IconButton
                       color="primary"
-                      onClick={() => handleEdit(employee)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(employee);
+                      }}
                     >
                       <EditIcon />
                     </IconButton>
                     <IconButton
                       color="error"
-                      onClick={() => handleDelete(employee.user_id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(employee.user_id);
+                      }}
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -950,6 +1008,7 @@ function Employees() {
             onChange={handleEditChange}
             //  InputLabelProps={{ shrink: true }}
             sx={{ marginBottom: 2 }}
+            disabled
           />
 
           <Box
@@ -1080,13 +1139,35 @@ function Employees() {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              mb: 2,
+              px: 2,
+              py: 1.5,
+              borderRadius: 2,
               marginBottom: 2,
+              background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+              boxShadow: 3,
             }}
           >
-            <Typography variant="h5">Add New Employee</Typography>
-            <IconButton onClick={() => toggleDrawer(false)}>
-              <CloseIcon />
-            </IconButton>
+            <Box sx={{ display: "flex", alignItems: "center", color: "#fff" }}>
+              <PersonAddAlt1Icon sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                Add New Employee
+              </Typography>
+            </Box>
+            <Tooltip title="Close">
+              <IconButton
+                onClick={() => toggleDrawer(false)}
+                sx={{
+                  color: "#fff",
+                  transition: "transform 0.2s ease",
+                  "&:hover": {
+                    transform: "scale(1.2)",
+                  },
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Tooltip>
           </Box>
 
           <TextField
@@ -1146,10 +1227,23 @@ function Employees() {
               display: "flex",
               justifyContent: "space-between",
               marginTop: 3,
+              gap: 2,
             }}
           >
-            <Button variant="contained" color="primary" onClick={handleSubmit}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmit}
+              sx={{ width: 100 }}
+            >
               Add
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => toggleDrawer(false)}
+            >
+              Cancel
             </Button>
           </Box>
         </Box>

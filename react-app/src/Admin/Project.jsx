@@ -37,6 +37,7 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  Tooltip,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -59,16 +60,18 @@ import ScheduleIcon from "@mui/icons-material/Schedule";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import DescriptionIcon from '@mui/icons-material/Description';
-
+import DescriptionIcon from "@mui/icons-material/Description";
+import DownloadIcon from "@mui/icons-material/Download";
 import TaskIcon from "@mui/icons-material/Task";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProjects, addProject } from "../redux/Project/ProjectSlice";
 import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 import { fetchClientData } from "../redux/Client/clientSlice";
 import { projectActions } from "../redux/Project/ProjectSlice";
-import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
-
+import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
+import { pink } from "@mui/material/colors";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 const statusConfig = {
   Open: {
     color: "#f0ad4e",
@@ -508,16 +511,6 @@ function Project() {
     return <Slide {...props} direction="down" />;
   }
 
-  const handleTaskModel = (project) => {
-    console.log("hello", project);
-    setTaskModelOpen(true);
-  };
-
-  const handleCloseTaskModel = () => {
-    setViewproject(null);
-    setTaskModelOpen(false);
-  };
-
   const handlefiltetActive = (project) => {
     console.log("Project = ", project);
 
@@ -542,6 +535,45 @@ function Project() {
     setOpen(false);
   };
 
+  const handleDownloadTimeEntries = async (ROWID)=>{
+    console.log("ROWID",ROWID);
+    const TimeEntryResponse = await axios.get(
+      `/server/time_entry_management_application_function/dowloadExcel/${ROWID}`
+    );
+    
+    
+    console.log("Time Entres",TimeEntryResponse);
+    
+    const flattened = [];
+    TimeEntryResponse.data.data.forEach(task => {
+      const taskName = task.Task_Name;
+      task.details.forEach(detail => {
+        const entry = detail.Time_Entries;
+        flattened.push({
+          'Task Name': taskName,
+          'Entry Date': entry.Entry_Date,
+          'Start Time': entry.Start_time,
+          'End Time': entry.End_time,
+          'Total Time (hrs)': (parseInt(entry.Total_time) / 60).toFixed(2),
+          'Username': entry.Username,
+          'Note': entry.Note,
+          'Project Name': entry.Project_Name
+        });
+      });
+    });
+
+    console.log("flattened",flattened);
+    const worksheet = XLSX.utils.json_to_sheet(flattened);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Task Time Entries');
+    
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const fileData = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(fileData, 'Task_Time_Entries.xlsx');
+ 
+
+  }
+
   const fields = [
     [
       "Project ID",
@@ -556,21 +588,37 @@ function Project() {
     ["Assigned To", projectDetail?.Assigned_To, <PersonIcon color="primary" />],
     [
       "Client Name",
-      projectDetail?.Client_Name,
+      projectDetail?.Client_Name?.trim()
+        ? projectDetail.Client_Name
+        : "Internal",
       <BusinessIcon color="primary" />,
     ],
     ["Start Date", projectDetail?.Start_Date, <EventIcon color="primary" />],
     ["End Date", projectDetail?.End_Date, <ScheduleIcon color="primary" />],
     ["Status", projectDetail?.Status, <TrackChangesIcon color="primary" />],
     ["Owner", projectDetail?.Owner, <EmojiEventsIcon color="primary" />],
-    ["Description", projectDetail?.Description, <DescriptionIcon color="primary" />]
+    ["Description", projectDetail?.Description,<DescriptionIcon color="primary" />],
+    [
+      "Time Entries",
+      <Button
+        variant="contained"
+         color="primary"
+        // startIcon={<DownloadIcon />}
+        onClick={() => handleDownloadTimeEntries(projectDetail?.ROWID)}
+        >
+        Download Time Sheet
+      </Button>,
+      <DownloadIcon color="primary" />,
+    ],
   ];
 
   const handleDetailDrwaer = (e, project) => {
     setOpen(true);
     console.log("name of the project", project);
     setprojectdetail(project);
+    
   };
+
 
   return (
     <Box sx={{ padding: 3 }}>
@@ -677,6 +725,9 @@ function Project() {
                     Status
                   </TableCell>
                   <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                    Client
+                  </TableCell>
+                  <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
                     Start Date
                   </TableCell>
                   <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
@@ -772,6 +823,16 @@ function Project() {
                     <TableRow
                       key={project.id}
                       onClick={(e) => handleDetailDrwaer(e, project)}
+                      sx={{
+                        cursor: "pointer",
+                        "&:hover": {
+                          backgroundColor:
+                            theme.palette.mode === "light"
+                              ? "#e3f2fd"
+                              : theme.palette.primary.dark,
+                          color: theme.palette.primary.contrastText,
+                        },
+                      }}
                     >
                       <TableCell>
                         {"P" + project.ROWID.substr(project.ROWID.length - 4)}
@@ -797,6 +858,11 @@ function Project() {
                           }}
                         />
                       </TableCell>
+                      <TableCell>
+                        {project?.Client_Name
+                          ? project.Client_Name
+                          : "Internal"}
+                      </TableCell>
                       <TableCell>{project.Start_Date}</TableCell>
                       <TableCell>{project.End_Date}</TableCell>
                       <TableCell>
@@ -819,7 +885,7 @@ function Project() {
                           <DeleteIcon />
                         </IconButton>
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell>
                         <TaskIcon
                           fontSize="large"
                           sx={{
@@ -834,7 +900,11 @@ function Project() {
                         />
                       </TableCell>
 
-                      <TableCell align="center">
+                      <TableCell
+                        display="flex"
+                        justifyContent="center"
+                        alignItems="center"
+                      >
                         <AccessTimeIcon
                           fontSize="large" // Use 'small', 'medium', 'large', or set via style
                           style={{
@@ -885,28 +955,41 @@ function Project() {
             marginTop: "70px",
           }}
         >
-            <Box
-    sx={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      // backgroundColor: "#f0f4ff",
-      padding: 2,
-      borderRadius: "8px 8px 0 0",
-      marginBottom: 2,
-      boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-    }}
-  >
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <WorkOutlineIcon color="primary" />
-      <Typography variant="h6" fontWeight="bold">
-        Add New Project
-      </Typography>
-    </Box>
-    <IconButton onClick={() => toggleDrawer(false)}>
-      <CloseIcon />
-    </IconButton>
-  </Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+              px: 2,
+              py: 1.5,
+              borderRadius: 2,
+              marginBottom: 2,
+              background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+              boxShadow: 3,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", color: "#fff" }}>
+              <WorkOutlineIcon sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                Add New Project
+              </Typography>
+            </Box>
+            <Tooltip title="Close">
+              <IconButton
+                onClick={() => toggleDrawer(false)}
+                sx={{
+                  color: "#fff",
+                  transition: "transform 0.2s ease",
+                  "&:hover": {
+                    transform: "scale(1.2)",
+                  },
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
           <TextField
             label="Project Name"
             name="name"
@@ -1043,7 +1126,12 @@ function Project() {
               marginTop: 3,
             }}
           >
-            <Button variant="contained" color="primary" onClick={handleSubmit}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmit}
+              sx={{ width: 100 }}
+            >
               Add
             </Button>
             <Button variant="outlined" color="error" onClick={handleCancel}>
@@ -1228,27 +1316,19 @@ function Project() {
             mt: "65px",
             maxHeight: "90vh",
             overflowY: "auto",
-            
            
           }}
         >
-          <Paper
-            elevation={0}
-            sx={{
-              borderRadius: 0,
-              height: "100%",
-              boxShadow: "none"
-            }}
-          >
+        
             <Box
               sx={{
-                backgroundColor: "primary.main",
+                 backgroundColor: "primary.main",
                 color: "#fff",
                 px: 3,
                 py: 2,
                 display: "flex",
                 justifyContent: "space-between",
-               
+
                 alignItems: "center",
                 position: "sticky", // Sticky position for header
                 top: 0, // Stick to the top
@@ -1288,7 +1368,14 @@ function Project() {
                               sx={{ mt: 0.5 }}
                             />
                           ) : (
-                            <Typography color="text.secondary">
+                            <Typography
+                              color="text.secondary"
+                              sx={{
+                                 whiteSpace: "pre-wrap", // allow line breaks
+                                wordBreak: "break-word", // break long words
+                                overflowWrap: "break-word", // fallback for older browsers
+                              }}
+                            >
                               {value}
                             </Typography>
                           )
@@ -1300,7 +1387,7 @@ function Project() {
                 ))}
               </List>
             )}
-          </Paper>
+        
         </Box>
       </Drawer>
       {viewproject ? (

@@ -22,7 +22,7 @@ import {
   Modal,
   DialogContentText,
   CircularProgress,
- 
+  Tooltip,
 } from "@mui/material";
 import { IoTimeSharp } from "react-icons/io5";
 import Avatar from "@mui/material/Avatar";
@@ -36,7 +36,8 @@ import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import axios from "axios";
 import { useRef } from "react";
-
+import { useSelector,useDispatch } from "react-redux";
+import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 export const TimeEntry = ({
   theme,
   viewModalOpen,
@@ -44,10 +45,12 @@ export const TimeEntry = ({
   setViewTask,
   handleCloseViewModal,
 }) => {
-// Create a ref for the TextField component
+  // Create a ref for the TextField component
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
 
- 
+
+  console.log("ViewTask",viewTask);
 
   const handleFocus = (id) => {
     document.getElementById(id).showPicker();
@@ -64,7 +67,18 @@ export const TimeEntry = ({
   const [errors, setErrors] = useState({});
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState(null);
-  const [todayTimeEntry,setTodayTimeEntry] = useState([]);
+  const [todayTimeEntry, setTodayTimeEntry] = useState([]);
+
+   const [startDate, setStartDate] = useState(() => {
+      const date = new Date();
+      date.setDate(date.getDate() - 7);
+      return date.toISOString().split("T")[0]; // format: YYYY-MM-DD
+    });
+  
+    const [endDate, setEndDate] = useState(() => {
+      const date = new Date();
+      return date.toISOString().split("T")[0];
+    });
 
   const dateInputRef = useRef(null);
 
@@ -81,9 +95,14 @@ export const TimeEntry = ({
   const validateForm = () => {
     let tempErrors = {};
     if (!newTimesheetEntry.date) tempErrors.date = "Date is required";
-    if (!newTimesheetEntry.startTime) tempErrors.startTime = "Start time is required";
+    if (!newTimesheetEntry.startTime)
+      tempErrors.startTime = "Start time is required";
     if (!newTimesheetEntry.endTime) tempErrors.endTime = "End time is required";
-    if (newTimesheetEntry.startTime && newTimesheetEntry.endTime && newTimesheetEntry.startTime >= newTimesheetEntry.endTime) {
+    if (
+      newTimesheetEntry.startTime &&
+      newTimesheetEntry.endTime &&
+      newTimesheetEntry.startTime >= newTimesheetEntry.endTime
+    ) {
       tempErrors.endTime = "End time must be after start time";
     }
     if (!newTimesheetEntry.note) tempErrors.note = "Note is required";
@@ -118,6 +137,9 @@ export const TimeEntry = ({
 
   const MAX_NOTE_LENGTH = 60;
 
+  const { data: employeeData } = useSelector((state) => state.employeeReducer);
+
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -126,9 +148,20 @@ export const TimeEntry = ({
         const user = await JSON.parse(localStorage.getItem("currUser"));
         setCurrUser(user);
         // Fetch time entry data
+
+        
+                if (!Array.isArray(employeeData) || employeeData.length === 0) {
+                  await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
+                }
         setIsLoading(true);
         const TimeEntryResponse = await axios.get(
-          `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
+          `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`,
+          {
+            params: {
+              startDate: startDate, // Selected start date
+              endDate: endDate, // Selected end date
+            },
+          }
         );
 
         const userProfile = {};
@@ -137,12 +170,16 @@ export const TimeEntry = ({
         for (const timeEntry of TimeEntryResponse.data.data) {
           for (const item of timeEntry.details) {
             if (!userProfile.hasOwnProperty(item.Time_Entries.User_ID)) {
-              const response = await axios.get(
-                `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
+              // const response = await axios.get(
+              //   `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
+              // );
+              const userID = item.Time_Entries.User_ID;
+              const user = employeeData.filter(
+                (employee) => employee.user_id === userID
               );
-
-              if (response.data.data != null) {
-                userProfile[item.Time_Entries.User_ID] = response.data.data;
+              const profileLink = user[0].profile_pic;
+              if (profileLink != null) {
+                userProfile[item.Time_Entries.User_ID] = profileLink;
               } else {
                 userProfile[item.Time_Entries.User_ID] =
                   "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
@@ -169,7 +206,7 @@ export const TimeEntry = ({
     note: "",
     totalTime: "",
   });
-  console.log("sdahfjsd",newTimesheetEntry.date);
+  console.log("sdahfjsd", newTimesheetEntry.date);
   const handleAlert = (type, label) => {
     setalerttype(type);
     setAlertLabel(label);
@@ -194,77 +231,27 @@ export const TimeEntry = ({
     return `${hrs} hr ${mins} min`;
   }
 
-
-
-//   const checkValidTimeSlot = (newStartTime, newEndTime, selectedDate) => {
-//     const timeEntries = timeEntry.find((item) => selectedDate === item?.entryDate);
-
-//     // Function to parse time including AM/PM format
-//     const parseTime = (timeStr) => {
-//         let [time, modifier] = timeStr.split(" ");
-//         let [hours, minutes] = time.split(":").map(Number);
-
-//         if (modifier === "PM" && hours !== 12) hours += 12;
-//         if (modifier === "AM" && hours === 12) hours = 0;
-
-//         return hours * 60 + minutes; // Convert time to minutes
-//     };
-
-//     const newStart = parseTime(newStartTime);
-//     const newEnd = parseTime(newEndTime);
-
-//     if (newEnd <= newStart) return false; // Invalid time range
-
-//     if (!timeEntries?.details) return true; // No existing entries, valid time slot
-
-//     for (const entry of timeEntries?.details) {
-//         const timeEntry = entry.Time_Entries; // Fixing nested structure
-
-//         if (timeEntry.Entry_Date === selectedDate) {
-//             const existingStart = parseTime(timeEntry.Start_time);
-//             const existingEnd = parseTime(timeEntry.End_time);
-
-//             if (
-//                 (newStart >= existingStart && newStart < existingEnd) || // Overlapping start
-//                 (newEnd > existingStart && newEnd <= existingEnd) || // Overlapping end
-//                 (newStart <= existingStart && newEnd >= existingEnd) // Complete overlap
-//             ) {
-//                 return false; // Overlapping time slot
-//             }
-//         }
-//     }
-//     return true; // Valid time slot
-// };
-
-// Test Cases
-//console.log("1",checkValidTimeSlot("08:00 AM", "11:46 AM", "2025-02-25")); // true
-// console.log(checkValidTimeSlot("01:32 PM", "02:00 PM", "2025-02-25")); // false
-// console.log(checkValidTimeSlot("02:30 PM", "01:00 PM", "2025-03-24")); // false (invalid range)
-// console.log("2",checkValidTimeSlot("06:30 PM", "07:00 PM", "2025-02-25")); // false (invalid range)
-
-
-
   const handleTimesheetInputChange = (event) => {
     const { name, value } = event.target;
-    console.log("[name]", name ,value);
-    
+    console.log("[name]", name, value);
+
     setNewTimesheetEntry((prev) => ({ ...prev, [name]: value }));
   };
   const handleAddTimesheetEntry = async () => {
     if (!viewTask) return;
-  
+
     const start = new Date(`1970-01-01T${newTimesheetEntry.startTime}`);
     const end = new Date(`1970-01-01T${newTimesheetEntry.endTime}`);
     const diffMs = (end - start) / (1000 * 60); // Total time in minutes
-  
+
     if (diffMs <= 0) {
       handleAlert("Error", "End time must be greater than Start Time");
       return;
     }
-  
+
     setLoading(true);
     setIsLoading(true);
-  
+
     try {
       // Check if the time slot is valid before proceeding
       // const validTimeSlot = checkValidTimeSlot(
@@ -272,22 +259,22 @@ export const TimeEntry = ({
       //   formatTimeToAMPM(end),
       //   newTimesheetEntry.date
       // );
-  
+
       // if (!validTimeSlot) {
       //   handleAlert("error", "Already have a Time Entry for this time slot");
-        // Fetch the previous data (even if the time entry is invalid)
+      // Fetch the previous data (even if the time entry is invalid)
       //   const TimeEntryResponse = await axios.get(
       //     `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
       //   );
       //   setTimeEntry(TimeEntryResponse.data.data);
       //   return; // Don't proceed with posting if the time is invalid
       // }
-  
+
       // Post the new timesheet entry to the server
       const response = await axios.post(
         "/server/time_entry_management_application_function/timeentry",
         {
-          Username: currUser.firstName + currUser.lastName,
+          Username: currUser.firstName +  " " + currUser.lastName,
           User_ID: currUser.userid,
           Entry_Date: newTimesheetEntry.date,
           Note: newTimesheetEntry.note,
@@ -300,18 +287,16 @@ export const TimeEntry = ({
           Project_Name: viewTask.Project_Name,
         }
       );
-  
+
       // After successfully posting, fetch the updated data
       const TimeEntryResponse = await axios.get(
         `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
       );
 
-      
-  
       // Update the state with the new data
       setTimeEntry(TimeEntryResponse.data.data);
       handleAlert("success", "Time Entry has been successfully submitted");
-  
+
       // Reset the new timesheet entry fields
       setNewTimesheetEntry({
         user: "",
@@ -321,26 +306,21 @@ export const TimeEntry = ({
         note: "",
         totalTime: "",
       });
-  
     } catch (error) {
-      
-     
       handleAlert("error", "Time Entry is Already Added ");
     } finally {
       setLoading(false);
       setIsLoading(false); // Ensure isLoading is set back to false after completion
     }
   };
-  
 
- 
   // const handleAddTimesheetEntry = async () => {
   //   if (!viewTask) return;
-  
+
   //   const start = new Date(`1970-01-01T${newTimesheetEntry.startTime}`);
   //   const end = new Date(`1970-01-01T${newTimesheetEntry.endTime}`);
   //   const diffMs = (end - start) / (1000 * 60); // Total time in minutes
-  
+
   //   if (diffMs <= 0) {
   //     handleAlert("Error", "End time must be greater than Start Time");
   //     return;
@@ -365,7 +345,7 @@ export const TimeEntry = ({
   //         Project_Name: viewTask.project_name,
   //       }
   //     );
-  
+
   //     // Handle success
   //     const TimeEntryResponse = await axios.get(
   //       `/server/time_entry_management_application_function/timeentry/${viewTask.taskid}`
@@ -373,7 +353,7 @@ export const TimeEntry = ({
   //     setTimeEntry(TimeEntryResponse.data.data);
   //     setIsLoading(false);
   //     handleAlert("success", "Time Entry has been successfully submitted");
-  
+
   //     setNewTimesheetEntry({
   //       user: "",
   //       date: "",
@@ -382,7 +362,7 @@ export const TimeEntry = ({
   //       note: "",
   //       totalTime: "",
   //     });
-  
+
   //   } catch (error) {
   //     if (error.response && error.response.status === 400) {
   //       // Show alert if the time entry overlaps
@@ -395,7 +375,7 @@ export const TimeEntry = ({
   //     setLoading(false);
   //   }
   // };
-  
+
   const handleDeleteTimeEntry = async (ROWID) => {
     try {
       //console.log("id=>", ROWID);
@@ -488,7 +468,13 @@ export const TimeEntry = ({
       );
       setEditModalOpen(false);
       const TimeEntryResponse = await axios.get(
-        `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
+        `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`,
+        {
+          params: {
+            startDate: startDate, // Selected start date
+            endDate: endDate, // Selected end date
+          },
+        }
       );
 
       setTimeEntry(TimeEntryResponse.data.data);
@@ -581,6 +567,56 @@ export const TimeEntry = ({
     setExpandedDate(expandedDate === date ? null : date);
   };
 
+  const handleFetchData = async () => {
+    try {
+      console.log("Fetching data from", startDate, "to", endDate);
+      setLoading(true);
+
+      // Fetch data from your API using the selected dates
+      const response = await axios.get(
+        `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`,
+        {
+          params: {
+            startDate: startDate, // Selected start date
+            endDate: endDate, // Selected end date
+          },
+        }
+      );
+
+      // Process the response data as needed
+      setTimeEntry(response.data.data);
+      setLoading(false);
+
+      const userProfile = {};
+
+      // Use for...of loop to properly await async actions
+      for (const timeEntry of response.data.data) {
+        for (const item of timeEntry.details) {
+          if (!userProfile.hasOwnProperty(item.Time_Entries.User_ID)) {
+            // const response = await axios.get(
+            //   `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
+            // );
+            const userID = item.Time_Entries.User_ID;
+            const user = employeeData.filter(
+              (employee) => employee.user_id === userID
+            );
+            const profileLink = user[0].profile_pic;
+            if (profileLink != null) {
+              userProfile[item.Time_Entries.User_ID] = profileLink;
+            } else {
+              userProfile[item.Time_Entries.User_ID] =
+                "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
+            }
+          }
+        }
+      }
+      setuserImage(userProfile);
+      console.log("Fetched Data:", response.data.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
   return (
     <div>
       {/* View Task Modal */}
@@ -636,6 +672,7 @@ export const TimeEntry = ({
             </CardContent>
           </Card>
 
+       
           {/* Scrollable Content Section */}
           <Box sx={{ overflowY: "auto", height: "calc(100vh - 140px)" }}>
             {" "}
@@ -643,127 +680,177 @@ export const TimeEntry = ({
             {viewTask && (
               <>
                 {/* Add Timesheet Entry Section */}
-                 <Box sx={{ mb: 4, ml: 2, mr: 2, position: "relative" }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Add Time Entry
-      </Typography>
+                <Box sx={{ mb: 4, ml: 2, mr: 2, position: "relative" }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Add Time Entry
+                  </Typography>
 
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            label="User"
-            name="user"
-            fullWidth
-            value={`${currUser.firstName} ${currUser.lastName}`}
-            sx={{ mb: 2 }}
-            disabled
-          />
-        </Grid>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="User"
+                        name="user"
+                        fullWidth
+                        value={`${currUser.firstName} ${currUser.lastName}`}
+                        sx={{ mb: 2 }}
+                        disabled
+                      />
+                    </Grid>
 
-        {/* <Grid item xs={12} sm={6}>
-          <div className="dateInput"  onFocus={() => handleFocus("dateInput")} >
-          <TextField
-          
-            label="Date"
-            name="date"
-            id="dateInput"
-            fullWidth
-            type="date"
-            value={newTimesheetEntry.date}
-            InputLabelProps={{ shrink: true }}
-            onChange={handleTimesheetInputChange}
-            sx={{ mb: 2 }}
-            error={!!errors.date}
-            helperText={errors.date}
-          />
-          </div>
-        </Grid> */}
-           <Grid item xs={12} sm={6}>
-      <div className="dateInput" onClick={handleDateClick}>
-        <TextField
-          label="Date"
-          name="date"
-          id="dateInput"
-          fullWidth
-          type="date"
-          inputRef={dateInputRef}
-          value={newTimesheetEntry.date}
-          InputLabelProps={{ shrink: true }}
-          onChange={handleTimesheetInputChange}
-          sx={{ mb: 2 }}
-          error={!!errors.date}
-          helperText={errors.date}
-        />
-      </div>
-    </Grid>
+      
+                    <Grid item xs={12} sm={6}>
+                      <div className="dateInput" onClick={handleDateClick}>
+                        <TextField
+                          label="Date"
+                          name="date"
+                          id="dateInput"
+                          fullWidth
+                          type="date"
+                          inputRef={dateInputRef}
+                          value={newTimesheetEntry.date}
+                          InputLabelProps={{ shrink: true }}
+                          onChange={handleTimesheetInputChange}
+                          sx={{ mb: 2 }}
+                          error={!!errors.date}
+                          helperText={errors.date}
+                        />
+                      </div>
+                    </Grid>
 
+                    <Grid item xs={12} sm={6}>
+                      <div
+                        className="timeInput1"
+                        onClick={() => handleTimeClick(startTimeRef)}
+                      >
+                        <TextField
+                          label="Start Time"
+                          id="timeInput1"
+                          name="startTime"
+                          fullWidth
+                          type="time"
+                          inputRef={startTimeRef}
+                          value={newTimesheetEntry.startTime}
+                          onChange={handleTimesheetInputChange}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            mb: 2,
+                            "& input": {
+                              color:
+                                theme.palette.mode === "dark"
+                                  ? "white"
+                                  : "black",
+                            },
+                            "& .MuiSvgIcon-root": {
+                              color:
+                                theme.palette.mode === "dark"
+                                  ? "white"
+                                  : "black",
+                            },
+                          }}
+                          error={!!errors.startTime}
+                          helperText={errors.startTime}
+                        />
+                      </div>
+                    </Grid>
 
-    <Grid item xs={12} sm={6}>
-        <div className="timeInput1" onClick={() => handleTimeClick(startTimeRef)}>
-          <TextField
-            label="Start Time"
-            id="timeInput1"
-            name="startTime"
-            fullWidth
-            type="time"
-            inputRef={startTimeRef}
-            value={newTimesheetEntry.startTime}
-            onChange={handleTimesheetInputChange}
-            InputLabelProps={{ shrink: true }}
-            sx={{
-              mb: 2,
-              "& input": { color: theme.palette.mode === "dark" ? "white" : "black" },
-              "& .MuiSvgIcon-root": { color: theme.palette.mode === "dark" ? "white" : "black" },
-            }}
-            error={!!errors.startTime}
-            helperText={errors.startTime}
-          />
-        </div>
-      </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <div
+                        className="timeInput2"
+                        onClick={() => handleTimeClick(endTimeRef)}
+                      >
+                        <TextField
+                          label="End Time"
+                          id="timeInput2"
+                          name="endTime"
+                          fullWidth
+                          type="time"
+                          inputRef={endTimeRef}
+                          value={newTimesheetEntry.endTime}
+                          onChange={handleTimesheetInputChange}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{ mb: 2 }}
+                          error={!!errors.endTime}
+                          helperText={errors.endTime}
+                        />
+                      </div>
+                    </Grid>
 
-      <Grid item xs={12} sm={6}>
-        <div className="timeInput2" onClick={() => handleTimeClick(endTimeRef)}>
-          <TextField
-            label="End Time"
-            id="timeInput2"
-            name="endTime"
-            fullWidth
-            type="time"
-            inputRef={endTimeRef}
-            value={newTimesheetEntry.endTime}
-            onChange={handleTimesheetInputChange}
-            InputLabelProps={{ shrink: true }}
-            sx={{ mb: 2 }}
-            error={!!errors.endTime}
-            helperText={errors.endTime}
-          />
-        </div>
-      </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Note"
+                        name="note"
+                        fullWidth
+                        multiline
+                        rows={4}
+                        value={newTimesheetEntry.note}
+                        onChange={handleTimesheetInputChange}
+                        sx={{ mb: 2 }}
+                        error={!!errors.note}
+                        helperText={errors.note}
+                      />
+                    </Grid>
 
-      <Grid item xs={12}>
-        <TextField
-          label="Note"
-          name="note"
-          fullWidth
-          multiline
-          rows={4}
-          value={newTimesheetEntry.note}
-          onChange={handleTimesheetInputChange}
-          sx={{ mb: 2 }}
-          error={!!errors.note}
-          helperText={errors.note}
-        />
-      </Grid>
+                    <Grid item xs={12}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSubmit}
+                        sx={{ width: 100 }}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <CircularProgress size={24} color="inherit"   />
+                        ) : (
+                          "Add"
+                        )}
+                      </Button>
+                    </Grid>
+                  </Grid>
 
-        <Grid item xs={12}>
-          <Button variant="contained" color="primary" onClick={handleSubmit} disabled={loading}>
-          {loading ? <CircularProgress size={24} color="inherit" /> : "Add"}
+                       <Card sx={{ mt :2, mb: 2, mx: 0 }}>
+                      <CardContent
+                        sx={{
+                          display: "flex",
+                          //  justifyContent: "flex-end",
+                          alignItems: "center",
+                          gap: 2,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <TextField
+                          label="Start Date"
+                          type="date"
+                          size="small"
+                          InputLabelProps={{ shrink: true }}
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                        />
+                        -
+                        <TextField
+                          label="End Date"
+                          type="date"
+                          size="small"
+                          InputLabelProps={{ shrink: true }}
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                        />
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={handleFetchData}
+                        >
+                          {loading ? (
+                            <CircularProgress size={24} color="inherit" />
+                          ) : (
+                            "Submit"
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
 
-          </Button>
-        </Grid>
-      </Grid>
-    </Box>
+                </Box>
                 <Box sx={{ mb: 4, ml: 2, mr: 2 }}>
+                  
                   <TableContainer component={Paper}>
                     <Table>
                       <TableHead>
@@ -956,18 +1043,42 @@ export const TimeEntry = ({
                                       )}
                                     </TableCell>
 
-                                    {/* Replace Note with an Icon that triggers the Modal */}
                                     <TableCell>
-                                      <IconButton
-                                        color="primary"
-                                        onClick={() =>
-                                          handleOpenModal(
-                                            entry.Time_Entries.Note
-                                          )
+                                      <Tooltip
+                                        title={
+                                          <Typography
+                                            sx={{
+                                              fontSize: "1rem",
+                                              fontWeight: 500,
+                                            }}
+                                          >
+                                            {entry.Time_Entries.Note}
+                                          </Typography>
                                         }
+                                        placement="top"
+                                        arrow
+                                        slotProps={{
+                                          tooltip: {
+                                            sx: {
+                                              borderRadius: "10px",
+                                              boxShadow:
+                                                "0px 4px 12px rgba(0, 0, 0, 0.1)",
+                                              p: 1.5,
+                                              maxWidth: 300,
+                                              // border: "1px solid #ddd",
+                                            },
+                                          },
+                                          arrow: {
+                                            sx: {
+                                              color: "#fefefe",
+                                            },
+                                          },
+                                        }}
                                       >
-                                        <DescriptionIcon />
-                                      </IconButton>
+                                        <IconButton color="primary">
+                                          <DescriptionIcon />
+                                        </IconButton>
+                                      </Tooltip>
                                     </TableCell>
 
                                     <TableCell>
@@ -979,7 +1090,9 @@ export const TimeEntry = ({
                                       </IconButton>
                                       <IconButton
                                         color="error"
-                                        onClick={() => handleOpenDeleteDialog(entry)}
+                                        onClick={() =>
+                                          handleOpenDeleteDialog(entry)
+                                        }
                                       >
                                         <DeleteIcon />
                                       </IconButton>
@@ -1026,6 +1139,7 @@ export const TimeEntry = ({
             value={currUser.firstName + " " + currUser.lastName}
             onChange={handleEditChange}
             sx={{ marginBottom: 2 }}
+            disabled
           />
           <TextField
             label="Date"
@@ -1040,22 +1154,28 @@ export const TimeEntry = ({
           />
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
-              <div className="timeInput" onFocus={() => handleFocus("timeInput3")}>
-              <TextField
-                label="Start Time"
-                name="startTime"
-                id="timeInput3"
-                fullWidth
-                type="time"
-                value={currentEditTimeEntry?.startTime || ""}
-                onChange={handleEditChange}
-                InputLabelProps={{ shrink: true }}
-                sx={{ mb: 2 }}
-              />
+              <div
+                className="timeInput"
+                onFocus={() => handleFocus("timeInput3")}
+              >
+                <TextField
+                  label="Start Time"
+                  name="startTime"
+                  id="timeInput3"
+                  fullWidth
+                  type="time"
+                  value={currentEditTimeEntry?.startTime || ""}
+                  onChange={handleEditChange}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ mb: 2 }}
+                />
               </div>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <div className="timeInput" onFocus={() => handleFocus("timeInput4")}>
+              <div
+                className="timeInput"
+                onFocus={() => handleFocus("timeInput4")}
+              >
                 <TextField
                   label="End Time"
                   id="timeInput4"
@@ -1104,57 +1224,60 @@ export const TimeEntry = ({
         </Box>
       </Modal>
 
-      <Dialog 
-      open={openModal} 
-      onClose={handleCloseModal} 
-      maxWidth="sm" 
-      fullWidth
-      PaperProps={{
-        style: { 
-          borderRadius: "16px", 
-          padding: "20px",
-          backgroundColor: "#f5f5f5",
-        },
-      }}
-    >
-      <DialogTitle 
-        sx={{ 
-          textAlign: "center", 
-          fontWeight: "bold", 
-          fontSize: "1.5rem", 
-          color: "#3f51b5" 
+      <Dialog
+        open={openModal}
+        onClose={handleCloseModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          style: {
+            borderRadius: "16px",
+            padding: "20px",
+            backgroundColor: "#f5f5f5",
+          },
         }}
       >
-          📝 Note
-      </DialogTitle>
-      <DialogContent 
-        dividers 
-        sx={{ 
-          textAlign: "center", 
-          margin: "20px 0", 
-          backgroundColor: "#ffffff",
-          borderRadius: "8px",
-        }}
-      >
-        <Typography variant="body1" sx={{ color: "#333", fontSize: "1.1rem" }}>
-          {selectedNote}
-        </Typography>
-      </DialogContent>
-      <DialogActions sx={{ justifyContent: "center" }}>
-        <Button 
-          onClick={handleCloseModal} 
-          variant="contained" 
-          color="primary" 
-          sx={{ 
-            textTransform: "none", 
-            borderRadius: "8px", 
+        <DialogTitle
+          sx={{
+            textAlign: "center",
             fontWeight: "bold",
+            fontSize: "1.5rem",
+            color: "#3f51b5",
           }}
         >
-          Close
-        </Button>
-      </DialogActions>
-    </Dialog>
+          📝 Note
+        </DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            textAlign: "center",
+            margin: "20px 0",
+            backgroundColor: "#ffffff",
+            borderRadius: "8px",
+          }}
+        >
+          <Typography
+            variant="body1"
+            sx={{ color: "#333", fontSize: "1.1rem" }}
+          >
+            {selectedNote}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center" }}>
+          <Button
+            onClick={handleCloseModal}
+            variant="contained"
+            color="primary"
+            sx={{
+              textTransform: "none",
+              borderRadius: "8px",
+              fontWeight: "bold",
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={openDeleteDialog} onClose={handleDeleteCancel}>
         <DialogTitle id="alert-dialog-title">{"Delete Time Entry"}</DialogTitle>
@@ -1165,10 +1288,19 @@ export const TimeEntry = ({
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 1 }}>
-          <Button onClick={handleDeleteCancel} variant="outlined" color="primary">
+          <Button
+            onClick={handleDeleteCancel}
+            variant="outlined"
+            color="primary"
+          >
             Cancel
           </Button>
-          <Button onClick={handleDeleteConfirm} variant="contained" color="error" autoFocus>
+          <Button
+            onClick={handleDeleteConfirm}
+            variant="contained"
+            color="error"
+            autoFocus
+          >
             Delete
           </Button>
         </DialogActions>

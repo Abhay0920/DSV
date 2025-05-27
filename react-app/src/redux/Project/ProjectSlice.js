@@ -86,7 +86,8 @@ export const ProjectSlice = createSlice({
     addProjectData: (state, action) => {
       // Log the state before and after the update
       // Directly mutate the state.data array without checking type (Immer will handle this)
-      state.data.push(action.payload);
+      // state.data.push(action.payload);
+      state.data.unshift(action.payload);
 
     },
     updateProjectData: (state, action) => {

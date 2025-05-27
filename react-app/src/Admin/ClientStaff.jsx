@@ -22,6 +22,7 @@ import {
   alpha,
   Avatar,
   Snackbar,
+  Tooltip,
   Alert,
   FormControlLabel,
   Switch,
@@ -30,10 +31,10 @@ import {
   DialogContent,
   DialogActions,
   DialogContentText,
-  
 } from "@mui/material";
 import Skeleton from "@mui/material/Skeleton";
 import { useTheme } from "@mui/material/styles";
+import ContactsOutlinedIcon from "@mui/icons-material/ContactsOutlined";
 
 import CloseIcon from "@mui/icons-material/Close";
 import Slide from "@mui/material/Slide";
@@ -42,8 +43,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   fetchClientContact,
   clientContactActions,
-  setFilteredClientContact,
-  updateClientContactStatusLocally ,
+  updateClientContactStatusLocally,
 } from "../redux/Client/contacts";
 import axios from "axios";
 import { fetchClientData } from "../redux/Client/clientSlice";
@@ -52,25 +52,16 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useLocation } from "react-router-dom";
 import { resolve } from "url";
 export const ClientStaff = () => {
-  const location = useLocation();
 
-  const { Org_Id } = location.state || {};
-  const { Org_Name } = location.state || {};
 
-  console.log("organization:", Org_Name);
 
-  const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  
-  const [staff, setStaff] = useState([]);
-  const [show, setShow] = useState(false);
-  const [alertLabel, setAlertLabel] = useState("");
-  const [alerttype, setalerttype] = useState("");
+
   const [ContactToDelete, setContactoDelete] = useState(null);
 
   const [newClientStaff, setNewClientStaff] = useState({
@@ -87,14 +78,14 @@ export const ClientStaff = () => {
     severity: "success",
   });
   const [errors, setErrors] = useState({});
-  const [org, setorg] = useState([]);
+
   const theme = useTheme();
 
   const dispatch = useDispatch();
   const { data, isLoading } = useSelector(
     (state) => state.clientContactReducer
   );
-  console.log("client contact data:", data);
+
   const { data: client } = useSelector((state) => state.clientReducer);
 
   useEffect(() => {
@@ -151,7 +142,6 @@ export const ClientStaff = () => {
   const handleAddClientStaff = async () => {
     if (
       newClientStaff.firstName &&
-      newClientStaff.lastName &&
       newClientStaff.email &&
       newClientStaff.mobile &&
       newClientStaff.organization &&
@@ -250,8 +240,6 @@ export const ClientStaff = () => {
       handleAddClientStaff(newClientStaff);
       toggleDrawer(false);
     }
-
-    console.log("adding the staff");
   };
 
   const toggleUserActive = async (userID, status, ROWID) => {
@@ -268,15 +256,14 @@ export const ClientStaff = () => {
         }
       );
       console.log("response:", response);
-      if(response.status === 200) {
-        dispatch(updateClientContactStatusLocally({
-          userID,
-          status
-        }));
+      if (response.status === 200) {
+        dispatch(
+          updateClientContactStatusLocally({
+            userID,
+            status,
+          })
+        );
       }
-
-
-      
 
       //console.log(response);
       // const updatedEmployee = employees.map((employee) => {
@@ -302,41 +289,41 @@ export const ClientStaff = () => {
   };
 
   const handleDeleteClick = (data) => {
-    console.log("hello hello hi ",data); 
+    console.log("hello hello hi ", data);
     setContactoDelete(data);
     setDeleteConfirmOpen(true);
   };
-   const handleDeleteConfirm = async () => {
-     if (ContactToDelete) {
-       try {
-        const { ROWID, UserID } = ContactToDelete; 
-         const response = await axios.delete(
+  const handleDeleteConfirm = async () => {
+    if (ContactToDelete) {
+      try {
+        const { ROWID, UserID } = ContactToDelete;
+        const response = await axios.delete(
           `/server/time_entry_management_application_function/contact`,
           {
             data: {
               ROWID: ROWID,
-              USERID: UserID
-            }
+              USERID: UserID,
+            },
           }
         );
-        
-         console.log("deleted project", response);
-         if (response.status === 200) {
-           // Remove the project from the local state
-          //  dispatch(projectActions.deleteProjecttData(projectToDelete.ROWID));
-           handleAlert("success", "Project deleted successfully");
-         } else {
-           handleAlert("error", "Failed to delete project");
-         }
-       } catch (error) {
-         console.error("Error deleting project:", error);
-         handleAlert("error", error.message || "Error deleting project");
-       } finally {
-         setDeleteConfirmOpen(false);
-         setContactoDelete(null);
-       }
-     }
-   };
+
+        console.log("deleted project", response);
+        if (response.status === 200) {
+     
+          dispatch(clientContactActions.deleteClienttData(ROWID));
+          handleAlert("success", "Staff deleted successfully");
+        } else {
+          handleAlert("error", "Failed to delete Staff");
+        }
+      } catch (error) {
+        console.error("Error deleting Staff:", error);
+        handleAlert("error", error.message || "Error deleting Staff");
+      } finally {
+        setDeleteConfirmOpen(false);
+        setContactoDelete(null);
+      }
+    }
+  };
 
   return (
     <>
@@ -419,7 +406,7 @@ export const ClientStaff = () => {
               onClick={() => toggleDrawer(true)}
               sx={{ width: { xs: "100%", sm: "auto" } }}
             >
-              Add Client
+              Add Contacts
             </Button>
           </Box>
         </Paper>
@@ -756,7 +743,7 @@ export const ClientStaff = () => {
                             {/* Delete Icon */}
                             <IconButton
                               color="error"
-                               onClick={() => handleDeleteClick(data)}
+                              onClick={() => handleDeleteClick(data)}
                             >
                               <DeleteIcon />
                             </IconButton>
@@ -804,13 +791,37 @@ export const ClientStaff = () => {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                mb: 2,
+                px: 2,
+                py: 1.5,
+                borderRadius: 2,
                 marginBottom: 2,
+                background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+                boxShadow: 3,
               }}
             >
-              <Typography variant="h5">Add Client Contact</Typography>
-              <IconButton onClick={() => toggleDrawer(false)}>
-                <CloseIcon />
-              </IconButton>
+              <Box
+                sx={{ display: "flex", alignItems: "center", color: "#fff" }}
+              >
+                <ContactsOutlinedIcon sx={{ mr: 1 }} />
+                <Typography variant="h6" fontWeight="bold">
+                  Add New Contact
+                </Typography>
+              </Box>
+              <Tooltip title="Close">
+                <IconButton
+                  onClick={() => toggleDrawer(false)}
+                  sx={{
+                    color: "#fff",
+                    transition: "transform 0.2s ease",
+                    "&:hover": {
+                      transform: "scale(1.2)",
+                    },
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </Tooltip>
             </Box>
 
             <TextField
@@ -888,8 +899,16 @@ export const ClientStaff = () => {
                 variant="contained"
                 color="primary"
                 onClick={handleSubmit}
+                sx={{ width: 100 }}
               >
                 Submit
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => toggleDrawer(false)}
+              >
+                Cancel
               </Button>
             </Box>
           </Box>
@@ -925,45 +944,47 @@ export const ClientStaff = () => {
           </Alert>
         </Snackbar>
         <Dialog
-        open={deleteConfirmOpen}
-        onClose={handleDeleteCancel}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        PaperProps={{
-          sx: {
-            width: "100%",
-            maxWidth: "500px",
-            borderRadius: "8px",
-          },
-        }}
-      >
-        <DialogTitle id="alert-dialog-title" sx={{ pb: 1 }}>
-          {"Delete Project"}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Are you sure you want to delete project{" "}
-            <strong>{ContactToDelete?.First_Name} {ContactToDelete?.Last_Name}</strong>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 1 }}>
-          <Button
-            onClick={handleDeleteCancel}
-            variant="outlined"
-            color="primary"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            variant="contained"
-            color="error"
-            autoFocus
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+          open={deleteConfirmOpen}
+          onClose={handleDeleteCancel}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+          PaperProps={{
+            sx: {
+              width: "100%",
+              maxWidth: "500px",
+              borderRadius: "8px",
+            },
+          }}
+        >
+          <DialogTitle id="alert-dialog-title" sx={{ pb: 1 }}>
+            {"Delete Staff "}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              Are you sure you want to delete Staff{" "}
+              <strong>
+                {ContactToDelete?.First_Name} {ContactToDelete?.Last_Name}
+              </strong>
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ p: 2, pt: 1 }}>
+            <Button
+              onClick={handleDeleteCancel}
+              variant="outlined"
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              variant="contained"
+              color="error"
+              autoFocus
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </>
   );

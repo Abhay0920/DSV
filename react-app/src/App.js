@@ -8,7 +8,6 @@ import {
 import "./App.css";
 import Layout1 from "./Admin/Layout1";
 import EmpLayout from "./Employee/Layout1";
-import Dashboard from "./Admin/Dashboard";
 import Project from "./Admin/Project";
 import Task from "./Admin/Task";
 import Feedback from "./Admin/Feedback";
@@ -60,15 +59,102 @@ function App() {
   const placeholderURL =
     "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
 
+  // useEffect(() => {
+  //   const checkAuth = async () => {
+  //     try {
+  //       const savedcurrUser = localStorage.getItem("currUser");
+  //       let userDetail = null;
+
+  //       if (!savedcurrUser) {
+  //         const result = await window.catalyst.auth.isUserAuthenticated();
+
+  //         userDetail = {
+  //           userid: result.content.user_id,
+  //           firstName: result.content.first_name,
+  //           lastName: result.content.last_name,
+  //           mailid: result.content.email_id,
+  //           timeZone: result.content.time_zone,
+  //           createdTime: result.content.created_time,
+  //           role: result.content.role_details.role_name,
+  //           user_type: result.content.user_type,
+  //           org_id: result.content.org_id,
+  //         };
+  //         localStorage.setItem("currUser", JSON.stringify(userDetail));
+
+
+  //         // Adding code statrts 
+  //         if(result && result.content){
+  //           setUserRole(result.content.role_details.role_name)
+  //           setCurrUser(result.content);
+  //           setIsAuthenticated(true);
+  //         }
+  //       } 
+  //       else {
+  //         try {
+  //           // userDetail = JSON.parse(savedcurrUser);
+
+  //         } catch (error) {
+  //           console.error("Failed to parse currUser:", error);
+  //           localStorage.removeItem("currUser");
+  //         }
+  //       }
+
+  //       if (userDetail) {
+  //         setCurrUser(userDetail);
+  //         setUserRole(userDetail.role);
+  //         setIsAuthenticated(true);
+
+  //         const profileResponse = await axios.get(
+  //           `/server/time_entry_management_application_function/userprofile/${userDetail.userid}`
+  //         );
+  //         const coverResponse = await axios.get(
+  //           `/server/time_entry_management_application_function/usercover/${userDetail.userid}`
+  //         );
+
+  //         if (profileResponse.data.data) {
+  //           localStorage.setItem("profileData", profileResponse.data.data);
+  //         } else {
+  //           localStorage.setItem(
+  //             "profileData",
+  //             "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541"
+  //           );
+  //         }
+
+  //         if (coverResponse.data.data) {
+  //           localStorage.setItem("coverData", coverResponse.data.data);
+  //         } else {
+  //           localStorage.setItem(
+  //             "coverData",
+  //             "https://media.licdn.com/dms/image/v2/D563DAQHzNlFsRnMJDg/image-scale_191_1128/image-scale_191_1128/0/1699936674657/fi_digital_services_cover?e=2147483647&v=beta&t=ra0dfMKNg51crI9H1y9cKrtDrSfsOhgON6X_f2Gli7g"
+  //           );
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error("Authentication error:", error);
+  //       setIsAuthenticated(false);
+  //     } finally {
+  //       setIsCheckingAuth(false);
+  //     }
+  //   };
+
+  //   checkAuth();
+  // }, []);
+
+    
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const savedcurrUser = localStorage.getItem("currUser");
         let userDetail = null;
 
+        console.log("saved",savedcurrUser)
+  
         if (!savedcurrUser) {
+
+          console.log("dnkdlf");
           const result = await window.catalyst.auth.isUserAuthenticated();
 
+          console.log("resulttss",result)
           userDetail = {
             userid: result.content.user_id,
             firstName: result.content.first_name,
@@ -89,36 +175,14 @@ function App() {
             localStorage.removeItem("currUser");
           }
         }
-
+  
         if (userDetail) {
           setCurrUser(userDetail);
           setUserRole(userDetail.role);
           setIsAuthenticated(true);
-
-          const profileResponse = await axios.get(
-            `/server/time_entry_management_application_function/userprofile/${userDetail.userid}`
-          );
-          const coverResponse = await axios.get(
-            `/server/time_entry_management_application_function/usercover/${userDetail.userid}`
-          );
-
-          if (profileResponse.data.data) {
-            localStorage.setItem("profileData", profileResponse.data.data);
-          } else {
-            localStorage.setItem(
-              "profileData",
-              "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541"
-            );
-          }
-
-          if (coverResponse.data.data) {
-            localStorage.setItem("coverData", coverResponse.data.data);
-          } else {
-            localStorage.setItem(
-              "coverData",
-              "https://media.licdn.com/dms/image/v2/D563DAQHzNlFsRnMJDg/image-scale_191_1128/image-scale_191_1128/0/1699936674657/fi_digital_services_cover?e=2147483647&v=beta&t=ra0dfMKNg51crI9H1y9cKrtDrSfsOhgON6X_f2Gli7g"
-            );
-          }
+  
+          // ⏳ Background fetch for profile and cover
+          fetchProfileAndCover(userDetail.userid);
         }
       } catch (error) {
         console.error("Authentication error:", error);
@@ -127,9 +191,35 @@ function App() {
         setIsCheckingAuth(false);
       }
     };
-
+  
+    const fetchProfileAndCover = async (userId) => {
+      try {
+        const profileResponse = await axios.get(
+          `/server/time_entry_management_application_function/userprofile/${userId}`
+        );
+        const coverResponse = await axios.get(
+          `/server/time_entry_management_application_function/usercover/${userId}`
+        );
+  
+        localStorage.setItem(
+          "profileData",
+          profileResponse.data.data || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541"
+        );
+  
+        localStorage.setItem(
+          "coverData",
+          coverResponse.data.data || "https://media.licdn.com/dms/image/v2/D563DAQHzNlFsRnMJDg/image-scale_191_1128/image-scale_191_1128/0/1699936674657/fi_digital_services_cover?e=2147483647&v=beta&t=ra0dfMKNg51crI9H1y9cKrtDrSfsOhgON6X_f2Gli7g"
+        );
+      } catch (err) {
+        console.error("Failed to fetch profile or cover:", err);
+      }
+    };
+  
     checkAuth();
   }, []);
+  
+
+
 
   useEffect(() => {
     if (!isAuthenticated) return;

@@ -30,6 +30,11 @@ const getAllTasks = async (req, res) => {
       const table = datastore.table("Tasks");
       const records = await table.getAllRows();
 
+
+    records.sort((a, b) => {
+      return new Date(b.CREATEDTIME) - new Date(a.CREATEDTIME);
+    });
+
       res.status(200).json({
         success: true,
         data: records,
@@ -78,12 +83,9 @@ const getTasksByEmployee = async (req, res) => {
 
     // Get all tasks and filter for the specific user
     const tasksResp = await zcql.executeZCQLQuery(`SELECT * FROM Tasks`);
+    
 
-    if (!tasksResp || tasksResp.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "No tasks found" });
-    }
+   
 
     // Filter tasks where userID exists in the comma-separated Assign_To_ID
     const userTasks = tasksResp.filter((task) => {
@@ -93,12 +95,20 @@ const getTasksByEmployee = async (req, res) => {
       return assignedIds.includes(userID);
     });
 
-    if (userTasks.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "No tasks found for this user" });
-    }
+    // if (userTasks.length === 0) {
+    //   return res
+    //     .status(404)
+    //     .json({ success: false, message: "No tasks found for this user" });
+    // }
 
+    if (userTasks.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: "No tasks assigned to this user",
+      });
+    }
+    
     console.log("tasks at backend", userTasks);
 
     // Format the response data
@@ -252,7 +262,7 @@ const deleteTask = async (req, res) => {
 };
 
 
-const tasksByProjectAndUser = async (req, res) => {
+const tasksByProjectAndUser = async (req, res) => { 
   const { projectID, userID } = req.query;
 
   if (!projectID || !userID) {
@@ -266,21 +276,31 @@ const tasksByProjectAndUser = async (req, res) => {
     const catalystApp = req.catalystApp;
     const zcql = catalystApp.zcql();
 
-    const query = `SELECT * FROM Tasks WHERE ProjectID = '${projectID}' AND Assign_To_ID = '${userID}'`;
+    const query = `SELECT * FROM Tasks WHERE ProjectID = '${projectID}'`;
     const tasks = await zcql.executeZCQLQuery(query);
 
-    if (!tasks || tasks.length === 0) {
+    const userTasks = tasks.filter((task) => {
+      const assignedIds = task.Tasks.Assign_To_ID.split(",").map((id) =>
+        id.trim()
+      );
+      return assignedIds.includes(userID);
+    });
+    
+    console.log("thr id is s", userTasks);
+
+    if (!userTasks || userTasks.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No tasks found for this project and user",
       });
     }
 
-    const formattedTasks = tasks.map((task) => ({
+
+    const formattedTasks = userTasks.map((task) => ({
       ROWID: task.Tasks.ROWID,
       Task_Name: task.Tasks.Task_Name,
       Project_Name: task.Tasks.Project_Name,
-      ProjectID: task.Tasks.ProjectID,
+      Project_ID: task.Tasks.ProjectID,
       Status: task.Tasks.Status,
       Assign_To_ID: task.Tasks.Assign_To_ID,
       Assign_To: task.Tasks.Assign_To,

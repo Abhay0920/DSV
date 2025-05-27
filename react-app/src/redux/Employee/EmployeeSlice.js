@@ -40,6 +40,12 @@ export const fetchEmployees = createAsyncThunk(
      
     },
     reducers: {
+      addEmployeetData: (state, action) => {
+        
+        state.data.push(action.payload);
+  
+      },
+
       setEmployeeProfilePics: (state, action) => {
         const profileData = action.payload; // Array of { user_id, profile_pic }
       
@@ -55,6 +61,8 @@ export const fetchEmployees = createAsyncThunk(
       
         console.log("After update: sbcsied", state.data);
       },
+
+
       
     },
     
@@ -74,4 +82,5 @@ export const fetchEmployees = createAsyncThunk(
     },
   });
   export const { setEmployeeProfilePics } = EmployeeSlice.actions;
+  export const {addEmployeetData} = EmployeeSlice.actions;
   export default EmployeeSlice.reducer;

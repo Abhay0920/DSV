@@ -97,18 +97,99 @@ function to24HourFormat(time) {
 //   }
 // };
 
+// const getTimeEntryByTaskId = async (req, res) => {
+//   const taskId = req.params.taskid;
+
+//   try {
+//     const catalystApp = req.catalystApp;
+//     const zcql = catalystApp.zcql();
+
+//     // Step 1: Fetch all Time Entries for this Task_ID at once
+//     const query = `SELECT * FROM Time_Entries WHERE Time_Entries.Task_ID = '${taskId}'`;
+//     const queryResp = await zcql.executeZCQLQuery(query);
+
+//     // Step 2: Group entries by Entry_Date
+//     const groupedData = {};
+
+//     for (const item of queryResp) {
+//       const entryDate = item.Time_Entries.Entry_Date;
+//       if (!groupedData[entryDate]) {
+//         groupedData[entryDate] = {
+//           totalTime: 0,
+//           details: [],
+//         };
+//       }
+
+//       groupedData[entryDate].totalTime += Number(item.Time_Entries.Total_time )|| 0;
+//       groupedData[entryDate].details.push(item);
+//     }
+
+//     // Step 3: Sort each group's details by Start_time
+//     const response = Object.entries(groupedData)
+//       .sort((a, b) => new Date(b[0]) - new Date(a[0])) // Sort Entry_Date descending
+//       .map(([entryDate, group]) => {
+//         group.details.sort((a, b) => {
+//           const startTimeA = to24HourFormat(a.Time_Entries.Start_time);
+//           const startTimeB = to24HourFormat(b.Time_Entries.Start_time);
+//           return startTimeA.localeCompare(startTimeB);
+//         });
+
+//         return {
+//           entryDate,
+//           totalTime: group.totalTime,
+//           details: group.details,
+//         };
+//       });
+
+//     res.status(200).json({
+//       success: true,
+//       data: response,
+//     });
+//   } catch (error) {
+//     console.error(error.message);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch project",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
+
+//Time Entried for specific date and and time 
+
 const getTimeEntryByTaskId = async (req, res) => {
   const taskId = req.params.taskid;
+  const { startDate, endDate } = req.query;
 
   try {
     const catalystApp = req.catalystApp;
     const zcql = catalystApp.zcql();
 
-    // Step 1: Fetch all Time Entries for this Task_ID at once
-    const query = `SELECT * FROM Time_Entries WHERE Time_Entries.Task_ID = '${taskId}'`;
+    // Step 1: Determine the date range
+    let start = startDate;
+    let end = endDate;
+
+    if (!start || !end) {
+      // Default to last 7 days
+      const today = new Date();
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 6);
+
+      start = sevenDaysAgo.toISOString().split("T")[0];
+      end = today.toISOString().split("T")[0];
+    }
+
+    // Step 2: Fetch Time Entries within the date range
+    const query = `
+      SELECT * FROM Time_Entries 
+      WHERE Time_Entries.Task_ID = '${taskId}' 
+      AND Time_Entries.Entry_Date BETWEEN '${start}' AND '${end}'
+    `;
     const queryResp = await zcql.executeZCQLQuery(query);
 
-    // Step 2: Group entries by Entry_Date
+    // Step 3: Group entries by Entry_Date
     const groupedData = {};
 
     for (const item of queryResp) {
@@ -120,13 +201,13 @@ const getTimeEntryByTaskId = async (req, res) => {
         };
       }
 
-      groupedData[entryDate].totalTime += Number(item.Time_Entries.Total_time )|| 0;
+      groupedData[entryDate].totalTime += Number(item.Time_Entries.Total_time) || 0;
       groupedData[entryDate].details.push(item);
     }
 
-    // Step 3: Sort each group's details by Start_time
+    // Step 4: Sort each group's details by Start_time
     const response = Object.entries(groupedData)
-      .sort((a, b) => new Date(b[0]) - new Date(a[0])) // Sort Entry_Date descending
+      .sort((a, b) => new Date(b[0]) - new Date(a[0]))
       .map(([entryDate, group]) => {
         group.details.sort((a, b) => {
           const startTimeA = to24HourFormat(a.Time_Entries.Start_time);
@@ -156,65 +237,7 @@ const getTimeEntryByTaskId = async (req, res) => {
 };
 
 
-// const getTimeEntryByTaskId = async (req, res) => {
-//   const taskId = req.params.taskid;
 
-//   try {
-//     const catalystApp = req.catalystApp;
-//     const zcql = catalystApp.zcql();
-
-//     // Step 1: Fetch all entries at once
-//     const query = `SELECT * FROM Time_Entries WHERE Task_ID = '${taskId}'`;
-//     const queryResp = await zcql.executeZCQLQuery(query);
-
-//     const groupedData = {};
-
-//     // Step 2: Grouping and Summing
-//     for (const item of queryResp) {
-//       const entryDate = item.Time_Entries.Entry_Date;
-//       if (!groupedData[entryDate]) {
-//         groupedData[entryDate] = {
-//           totalTime: 0,
-//           details: [],
-//         };
-//       }
-
-//       // Add safely
-//       const time = Number(item.Time_Entries.Total_time) || 0;
-//       groupedData[entryDate].totalTime += time;
-//       groupedData[entryDate].details.push(item);
-//     }
-
-//     // Step 3: Sorting
-//     const response = Object.entries(groupedData)
-//       .sort((a, b) => new Date(b[0]) - new Date(a[0])) // Sort by Entry_Date descending
-//       .map(([entryDate, group]) => {
-//         group.details.sort((a, b) => {
-//           const startTimeA = to24HourFormat(a.Time_Entries.Start_time);
-//           const startTimeB = to24HourFormat(b.Time_Entries.Start_time);
-//           return startTimeA.localeCompare(startTimeB);
-//         });
-
-//         return {
-//           entryDate,
-//           totalTime: group.totalTime,
-//           details: group.details,
-//         };
-//       });
-
-//     res.status(200).json({
-//       success: true,
-//       data: response,
-//     });
-//   } catch (error) {
-//     console.error(error.message);
-//     res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch project",
-//       error: error.message,
-//     });
-//   }
-// };
 
 const parseTime = (timeStr) => {
   let [time, modifier] = timeStr.split(" ");
@@ -257,7 +280,7 @@ const createTimeEntry = async (req, res) => {
 
     const newStart = parseTime(taskData.Start_time);
     const newEnd = parseTime(taskData.End_time);
-    console.log("new", newStart, newEnd);
+  
 
     if (newEnd <= newStart || !checkTimeOverlap(newStart, newEnd, queryResp)) {
       return res
@@ -340,39 +363,146 @@ const updateTimeEntry = async (req, res) => {
   }
 };
 
-const getTimeEntryByProjectId = async (req, res) => {
-  const id = req.params.id;
+// const getTimeEntryByProjectId = async (req, res) => {
+//   const id = req.params.id;
+//   try {
+//     const catalystApp = req.catalystApp;
+//     const zcql = catalystApp.zcql();
+
+//     const query = `SELECT Time_Entries.Task_ID, Time_Entries.Task_Name 
+//                    FROM Time_Entries 
+//                    WHERE Project_ID = '${id}' 
+//                    GROUP BY Time_Entries.Task_ID`;
+
+//     const queryResp = await zcql.executeZCQLQuery(query);
+
+//     const response = await Promise.all(
+//       queryResp.map(async (item) => {
+//         const queryAll = `SELECT * FROM Time_Entries WHERE Task_ID ='${item.Time_Entries.Task_ID}'`;
+//         const queryRespAll = await zcql.executeZCQLQuery(queryAll);
+
+//         queryRespAll.sort((a, b) => {
+//           const startTimeA = to24HourFormat(a.Time_Entries.Start_time);
+//           const startTimeB = to24HourFormat(b.Time_Entries.Start_time);
+//           return startTimeA.localeCompare(startTimeB);
+//         });
+
+//         return {
+//           Task_Id: item.Time_Entries.Task_ID,
+//           Task_Name: item.Time_Entries.Task_Name,
+//           details: queryRespAll,
+//         };
+//       })
+//     );
+
+//     console.log("response", response);
+
+//     res.status(200).json({
+//       message: "Fetch successful",
+//       success: true,
+//       data: response,
+//     });
+//   } catch (error) {
+//     console.error("Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
+
+// const getTimeEntryByProjectId = async (req, res) => {
+//   const id = req.params.id;
+
+//   try {
+//     const catalystApp = req.catalystApp;
+//     const zcql = catalystApp.zcql();
+
+//     // Get all time entries for the given project ID
+//     const query = `SELECT * FROM Time_Entries WHERE Project_ID = '${id}'`;
+//     const allEntries = await zcql.executeZCQLQuery(query);
+
+//     // Group entries by Task_ID and sort details by Start_time
+//     const taskMap = allEntries.reduce((acc, entry) => {
+//       const taskId = entry.Time_Entries.Task_ID;
+//       if (!acc[taskId]) {
+//         acc[taskId] = {
+//           Task_Id: taskId,
+//           Task_Name: entry.Time_Entries.Task_Name,
+//           details: [],
+//         };
+//       }
+//       acc[taskId].details.push(entry);
+//       return acc;
+//     }, {});
+
+//     // Sort details inside each task group by date (descending)
+//     const response = Object.values(taskMap).map((task) => {
+//       task.details.sort((a, b) => {
+//         const dateA = new Date(a.Time_Entries.Entry_Date);
+//         const dateB = new Date(b.Time_Entries.Entry_Date);
+//         return dateB - dateA; // Descending
+//       });
+//       return task;
+//     });
+
+//     res.status(200).json({
+//       message: "Fetch successful",
+//       success: true,
+//       data: response,
+//     });
+//   } catch (error) {
+//     console.error("Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
+
+const getTimeEntryForExcel = async (req, res) => {
+  const id = req.params.ROWID;
+console.log("id",id);
+
   try {
     const catalystApp = req.catalystApp;
     const zcql = catalystApp.zcql();
 
-    const query = `SELECT Time_Entries.Task_ID, Time_Entries.Task_Name 
-                   FROM Time_Entries 
-                   WHERE Project_ID = '${id}' 
-                   GROUP BY Time_Entries.Task_ID`;
+    // Get all time entries for the given project
+    const query = `SELECT * FROM Time_Entries WHERE Project_ID = '${id}'`;
+    const allEntries = await zcql.executeZCQLQuery(query);
 
-    const queryResp = await zcql.executeZCQLQuery(query);
-
-    const response = await Promise.all(
-      queryResp.map(async (item) => {
-        const queryAll = `SELECT * FROM Time_Entries WHERE Task_ID ='${item.Time_Entries.Task_ID}'`;
-        const queryRespAll = await zcql.executeZCQLQuery(queryAll);
-
-        queryRespAll.sort((a, b) => {
-          const startTimeA = to24HourFormat(a.Time_Entries.Start_time);
-          const startTimeB = to24HourFormat(b.Time_Entries.Start_time);
-          return startTimeA.localeCompare(startTimeB);
-        });
-
-        return {
-          Task_Id: item.Time_Entries.Task_ID,
-          Task_Name: item.Time_Entries.Task_Name,
-          details: queryRespAll,
+    // Group by Task_ID
+    const taskMap = allEntries.reduce((acc, entry) => {
+      const taskId = entry.Time_Entries.Task_ID;
+      if (!acc[taskId]) {
+        acc[taskId] = {
+          Task_Id: taskId,
+          Task_Name: entry.Time_Entries.Task_Name,
+          details: [],
         };
-      })
-    );
+      }
+      acc[taskId].details.push(entry);
+      return acc;
+    }, {});
 
-    console.log("response", response);
+    // Sort by Date and Start_time (both in descending order)
+    const response = Object.values(taskMap).map((task) => {
+      task.details.sort((a, b) => {
+        const dateA = new Date(a.Time_Entries.Entry_Date);
+        const dateB = new Date(b.Time_Entries.Entry_Date);
+
+        if (dateA.getTime() === dateB.getTime()) {
+          // Convert time string to 24-hour format
+          const timeA = to24HourFormat(a.Time_Entries.Start_time);
+          const timeB = to24HourFormat(b.Time_Entries.Start_time);
+          return timeB.localeCompare(timeA); // Descending
+        }
+
+        return dateB - dateA; // Descending by Date
+      });
+      return task;
+    });
 
     res.status(200).json({
       message: "Fetch successful",
@@ -388,10 +518,90 @@ const getTimeEntryByProjectId = async (req, res) => {
   }
 };
 
+
+//For specific date and time 
+
+const getTimeEntryByProjectId = async (req, res) => {
+  const id = req.params.id;
+  const { startDate, endDate } = req.query; // expected in YYYY-MM-DD format
+
+  try {
+    const catalystApp = req.catalystApp;
+    const zcql = catalystApp.zcql();
+
+    // Handle date filtering
+    let fromDate = startDate;
+    let toDate = endDate;
+
+    // If dates are not provided, fallback to last 7 days (including today)
+    if (!startDate || !endDate) {
+      const currentDate = new Date();
+      const sevenDaysAgo = new Date(currentDate);
+      sevenDaysAgo.setDate(currentDate.getDate() - 6); // includes today
+
+      fromDate = sevenDaysAgo.toISOString().split("T")[0];
+      toDate = currentDate.toISOString().split("T")[0];
+    }
+
+    const dateCondition = `AND Entry_Date BETWEEN '${fromDate}' AND '${toDate}'`;
+
+    // Fetch all entries for the project ID with date filtering
+    const query = `SELECT * FROM Time_Entries WHERE Project_ID = '${id}' ${dateCondition}`;
+    const allEntries = await zcql.executeZCQLQuery(query);
+
+    // Group by Task_ID
+    const taskMap = allEntries.reduce((acc, entry) => {
+      const taskId = entry.Time_Entries.Task_ID;
+      if (!acc[taskId]) {
+        acc[taskId] = {
+          Task_Id: taskId,
+          Task_Name: entry.Time_Entries.Task_Name,
+          details: [],
+        };
+      }
+      acc[taskId].details.push(entry);
+      return acc;
+    }, {});
+
+    // Sort each task's entries by Date ↓ and Start_time ↓
+    const response = Object.values(taskMap).map((task) => {
+      task.details.sort((a, b) => {
+        const dateA = new Date(a.Time_Entries.Entry_Date);
+        const dateB = new Date(b.Time_Entries.Entry_Date);
+
+        if (dateA.getTime() === dateB.getTime()) {
+          const timeA = to24HourFormat(a.Time_Entries.Start_time);
+          const timeB = to24HourFormat(b.Time_Entries.Start_time);
+          return timeB.localeCompare(timeA); // descending
+        }
+
+        return dateB - dateA; // descending by date
+      });
+      return task;
+    });
+
+    res.status(200).json({
+      message: "Fetch successful",
+      success: true,
+      data: response,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
+
+
 module.exports = {
   getTimeEntryByTaskId,
   createTimeEntry,
   deleteTimeEntry,
   updateTimeEntry,
   getTimeEntryByProjectId,
+  getTimeEntryForExcel,
 };

@@ -333,7 +333,7 @@ const styles = {
 export default function EnhancedDashboard() {
   const theme = useTheme();
   const [year, setYear] = useState(new Date().getFullYear());
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [totalEmployees, setTotalEmployees] = useState(0);
   const [projectDrawerOpen, setProjectDrawerOpen] = useState(false);
 
@@ -354,10 +354,7 @@ export default function EnhancedDashboard() {
   const [taskYear, setTaskYear] = useState(new Date().getFullYear());
   const [ProjectcloseCount, setProjectcloseCount] = useState(0);
 
-  const years = Array.from(
-    { length: 5 },
-    (_, i) => new Date().getFullYear() - i
-  );
+ 
 
   const { data: projectsData } = useSelector((state) => state.projectReducer);
   const { data: employeeData,profilePics } = useSelector((state) => state.employeeReducer);
@@ -376,16 +373,32 @@ export default function EnhancedDashboard() {
   const [UnassignedDrawerOpen, setUnassignedDrawerOpen] = useState(false);
 
 
+
+  const years = Array.from(
+    new Set(projectsData?.map(p => new Date(p.Start_Date).getFullYear()))
+  ).sort((a, b) => b - a);
+  
   const dispatch = useDispatch();
   const placeholderURL =
   "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
 
   useEffect(() => {
-    if (!projectsData?.length) dispatch(fetchProjects());
-    if (!taksData?.length) dispatch(fetchTasks());
-    if (!client?.length) dispatch(fetchClientData());
-    if (!employeeData?.length) dispatch(fetchEmployees());
-    if (!issues?.length) dispatch(fetchIssueData());
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        if (!projectsData?.length) await dispatch(fetchProjects());
+        if (!taksData?.length) await dispatch(fetchTasks());
+        if (!client?.length) await dispatch(fetchClientData());
+        if (!employeeData?.length) await dispatch(fetchEmployees());
+        if (!issues?.length) await dispatch(fetchIssueData());
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    loadData();
   }, [dispatch]);
   // console.log("employee data from dashboard:",employeeList);
 
@@ -410,7 +423,9 @@ export default function EnhancedDashboard() {
   };
 
   useEffect(() => {
+    
     if (!employeeData || !taksData || !projectsData || !issues) return;
+   
     getUnassignedEmployees();
 
     const Unassigneds = employeeData?.filter(
@@ -471,14 +486,17 @@ export default function EnhancedDashboard() {
     setProjectopenCount(projectStatusCount.Open);
     setProjectworkingCount(projectStatusCount["Work In Process"]);
 
-    setIsLoading(false);
+     
   }, [employeeData, taksData, projectsData]);
 
   // 🔸 2. Projects by Month for Selected Year
   useEffect(() => {
+  
     const filtered = projectsData?.filter(
       (p) => new Date(p.Start_Date).getFullYear() === year
     );
+
+    console.log("filtered Year :",filtered);
 
     const monthlyData = {
       total: Array(12).fill(0),
@@ -496,6 +514,7 @@ export default function EnhancedDashboard() {
     });
 
     setMonthlyProjectData(monthlyData);
+   
   }, [year, projectsData]);
 
   // 🔸 3. Task Stats by Year
@@ -518,56 +537,59 @@ export default function EnhancedDashboard() {
   }, [taksData]);
 
   useEffect(() => {
+ 
     const yearData = userTasksByYear[taskYear] || {};
     setTotalClose(yearData.close || 0);
     setTotalopen(yearData.open || 0);
     setTotalWorking(yearData.working || 0);
     settTotalTask(yearData.total || 0);
+
+   
   }, [taskYear, userTasksByYear]);
+
+
+
 
   // Card data with enhanced icons and colors
   const cardData = [
     {
       title: "Total Employees",
-      value: employeeData.length,
+      value: employeeList?.length || 0,
       icon: <PeopleIcon />,
       color: theme.palette.primary.main,
-
       isIncrease: true,
     },
     {
       title: "Unassigned Employees",
-      value: totalUnassigned.length,
+      value: totalUnassigned?.length || 0,
       icon: <PersonIcon />,
       color: theme.palette.warning.main,
-
       isIncrease: true,
     },
     {
       title: "Total Projects",
-      value: projectsData.length,
+      value: projectsData?.length || 0,
       icon: <AssignmentIcon />,
       color: theme.palette.success.main,
-
       isIncrease: true,
     },
     {
       title: "Total Issues",
-      value: issues.length,
+      value: issues?.length || 0,
       icon: <BugReportIcon />,
       color: theme.palette.warning.main,
-
       isIncrease: true,
     },
     {
-      title: "Total Clients",
-      value: client.length,
+      title: "Total Accounts",
+      value: client?.length || 0,
       icon: <PeopleIcon />,
       color: theme.palette.primary.main,
-
       isIncrease: true,
     },
   ];
+  
+
 
   // Enhanced pie chart data
   const PiechartValue = [
@@ -620,31 +642,9 @@ export default function EnhancedDashboard() {
   };
   // Calculate completion percentage for the circular progress
 
-//Register the client
+  
 
-useEffect(() => {
-  const notification = window.catalyst?.notification;
 
-  if (!notification) {
-    console.error("Catalyst notification API not found.");
-    return;
-  }
-
-  console.log("Trying to enable notification...");
-
-  notification.enableNotification()
-    .then((response) => {
-      console.log("Notification enabled successfully:", response);
-
-      // Attach message handler
-      window.catalyst.notification.messageHandler = (msg) => {
-        console.log("✅ Aman Notification Received:", msg);
-      };
-    })
-    .catch((err) => {
-      console.error("❌ Failed to enable notification:", err);
-    });
-}, []);
 
 
 
@@ -810,10 +810,12 @@ useEffect(() => {
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
+
         {isLoading
           ? // Skeleton loaders
             [...Array(4)].map((_, index) => (
               <Grid item xs={12} sm={6} md={3} key={index}>
+                {console.log("skelton",isLoading)}
                 <Card
                   sx={{
                     borderRadius: 3,
@@ -875,7 +877,7 @@ useEffect(() => {
                     else if (card.title === "Total Issues") handleIssueClick();
                     else if (card.title === "Unassigned Employees")
                       handleUnassignedClick();
-                    else if (card.title === "Total Clients")
+                    else if (card.title === "Total Accounts")
                       handleClientClick();
                   }}
                 >

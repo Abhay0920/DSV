@@ -372,17 +372,18 @@ export default function EnhancedDashboard() {
   // Your data props
 
   // Years for dropdowns
-  const years = Array.from(
-    { length: 5 },
-    (_, i) => new Date().getFullYear() - i
-  );
+ 
 
-  const { data: projectsData } = useSelector(
-    (state) => state.empProjectReducer
-  );
+  const { data: projectsData } = useSelector((state) => state.empProjectReducer);
   const { data: tasksData } = useSelector((state) => state.empTaskReducer);
   const { data: employeeData } = useSelector((state) => state.employeeReducer);
   const { data: issuesData } = useSelector((state) => state.empIssuesReducer);
+    
+  console.log("projectData",projectsData);
+
+  const years = Array.from(
+    new Set(projectsData?.map(p => new Date(p.Projects.Start_Date).getFullYear()))
+  ).sort((a, b) => b - a);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -424,7 +425,7 @@ export default function EnhancedDashboard() {
   useEffect(() => {
     const fetchTotalEmployees = async () => {
       try {
-        setIsLoading(true);
+        
         setCurrentUserProjects(projectsData);
         const closeCount = tasksData?.filter(
           (task) => task.Status === "Completed"
@@ -501,9 +502,7 @@ export default function EnhancedDashboard() {
         settotalIntern(interns.length);
       } catch (error) {
         console.error("Error fetching data:", error);
-      } finally {
-        setIsLoading(false);
-      }
+      } 
     };
 
     fetchTotalEmployees();
@@ -673,13 +672,7 @@ export default function EnhancedDashboard() {
     setCompletedProjectDrawerOpen(true);
   const handleIssueCardClick = () => setIssueDrawerOpen(true);
 
-  // Calculate completion percentage for the circular progress
-  const completionPercentage = Math.round(
-    (ProjectcloseCount / projectsData.length) * 100
-  );
-  const completionTaskPercentage = Math.round(
-    (totalClose / tasksData.length) * 100
-  );
+
   const completionIssuePercentage = Math.round(
     (closeIssue / issuesData.length) * 100
   );
@@ -763,8 +756,15 @@ export default function EnhancedDashboard() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Box sx={{ width: 80, height: 80 }}>
               <CircularProgressbar
-                value={completionPercentage}
-                text={`${completionPercentage}%`}
+                value={
+                  ProjectcloseCount > 0 ?
+                   (ProjectcloseCount / projectsData.length) * 100
+                   :0
+                }
+                text={
+                  ProjectcloseCount > 0 ?
+                  `${Math.round( (ProjectcloseCount / projectsData.length) * 100)}%`:"0%"
+                }
                 styles={buildStyles({
                   pathColor: theme.palette.success.main,
                   textColor: theme.palette.text.primary,
@@ -791,8 +791,11 @@ export default function EnhancedDashboard() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Box sx={{ width: 80, height: 80 }}>
               <CircularProgressbar
-                value={completionTaskPercentage}
-                text={`${completionTaskPercentage}%`}
+                value={ totalClose > 0 ? 
+                  (totalClose / tasksData.length) * 100 : 0}
+                text={totalClose.length > 0
+                 ? `${Math.round((totalClose / tasksData.length) * 100)}%`:"0%"
+                }
                 styles={buildStyles({
                   pathColor: theme.palette.success.main,
                   textColor: theme.palette.text.primary,
@@ -815,8 +818,12 @@ export default function EnhancedDashboard() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Box sx={{ width: 80, height: 80 }}>
               <CircularProgressbar
-                value={completionIssuePercentage}
-                text={`${completionIssuePercentage}%`}
+                value={closeIssue > 0 ? 
+                  (closeIssue / issuesData.length) * 100 :0
+                }
+                text={closeIssue > 0 ? 
+                `${Math.round( (closeIssue / issuesData.length) * 100)}%`:"0%"
+                }
                 styles={buildStyles({
                   pathColor: theme.palette.success.main,
                   textColor: theme.palette.text.primary,

@@ -43,6 +43,9 @@ import Skeleton from "@mui/material/Skeleton";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import PlaylistAddCheckIcon from "@mui/icons-material/PlaylistAddCheck";
+import CloseIcon from "@mui/icons-material/Close";
+
 import {
   FaTasks,
   FaUsers,
@@ -61,39 +64,15 @@ import { fetchEmployees } from "../redux/Employee/EmployeeSlice";
 import { fetchTasks, TaskActions } from "../redux/Tasks/TaskSlice";
 
 import { fetchProjects } from "../redux/Project/ProjectSlice";
-const statusOptions = ["Open", "In Progress", "Completed"];
-// const statusConfig = {
-//   Completed: {
-//     icon: FaCheckCircle,
-//     color: "#2e7d32",
-//     backgroundColor: "#e6f4ea",
-//     borderColor: "#a5d6a7",
-//   },
-//   "In Progress": {
-//     icon: FaPlayCircle,
-//     color: "#1976d2",
-//     backgroundColor: "#e8f0fe",
-//     borderColor: "#90caf9",
-//   },
-//   Pending: {
-//     icon: FaHourglassHalf,
-//     color: "#ed6c02",
-//     backgroundColor: "#fff8e6",
-//     borderColor: "#ffb74d",
-//   },
-// };
+const statusOptions = ["Open", "Work In Process", "Completed"];
 
 const statusConfig = {
-  Pending: {
+  Open: {
     color: "#f0ad4e",
     backgroundColor: "#fff3cd",
     borderColor: "#ffeeba",
   },
-  "In Progress": {
-    color: "#0d6efd",
-    backgroundColor: "#cfe2ff",
-    borderColor: "#b6d4fe",
-  },
+
   Completed: {
     color: "#198754",
     backgroundColor: "#d1e7dd",
@@ -103,11 +82,6 @@ const statusConfig = {
     color: "#0d6efd",
     backgroundColor: "#cfe2ff",
     borderColor: "#b6d4fe",
-  },
-  Close: {
-    color: "#dc3545",
-    backgroundColor: "#f8d7da",
-    borderColor: "#f5c2c7",
   },
 };
 function Task() {
@@ -139,7 +113,6 @@ function Task() {
     message: "",
     severity: "success",
   });
-  console.log("projectname,", projectName, projectId);
   const [newTask, setNewTask] = useState({
     projectId: projectId || "",
     project_name: projectName || "",
@@ -178,7 +151,7 @@ function Task() {
           // If Task data is not already in Redux, fetch it
           if (!Array.isArray(tasksData) || tasksData.length === 0) {
             const response = await dispatch(fetchTasks()).unwrap();
-       
+
             setTasks(response);
           } else {
             // Use existing Task data from Redux
@@ -189,18 +162,18 @@ function Task() {
         console.error("Error fetching tasks:", error);
       }
     };
-  
+
     // Check and fetch employee and project data only if needed
     if (!Array.isArray(employeedata) || employeedata.length === 0) {
       dispatch(fetchEmployees());
     }
-  
+
     if (!Array.isArray(data) || data.length === 0) {
       dispatch(fetchProjects());
     }
-  
+
     fetchTasksData();
-  }, [projectId, dispatch, Task, data, employeedata]);
+  }, [projectId, dispatch]);
 
   useEffect(() => {
     if (employeedata) {
@@ -369,21 +342,21 @@ function Task() {
 
   const handleCancel = () => {
     setNewTask({
-    projectId: projectId || "",
-    project_name: projectName || "",
-    name: "",
-    assignTo: "",
-    assignToID: "",
-    status: "",
-    startDate: "",
-    endDate: "",
-    description: "",
+      projectId: projectId || "",
+      project_name: projectName || "",
+      name: "",
+      assignTo: "",
+      assignToID: "",
+      status: "",
+      startDate: "",
+      endDate: "",
+      description: "",
     });
     toggleDrawer(false);
   };
 
   const handleEdit = (task) => {
-    console.log("task data",task);
+    console.log("task data", task);
     setCurrentTask(task);
     setEditModalOpen(true);
   };
@@ -418,11 +391,10 @@ function Task() {
         handleAlert("success", "Task updated successfully");
         if (projectId && currentTask.ProjectID === projectId) {
           const updatedTasksData = tasks?.map((item) =>
-            item.ROWID === ROWID? updateResponse.data.data : item
+            item.ROWID === ROWID ? updateResponse.data.data : item
           );
           setTasks(updatedTasksData);
         }
-  
       } else {
         handleAlert("error", "Failed to update task");
       }
@@ -503,7 +475,7 @@ function Task() {
           dispatch(TaskActions.deleteTasktData(taskToDelete.ROWID));
           handleAlert("success", "Task deleted successfully");
           setTasks((prev) =>
-            prev.filter((item) => item.ROWID!== taskToDelete.ROWID)
+            prev.filter((item) => item.ROWID !== taskToDelete.ROWID)
           );
         } else {
           handleAlert("error", "Failed to delete task");
@@ -1076,7 +1048,7 @@ function Task() {
                         <TableCell>
                           <Chip
                             label={task.Status}
-                             size="small"
+                            size="small"
                             sx={{
                               backgroundColor:
                                 statusConfig[task.Status]?.backgroundColor ||
@@ -1085,8 +1057,8 @@ function Task() {
                                 statusConfig[task.Status]?.color || "#757575",
                               border: `1px solid ${statusConfig[task.Status]?.borderColor || "#e0e0e0"}`,
                               fontWeight: 500,
-                               fontSize: "0.75rem",
-                               height: "24px",
+                              fontSize: "0.75rem",
+                              height: "24px",
                               "& .MuiChip-label": {
                                 px: 1,
                               },
@@ -1100,7 +1072,6 @@ function Task() {
                               //   opacity: 0.9,
                               // },
                             }}
-                           
                           />
                         </TableCell>
                         <TableCell>{task.Start_Date}</TableCell>
@@ -1120,17 +1091,15 @@ function Task() {
                           </IconButton>
                         </TableCell>
                         <TableCell>
-                        <AccessTimeIcon
-                          fontSize="large" // Use 'small', 'medium', 'large', or set via style
-                          style={{
-                            color: theme.palette.primary.main,
-                            fontSize: 30, // You can increase this number as needed (e.g., 36, 40)
-                            cursor: "pointer",
-                          }}
+                          <AccessTimeIcon
+                            fontSize="large" // Use 'small', 'medium', 'large', or set via style
+                            style={{
+                              color: theme.palette.primary.main,
+                              fontSize: 30, // You can increase this number as needed (e.g., 36, 40)
+                              cursor: "pointer",
+                            }}
                             onClick={() => handleViewTask(task)}
                           />
-                         
-                        
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1154,7 +1123,6 @@ function Task() {
         </Grid>
       </Grid>
 
-      {/* Add Task Drawer */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -1170,34 +1138,41 @@ function Task() {
             marginTop: "70px",
           }}
         >
-          <Typography variant="h5" sx={{ marginBottom: 3 }}>
-            Add Task
-          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb:2,
+              px: 2,
+              py: 1.5,
+              borderRadius: 2,
+              marginBottom: 2,
+             background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+              boxShadow: 3,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", color: "#fff"}}>
+              <PlaylistAddCheckIcon sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                Add New Task
+              </Typography>
+            </Box>
+             <Tooltip title="Close">
+            <IconButton onClick={() => toggleDrawer(false)}
+             sx={{
+              color: "#fff",
+              transition: "transform 0.2s ease",
+              "&:hover": {
+                transform: "scale(1.2)",
+              },
+            }}
+             >
 
-          {/* <Autocomplete
-  options={projects}
-  getOptionLabel={(option) => option.Project_Name} // Show project name
-  isOptionEqualToValue={(option, value) => option.ROWID === value?.ROWID} // Ensure correct selection
-  value={projects.find((option) => option.ROWID ===  projectId) || null}
-  onChange={(event, newValue) => {
-    handleInputChange({
-      target: { name: "projectId", value: newValue ? newValue.ROWID : "" },
-    });
-  }}
-  disabled={!!projectId} 
-  renderInput={(params) => (
-    <TextField
-  {...params}
-  label="Project Name"
-  name="projectId"
-  fullWidth
-  variant="outlined"
-  sx={{ marginBottom: 2 }}
-  error={!!errors.projectId}
-  helperText={errors.projectId || ""}
-/>
-  )}
-/> */}
+              <CloseIcon />
+            </IconButton>
+            </Tooltip>
+          </Box>
 
           <Autocomplete
             options={data}
@@ -1235,24 +1210,6 @@ function Task() {
             )}
             disabled={!!projectName}
           />
-
-          {/* <TextField
-        label="Add Project"
-        name="project"
-        fullWidth
-        select
-        value={newTask.projectId}
-        onChange={handleInputChange}
-        sx={{ marginBottom: 2 }}
-        error={!!errors.projectId}
-        helperText={errors.projectId}
-      >
-        {projects.map((option) => (
-          <MenuItem key={option.ROWID} value={option.ROWID}>
-            {option.Project_Name}
-          </MenuItem>
-        ))}
-      </TextField> */}
 
           <TextField
             label="Add Task"
@@ -1367,8 +1324,8 @@ function Task() {
             sx={{ marginBottom: 3 }}
           />
 
-          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Button variant="contained" color="primary" onClick={handleSubmit}>
+          <Box sx={{ display: "flex", justifyContent: "space-between"}}>
+            <Button variant="contained" color="primary" onClick={handleSubmit}  sx={{ width: 100 }}>
               Add
             </Button>
             <Button variant="outlined" color="error" onClick={handleCancel}>
@@ -1436,6 +1393,8 @@ function Task() {
                 getOptionLabel={(option) => option.username}
                 value={assignOptions.filter((opt) =>
                   currentTask.Assign_To_ID
+                    ? currentTask.Assign_To_ID.includes(opt.userID)
+                    : typeof currentTask.Assign_To_ID === "string"
                     ? currentTask.Assign_To_ID.split(",").includes(opt.userID)
                     : []
                 )}

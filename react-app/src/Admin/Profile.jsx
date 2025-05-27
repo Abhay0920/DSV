@@ -47,8 +47,7 @@ import {
   Info,
   CheckCircle,
 } from "@mui/icons-material";
-
-// import EditIcon from "@mui/icons-material/Edit";
+import { useOutletContext } from "react-router-dom";
 import {
   Edit as EditIcon,
   Email as EmailIcon,
@@ -58,11 +57,12 @@ import {
   CloudDownload as CloudDownloadIcon,
 } from "@mui/icons-material";
 import { alpha } from "@mui/material/styles";
-import { fetchProfile } from "../redux/Profile/Profile";
 import UploadIcon from "@mui/icons-material/Upload";
 import { blue } from "@mui/material/colors";
-import { useDispatch,useSelector } from "react-redux";
-function Profile({ handleDialogClose, processImageSave }) {
+
+function Profile() {
+  const { setUserProfile } = useOutletContext();
+
   const [userInfo, setUserInfo] = useState({});
   const [skills, setSkills] = useState(userInfo.skills || ["Not Available"]);
   const theme = useTheme();
@@ -76,7 +76,6 @@ function Profile({ handleDialogClose, processImageSave }) {
 
   const [skillModelOpen, setSkillModelOpen] = useState(false);
 
-
   const [editedInfo, setEditedInfo] = useState({
     name: userInfo.name || "",
     email: userInfo.email || "",
@@ -86,7 +85,6 @@ function Profile({ handleDialogClose, processImageSave }) {
   });
   const [loading, setLoading] = useState(true);
   const [cvFile, setCvFile] = useState(null);
-
   const [profileImage, setProfileImage] = useState(null);
   const [coverImage, setCoverImage] = useState(null);
 
@@ -97,8 +95,7 @@ function Profile({ handleDialogClose, processImageSave }) {
     message: "",
     severity: "success",
   });
-  // const dispatch = useDispatch();
-  // const {data:profileData} = useSelector(state => state.profileReducer);
+
   useEffect(() => {
     const getUserDetail = async () => {
       const user = JSON.parse(localStorage.getItem("currUser"));
@@ -109,11 +106,13 @@ function Profile({ handleDialogClose, processImageSave }) {
         const response = await axios.get(
           `/server/time_entry_management_application_function/profile/data/${user.userid}`
         );
-        // dispatch(fetchProfile());
 
         const data = response.data.data;
         console.log("data", data);
         const profileBase64 = localStorage.getItem("profileData");
+
+        console.log("profile at profile", profileBase64);
+
         const coverBase64 = localStorage.getItem("coverData");
 
         const userSkills = data.Users.Skills
@@ -121,18 +120,6 @@ function Profile({ handleDialogClose, processImageSave }) {
           : [];
         setSkills(userSkills);
 
-        // console.log("userData", {
-        //   name: `${user.firstName} ${user.lastName}`,
-        //   email: user.mailid,
-        //   phone: data.Users.Phone,
-        //   address: data.Users.Address,
-        //   AboutME: data.Users.AboutME,
-        //   profileImage: profileBase64,
-        //   coverImage: coverBase64,
-        //   role: user.role,
-        //   skills: userSkills,
-        // });
-       
         setUserInfo({
           name: `${user.firstName} ${user.lastName}`,
           email: user.mailid,
@@ -143,11 +130,11 @@ function Profile({ handleDialogClose, processImageSave }) {
           coverImage: coverBase64,
           role: user.role,
           skills: userSkills,
-          resume:data.Users.Resume_Link,
+          resume: data.Users.Resume_Link,
         });
-       if(data.Users.Resume_Link) {
-        console.log("helllo hello hi")
-        setShowviewBtn(true);
+        if (data.Users.Resume_Link) {
+          console.log("helllo hello hi");
+          setShowviewBtn(true);
         }
       } catch (error) {
         console.error("Error fetching user details:", error);
@@ -202,45 +189,9 @@ function Profile({ handleDialogClose, processImageSave }) {
     }));
   };
 
-  const handleCvUpload = (e) => {
-    const file = e.target.files[0];
-    console.log(file);
-    setCvFile(file);
-  };
-
-  const handleOpenCvModal = () => {
-    setIsCvModalOpen(true);
-  };
-
   const handleCloseCvModal = () => {
     setIsCvModalOpen(false);
     setCvFile(null);
-  };
-
-  const handleImageChange = (e, type) => {
-    const file = e.target.files[0];
-    if (type === "profile") {
-      setProfileImage(file);
-    }
-    if (type === "cover") {
-      setCoverImage(file);
-    }
-  };
-
-  const imageCloudUpload = async (image) => {
-    const formData = new FormData();
-    formData.append("file", image);
-    formData.append("upload_preset", "time_management_fristine");
-    formData.append("cloud_name", "drxocmkpu");
-    const response = await fetch(
-      "https://api.cloudinary.com/v1_1/drxocmkpu/image/upload",
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-    const imageURL = await response.json();
-    return imageURL.url;
   };
 
   const handleAlert = (severity, message) => {
@@ -291,17 +242,22 @@ function Profile({ handleDialogClose, processImageSave }) {
         throw new Error("Profile update failed.");
       }
 
+      console.log("Updated profile", updatedProfile);
+
       // Update local state
       setUserInfo((prev) => ({
         ...prev,
-        ...updatedProfile,
-        skills, // Keep as array for UI consistency
+        ...{
+          address: updatedProfile.Address,
+          phone: updatedProfile.Phone,
+          AboutME: updatedProfile.AboutME,
+        },
+        skills,
       }));
 
-      handleAlert("success", "Profile updated successfully!");
+      handleAlert("success", "Profile Data Updated Successfully!");
       setIsEditingProfileData(false);
-      setProfileImage(null);
-      setCoverImage(null);
+
       // window.location.reload();
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -322,10 +278,6 @@ function Profile({ handleDialogClose, processImageSave }) {
         formData.append("resume", cvFile, cvFile.name);
       }
 
-      // console.log("FormData Entries:");
-      // for (const [key, value] of formData.entries()) {
-      //   console.log(`${key}:`, value);
-      // }
       const response = await fetch(
         `/server/time_entry_management_application_function/resume/${currUser.userid}`,
         {
@@ -340,7 +292,6 @@ function Profile({ handleDialogClose, processImageSave }) {
       if (response.ok === true) {
         setShowviewBtn(true);
         handleAlert("success", "Resume Uploaded successfully!");
-     
       } else {
         handleAlert("error", "Resume Upload Failed.");
       }
@@ -564,15 +515,14 @@ function Profile({ handleDialogClose, processImageSave }) {
   const uniqueHandleSubmitFunc = async () => {
     console.log(profileImage, coverImage);
     if (!profileImage && !coverImage) return;
-
     setUniqueIsLoadingState(true);
     setLoading(true);
+
     const user = JSON.parse(localStorage.getItem("currUser"));
     if (!user || !user.userid) {
       handleAlert("error", "User not found. Please log in again.");
       return;
     }
-
     const formData = new FormData();
 
     let profileUpdateSuccess = true;
@@ -596,9 +546,11 @@ function Profile({ handleDialogClose, processImageSave }) {
               if (response.status === 200) {
                 setUserInfo((prev) => ({
                   ...prev,
-                  profileImage: response.data.profileLink,
+                  profileImage: response.data.profileURL,
                 }));
-                localStorage.setItem("profileData", response.data.profileLink);
+                setUserProfile(response.data.profileURL);
+                setProfileImage(response.data.profileURL);
+                localStorage.setItem("profileData", response.data.profileURL);
               } else {
                 profileUpdateSuccess = false;
               }
@@ -621,11 +573,12 @@ function Profile({ handleDialogClose, processImageSave }) {
             )
             .then(async (response) => {
               if (response.status === 200) {
+                console.log("response from cover photo", response.data);
                 setUserInfo((prev) => ({
                   ...prev,
-                  coverImage: response.data.coverLink,
+                  coverImage: response.data.coverURL,
                 }));
-                localStorage.setItem("coverData", response.data.coverLink);
+                localStorage.setItem("coverData", response.data.coverURL);
               } else {
                 coverUpdateSuccess = false;
               }
@@ -634,51 +587,29 @@ function Profile({ handleDialogClose, processImageSave }) {
               coverUpdateSuccess = false;
             })
         );
-
-        // uploadPromises.push(
-        //   imageCloudUpload(coverImage)
-        //     .then(async (coverURL) => {
-        //       const response = await axios.post(
-        //         `/server/time_entry_management_application_function/usercover/${user.userid}`,
-        //         { coverLink: coverURL }
-        //       );
-        //       if (response.status === 200) {
-        //         setUserInfo((prev) => ({ ...prev, coverImage: coverURL }));
-        //         localStorage.setItem("coverData", coverURL);
-        //       } else {
-        //         coverUpdateSuccess = false;
-        //       }
-        //     })
-        //     .catch(() => {
-        //       coverUpdateSuccess = false;
-        //     })
-        // );
       }
 
       const response = await Promise.all(uploadPromises);
       console.log("response", response);
 
       uniqueHandleCancelFunc();
-      // Provide feedback to user
+
       if (!profileUpdateSuccess && !coverUpdateSuccess) {
         handleAlert("error", "Failed to update profile and cover images.");
         return;
       } else {
-        handleAlert(
-          "success",
-          "Updating profile and cover images successful. Reloading the page..."
-        );
+        handleAlert("success", "Updating profile and cover images successful.");
       }
 
       setTimeout(() => {
-        window.location.reload();
+        // window.location.reload();
       }, 500);
     } catch (err) {
       console.error("Image update error:", err);
       handleAlert("error", "An error occurred while updating images.");
     } finally {
-      // setLoading(false);
-      // setUniqueIsLoadingState(false);
+      setLoading(false);
+      setUniqueIsLoadingState(false);
     }
   };
 
@@ -699,7 +630,7 @@ function Profile({ handleDialogClose, processImageSave }) {
         sx={{
           position: "relative",
           height: 250, // Increased height
-          backgroundImage: `url(${coverImage ? URL.createObjectURL(coverImage) : userInfo.coverImage})`,
+          backgroundImage: `url(${userInfo.coverImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           borderRadius: "16px",
@@ -897,7 +828,6 @@ function Profile({ handleDialogClose, processImageSave }) {
                   color: "text.secondary",
                 }}
               >
-               
                 {userInfo?.AboutME || "Not provided"}
               </Typography>
             </CardContent>
@@ -1191,37 +1121,35 @@ function Profile({ handleDialogClose, processImageSave }) {
                 },
               }}
             >
-             {showviewBtn? "Update CV" : "Upload CV" }
+              {showviewBtn ? "Update CV" : "Upload CV"}
             </Button>
 
-           { showviewBtn &&  (
-            <Button
-            fullWidth
-            variant="outlined"
-            onClick={handleDisplayCV}
-            startIcon={<CloudDownloadIcon />}
-            sx={{
-              borderRadius: "12px",
-              py: 1.5,
-              borderColor: "primary.main",
-              borderWidth: "2px",
-              color: "primary.main",
-              fontWeight: 600,
-              textTransform: "none",
-              fontSize: "0.95rem",
-              transition: "all 0.3s ease",
-              "&:hover": {
-                borderColor: "primary.dark",
-                backgroundColor: alpha(theme.palette.primary.main, 0.04),
-                transform: "translateY(-3px)",
-              },
-            }}
-          >
-            View CV
-          </Button>
-
-           )
-           } 
+            {showviewBtn && (
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={handleDisplayCV}
+                startIcon={<CloudDownloadIcon />}
+                sx={{
+                  borderRadius: "12px",
+                  py: 1.5,
+                  borderColor: "primary.main",
+                  borderWidth: "2px",
+                  color: "primary.main",
+                  fontWeight: 600,
+                  textTransform: "none",
+                  fontSize: "0.95rem",
+                  transition: "all 0.3s ease",
+                  "&:hover": {
+                    borderColor: "primary.dark",
+                    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                    transform: "translateY(-3px)",
+                  },
+                }}
+              >
+                View CV
+              </Button>
+            )}
           </Box>
         </Grid>
       </Grid>

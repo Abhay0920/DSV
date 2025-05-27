@@ -22,7 +22,8 @@ import {
   Modal,
   TableFooter,
   TablePagination,
-
+  Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import { IoTimeSharp } from "react-icons/io5";
 import Avatar from "@mui/material/Avatar";
@@ -57,6 +58,17 @@ export const TimeEntry = ({
   const [currUser, setCurrUser] = useState({});
   const [openModal, setOpenModal] = useState(false);
   const [selectedNote, setSelectedNote] = useState("");
+  const [loading, setloading] = useState(false);
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date.toISOString().split("T")[0]; // format: YYYY-MM-DD
+  });
+
+  const [endDate, setEndDate] = useState(() => {
+    const date = new Date();
+    return date.toISOString().split("T")[0];
+  });
 
   const handleOpenModal = (note) => {
     setSelectedNote(note);
@@ -81,10 +93,10 @@ export const TimeEntry = ({
   const dispatch = useDispatch();
 
   const { data } = useSelector((state) => state.timeEntryReducer);
-  console.log("datatatatatime",data);
+  console.log("datatatatatime", data);
   const { data: employeeData } = useSelector((state) => state.employeeReducer);
-  
-  console.log("TIme Entry is :",timeEntry);
+
+  console.log("TIme Entry is :", timeEntry);
   // useEffect(()=>{
   //   dispatch(fetchTimeEntry(viewTask.ROWID));
   // },[dispatch]);
@@ -97,11 +109,17 @@ export const TimeEntry = ({
         const user = await JSON.parse(localStorage.getItem("currUser"));
         setCurrUser(user);
         if (!Array.isArray(employeeData) || employeeData.length === 0) {
-                        await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
-                      }
+          await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
+        }
         setIsLoading(true);
         const TimeEntryResponse = await axios.get(
-          `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`
+          `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`,
+          {
+            params: {
+              startDate: startDate, // Selected start date
+              endDate: endDate, // Selected end date
+            },
+          }
         );
 
         setTimeEntry(TimeEntryResponse.data.data);
@@ -116,9 +134,11 @@ export const TimeEntry = ({
               // const response = await axios.get(
               //   `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
               // );
-              const userID=item.Time_Entries.User_ID;
-              const user=employeeData.filter(employee => employee.user_id===userID);
-              const profileLink=user[0].profile_pic;
+              const userID = item.Time_Entries.User_ID;
+              const user = employeeData.filter(
+                (employee) => employee.user_id === userID
+              );
+              const profileLink = user[0].profile_pic;
               if (profileLink != null) {
                 userProfile[item.Time_Entries.User_ID] = profileLink;
               } else {
@@ -129,7 +149,6 @@ export const TimeEntry = ({
           }
         }
         setuserImage(userProfile);
-        
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -170,17 +189,16 @@ export const TimeEntry = ({
     return `${hrs} hr ${mins} min`;
   }
 
-  
-  // const allTimeEntries = TimeEntriesArray.flatMap(item => 
+  // const allTimeEntries = TimeEntriesArray.flatMap(item =>
   //   item.details.map(detail => detail.Time_Entries)
   // );
-  
+
   // Pagination
   // const paginatedTimeEntries = allTimeEntries.slice(
   //   page * rowsPerPage,
   //   page * rowsPerPage + rowsPerPage
   // );
-  
+
   const handleTimesheetInputChange = (event) => {
     const { name, value } = event.target;
     setNewTimesheetEntry((prev) => ({ ...prev, [name]: value }));
@@ -395,6 +413,56 @@ export const TimeEntry = ({
     }
   };
 
+  const handleFetchData = async () => {
+    try {
+      console.log("Fetching data from", startDate, "to", endDate);
+      setloading(true);
+
+      // Fetch data from your API using the selected dates
+      const response = await axios.get(
+        `/server/time_entry_management_application_function/timeentry/${viewTask.ROWID}`,
+        {
+          params: {
+            startDate: startDate, // Selected start date
+            endDate: endDate, // Selected end date
+          },
+        }
+      );
+
+      // Process the response data as needed
+      setTimeEntry(response.data.data);
+      setloading(false);
+
+      const userProfile = {};
+
+      // Use for...of loop to properly await async actions
+      for (const timeEntry of response.data.data) {
+        for (const item of timeEntry.details) {
+          if (!userProfile.hasOwnProperty(item.Time_Entries.User_ID)) {
+            // const response = await axios.get(
+            //   `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
+            // );
+            const userID = item.Time_Entries.User_ID;
+            const user = employeeData.filter(
+              (employee) => employee.user_id === userID
+            );
+            const profileLink = user[0].profile_pic;
+            if (profileLink != null) {
+              userProfile[item.Time_Entries.User_ID] = profileLink;
+            } else {
+              userProfile[item.Time_Entries.User_ID] =
+                "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
+            }
+          }
+        }
+      }
+      setuserImage(userProfile);
+      console.log("Fetched Data:", response.data.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
   return (
     <div>
       {/* View Task Modal */}
@@ -449,194 +517,244 @@ export const TimeEntry = ({
             </CardContent>
           </Card>
 
+          {/* Filter Section */}
+          <Card sx={{ mb: 2, mx: 2 }}>
+            <CardContent
+              sx={{
+                display: "flex",
+                //  justifyContent: "flex-end",
+                alignItems: "center",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <TextField
+                label="Start Date"
+                type="date"
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              -
+              <TextField
+                label="End Date"
+                type="date"
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleFetchData}
+                disabled={loading}
+              >
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Submit"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Scrollable Content Section */}
           <Box sx={{ overflowY: "auto", height: "calc(100vh - 140px)" }}>
-      {viewTask && (
-        <Box sx={{ mb: 4, ml: 2, mr: 2 }}>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: theme.palette.primary.main }}>
-                  <TableCell
-                    sx={{
-                      color: theme.palette.primary.contrastText,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    User
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      color: theme.palette.primary.contrastText,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Date
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      color: theme.palette.primary.contrastText,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Start Time
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      color: theme.palette.primary.contrastText,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    End Time
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      color: theme.palette.primary.contrastText,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Total Time
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      color: theme.palette.primary.contrastText,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Note
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      color: theme.palette.primary.contrastText,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Action
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-
-              {isLoading ? (
-                <TableBody>
-                  <TableRow>
-                    <TableCell colSpan={7} sx={{ height: "300px" }}>
-                      <Box sx={{ width: "100%" }}>
-                        <Skeleton />
-                        <Skeleton animation="wave" />
-                        <Skeleton animation={false} />
-                        <Skeleton />
-                        <Skeleton animation="wave" />
-                        <Skeleton animation={false} />
-                        <Skeleton />
-                        <Skeleton animation="wave" />
-                        <Skeleton animation={false} />
-                        <Skeleton />
-                        <Skeleton animation="wave" />
-                        <Skeleton animation={false} />
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              ) : timeEntry.length === 0 ? (
-                <TableBody>
-                  <TableRow>
-                    <TableCell colSpan={7}>
-                      <Box
-                        sx={{
-                          p: 3,
-                          textAlign: "center",
-                          minHeight: "200px",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          gap: 2,
-                        }}
+            {viewTask && (
+              <Box sx={{ mb: 4, ml: 2, mr: 2 }}>
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow
+                        sx={{ backgroundColor: theme.palette.primary.main }}
                       >
-                        <IoTimeSharp
-                          size={50}
-                          color={theme.palette.text.secondary}
-                        />
-                        <Typography variant="h5" color="text.secondary">
-                          No Time Entries Found
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                          There are no time entry to display.
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              ) : (
-                <TableBody>
-                  {timeEntry.map((item) => (
-                    <React.Fragment key={item.entryDate}>
-                      <TableRow>
-                        <TableCell colSpan={7}>
-                          <Accordion>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                              <Button
-                                variant="outlined"
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                }}
+                        <TableCell
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          User
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          Date
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          Start Time
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          End Time
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          Total Time
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          Note
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          Action
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+
+                    {isLoading ? (
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={7} sx={{ height: "300px" }}>
+                            <Box sx={{ width: "100%" }}>
+                              <Skeleton />
+                              <Skeleton animation="wave" />
+                              <Skeleton animation={false} />
+                              <Skeleton />
+                              <Skeleton animation="wave" />
+                              <Skeleton animation={false} />
+                              <Skeleton />
+                              <Skeleton animation="wave" />
+                              <Skeleton animation={false} />
+                              <Skeleton />
+                              <Skeleton animation="wave" />
+                              <Skeleton animation={false} />
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    ) : timeEntry.length === 0 ? (
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={7}>
+                            <Box
+                              sx={{
+                                p: 3,
+                                textAlign: "center",
+                                minHeight: "200px",
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                gap: 2,
+                              }}
+                            >
+                              <IoTimeSharp
+                                size={50}
+                                color={theme.palette.text.secondary}
+                              />
+                              <Typography variant="h5" color="text.secondary">
+                                No Time Entries Found
+                              </Typography>
+                              <Typography
+                                variant="body1"
+                                color="text.secondary"
                               >
-                                <MdDateRange />
-                                {item.entryDate}
-                              </Button>
-                              <Button
-                                variant="outlined"
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                  ml: 2,
-                                }}
-                              >
-                                <FaClock />
-                                {formatTime(item.totalTime)}
-                              </Button>
-                            </AccordionSummary>
-                            <AccordionDetails>
-                              <Table size="small">
-                                <TableBody>
-                                  {item.details?.map((entry, index) => (
-                                    <TableRow key={index}>
-                                      <TableCell
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: "18px",
-                                        }}
-                                      >
-                                        <Avatar
-                                          src={
-                                            userImage[
-                                              entry.Time_Entries.User_ID
-                                            ]
-                                          }
-                                        />
-                                        <span>
-                                          {entry.Time_Entries.Username}
-                                        </span>
-                                      </TableCell>
-                                      <TableCell>
-                                        {entry.Time_Entries.Entry_Date}
-                                      </TableCell>
-                                      <TableCell>
-                                        {entry.Time_Entries.Start_time}
-                                      </TableCell>
-                                      <TableCell>
-                                        {entry.Time_Entries.End_time}
-                                      </TableCell>
-                                      <TableCell>
-                                        {formatTime(
-                                          entry.Time_Entries.Total_time
-                                        )}
-                                      </TableCell>
-                                      <TableCell>
+                                There are no time entry to display.
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    ) : (
+                      <TableBody>
+                        {timeEntry.map((item) => (
+                          <React.Fragment key={item.entryDate}>
+                            <TableRow>
+                              <TableCell colSpan={7}>
+                                <Accordion>
+                                  <AccordionSummary
+                                    expandIcon={<ExpandMoreIcon />}
+                                  >
+                                    <Button
+                                      variant="outlined"
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                      }}
+                                    >
+                                      <MdDateRange />
+                                      {item.entryDate}
+                                    </Button>
+                                    <Button
+                                      variant="outlined"
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                        ml: 2,
+                                      }}
+                                    >
+                                      <FaClock />
+                                      {formatTime(item.totalTime)}
+                                    </Button>
+                                  </AccordionSummary>
+                                  <AccordionDetails>
+                                    <Table size="small">
+                                      <TableBody>
+                                        {item.details?.map((entry, index) => (
+                                          <TableRow key={index}>
+                                            <TableCell
+                                              style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "18px",
+                                              }}
+                                            >
+                                              <Avatar
+                                                src={
+                                                  userImage[
+                                                    entry.Time_Entries.User_ID
+                                                  ]
+                                                }
+                                              />
+                                              <span>
+                                                {entry.Time_Entries.Username}
+                                              </span>
+                                            </TableCell>
+                                            <TableCell>
+                                              {entry.Time_Entries.Entry_Date}
+                                            </TableCell>
+                                            <TableCell>
+                                              {entry.Time_Entries.Start_time}
+                                            </TableCell>
+                                            <TableCell>
+                                              {entry.Time_Entries.End_time}
+                                            </TableCell>
+                                            <TableCell>
+                                              {formatTime(
+                                                entry.Time_Entries.Total_time
+                                              )}
+                                            </TableCell>
+                                            {/* <TableCell>
                                         <IconButton
                                           color="primary"
                                           onClick={() =>
@@ -647,39 +765,78 @@ export const TimeEntry = ({
                                         >
                                           <DescriptionIcon />
                                         </IconButton>
-                                      </TableCell>
-                                      <TableCell>
-                                        <IconButton
-                                          color="primary"
-                                          onClick={() => handleEdit(entry)}
-                                        >
-                                          <EditIcon />
-                                        </IconButton>
-                                        <IconButton
-                                          color="error"
-                                          onClick={() =>
-                                            handleDeleteTimeEntry(
-                                              entry.Time_Entries.ROWID
-                                            )
-                                          }
-                                        >
-                                          <DeleteIcon />
-                                        </IconButton>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </AccordionDetails>
-                          </Accordion>
-                        </TableCell>
-                      </TableRow>
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-              )}
+                                      </TableCell> */}
+                                            <TableCell>
+                                              <Tooltip
+                                                title={
+                                                  <Typography
+                                                    sx={{
+                                                      fontSize: "1rem",
+                                                      fontWeight: 500,
+                                                    }}
+                                                  >
+                                                    {entry.Time_Entries.Note}
+                                                  </Typography>
+                                                }
+                                                placement="top"
+                                                arrow
+                                                slotProps={{
+                                                  tooltip: {
+                                                    sx: {
+                                                      borderRadius: "10px",
+                                                      boxShadow:
+                                                        "0px 4px 12px rgba(0, 0, 0, 0.1)",
+                                                      p: 1.5,
+                                                      maxWidth: 300,
+                                                      // border: "1px solid #ddd",
+                                                    },
+                                                  },
+                                                  arrow: {
+                                                    sx: {
+                                                      color: "#fefefe",
+                                                    },
+                                                  },
+                                                }}
+                                              >
+                                                <IconButton color="primary">
+                                                  <DescriptionIcon />
+                                                </IconButton>
+                                              </Tooltip>
+                                            </TableCell>
+                                            <TableCell>
+                                              <IconButton
+                                                color="primary"
+                                                onClick={() =>
+                                                  handleEdit(entry)
+                                                }
+                                              >
+                                                <EditIcon />
+                                              </IconButton>
+                                              <IconButton
+                                                color="error"
+                                                onClick={() =>
+                                                  handleDeleteTimeEntry(
+                                                    entry.Time_Entries.ROWID
+                                                  )
+                                                }
+                                              >
+                                                <DeleteIcon />
+                                              </IconButton>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </AccordionDetails>
+                                </Accordion>
+                              </TableCell>
+                            </TableRow>
+                          </React.Fragment>
+                        ))}
+                      </TableBody>
+                    )}
 
-{/* <TableFooter>
+                    {/* <TableFooter>
                 <TableRow>
                   <TablePagination
                     rowsPerPageOptions={[5, 10, 20]}
@@ -691,15 +848,12 @@ export const TimeEntry = ({
                   />
                 </TableRow>
               </TableFooter> */}
-            </Table>
-          </TableContainer>
+                  </Table>
+                </TableContainer>
+              </Box>
+            )}
+          </Box>
         </Box>
-      )}
-    </Box>
-    
-        </Box>
-
-        
       </Modal>
       {/* edit time entry model */}
       <Modal open={editModalOpen} onClose={handleEditCancel}>
@@ -801,60 +955,62 @@ export const TimeEntry = ({
         </Box>
       </Modal>
 
-      <Dialog 
-  open={openModal} 
-  onClose={handleCloseModal} 
-  maxWidth="sm" 
-  fullWidth
-  PaperProps={{
-    style: { 
-      borderRadius: "16px", 
-      padding: "20px",
-      backgroundColor: "#f5f5f5",
-    },
-  }}
->
-  <DialogTitle 
-    sx={{ 
-      textAlign: "center", 
-      fontWeight: "bold", 
-      fontSize: "1.5rem", 
-      color: "#3f51b5" 
-    }}
-  >
-    📝 Note
-  </DialogTitle>
+      <Dialog
+        open={openModal}
+        onClose={handleCloseModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          style: {
+            borderRadius: "16px",
+            padding: "20px",
+            backgroundColor: "#f5f5f5",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            textAlign: "center",
+            fontWeight: "bold",
+            fontSize: "1.5rem",
+            color: "#3f51b5",
+          }}
+        >
+          📝 Note
+        </DialogTitle>
 
-  <DialogContent 
-    dividers 
-    sx={{ 
-      textAlign: "center", 
-      margin: "20px 0", 
-      backgroundColor: "#ffffff",
-      borderRadius: "8px",
-    }}
-  >
-    <Typography variant="body1" sx={{ color: "#333", fontSize: "1.1rem" }}>
-      {selectedNote}
-    </Typography>
-  </DialogContent>
+        <DialogContent
+          dividers
+          sx={{
+            textAlign: "center",
+            margin: "20px 0",
+            backgroundColor: "#ffffff",
+            borderRadius: "8px",
+          }}
+        >
+          <Typography
+            variant="body1"
+            sx={{ color: "#333", fontSize: "1.1rem" }}
+          >
+            {selectedNote}
+          </Typography>
+        </DialogContent>
 
-  <DialogActions sx={{ justifyContent: "center" }}>
-    <Button 
-      onClick={handleCloseModal} 
-      variant="contained" 
-      color="primary" 
-      sx={{ 
-        textTransform: "none", 
-        borderRadius: "8px", 
-        fontWeight: "bold",
-      }}
-    >
-      Close
-    </Button>
-  </DialogActions>
-</Dialog>
-
+        <DialogActions sx={{ justifyContent: "center" }}>
+          <Button
+            onClick={handleCloseModal}
+            variant="contained"
+            color="primary"
+            sx={{
+              textTransform: "none",
+              borderRadius: "8px",
+              fontWeight: "bold",
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

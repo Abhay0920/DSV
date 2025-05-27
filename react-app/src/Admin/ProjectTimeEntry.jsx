@@ -20,13 +20,15 @@ import {
   Paper,
   IconButton,
   Modal,
+  Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import { IoTimeSharp } from "react-icons/io5";
 import Avatar from "@mui/material/Avatar";
 import Skeleton from "@mui/material/Skeleton";
 import { FaClock } from "react-icons/fa6";
 import { MdDateRange } from "react-icons/md";
-import { useDispatch,useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import DescriptionIcon from "@mui/icons-material/Description";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -56,10 +58,20 @@ export const ProjectTimeEntry = ({
     endTime: "",
     note: "",
   });
+
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date.toISOString().split("T")[0]; // format: YYYY-MM-DD
+  });
+
+  const [endDate, setEndDate] = useState(() => {
+    const date = new Date();
+    return date.toISOString().split("T")[0];
+  });
   const [editModalOpen, setEditModalOpen] = useState(false);
-    const dispatch = useDispatch();
-      const { data: employeeData } = useSelector((state) => state.employeeReducer);
-  
+  const dispatch = useDispatch();
+  const { data: employeeData } = useSelector((state) => state.employeeReducer);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,9 +80,9 @@ export const ProjectTimeEntry = ({
 
         const user = await JSON.parse(localStorage.getItem("currUser"));
         setCurrUser(user);
-         if (!Array.isArray(employeeData) || employeeData.length === 0) {
-                await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
-              }
+        if (!Array.isArray(employeeData) || employeeData.length === 0) {
+          await dispatch(fetchEmployees()).unwrap(); // wait until data is fetched
+        }
         // Fetch time entry data
         setIsLoading(true);
         const TimeEntryResponse = await axios.get(
@@ -82,31 +94,29 @@ export const ProjectTimeEntry = ({
         setTimeEntry(TimeEntryResponse.data.data);
         setIsLoading(false);
 
-
         const userProfile = {};
         // Use for...of loop to properly await async actions
         for (const timeEntry of TimeEntryResponse.data.data) {
-          console.log("time entries ",timeEntry);
+          console.log("time entries ", timeEntry);
           for (const item of timeEntry.details) {
             if (!userProfile.hasOwnProperty(item.Time_Entries.User_ID)) {
               // const response = await axios.get(
               //   `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
               // );
 
-              const userID=item.Time_Entries.User_ID;
+              const userID = item.Time_Entries.User_ID;
 
-              
-
-              const user=employeeData.filter(employee => employee.user_id===userID);
-              console.log("keadr",user);
-              console.log("user kedar",user[0].profile_pic);
-              const profileLink=user[0].profile_pic;
-             
+              const user = employeeData.filter(
+                (employee) => employee.user_id === userID
+              );
+              console.log("keadr", user);
+              console.log("user kedar", user[0].profile_pic);
+              const profileLink = user[0].profile_pic;
 
               // console.log("profile response", response.data.data);
 
-              if (profileLink!= null) {
-                userProfile[item.Time_Entries.User_ID] = profileLink
+              if (profileLink != null) {
+                userProfile[item.Time_Entries.User_ID] = profileLink;
               } else {
                 userProfile[item.Time_Entries.User_ID] =
                   "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
@@ -116,7 +126,6 @@ export const ProjectTimeEntry = ({
         }
 
         setuserImage(userProfile);
-        
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -379,9 +388,60 @@ export const ProjectTimeEntry = ({
     }
   };
 
-  // const handleAction = () =>{
-  //   setview(true);
-  // }
+  const handleFetchData = async () => {
+    try {
+      console.log("Fetching data from", startDate, "to", endDate);
+      setIsLoading(true);
+
+      // Fetch data from your API using the selected dates
+      const response = await axios.get(
+        `/server/time_entry_management_application_function/time_entry/project/${viewproject.ROWID}`,
+        {
+          params: {
+            startDate: startDate, // Selected start date
+            endDate: endDate, // Selected end date
+          },
+        }
+      );
+
+      // Process the response data as needed
+      setTimeEntry(response.data.data);
+      setIsLoading(false);
+      // Use for...of loop to properly await async actions
+      const userProfile = {};
+      // Use for...of loop to properly await async actions
+      for (const timeEntry of response.data.data) {
+        console.log("time entries ", timeEntry);
+        for (const item of timeEntry.details) {
+          if (!userProfile.hasOwnProperty(item.Time_Entries.User_ID)) {
+            // const response = await axios.get(
+            //   `/server/time_entry_management_application_function/userprofile/${item.Time_Entries.User_ID}`
+            // );
+
+            const userID = item.Time_Entries.User_ID;
+
+            const user = employeeData.filter(
+              (employee) => employee.user_id === userID
+            );
+            console.log("keadr", user);
+            console.log("user kedar", user[0].profile_pic);
+            const profileLink = user[0].profile_pic;
+
+            // console.log("profile response", response.data.data);
+
+            if (profileLink != null) {
+              userProfile[item.Time_Entries.User_ID] = profileLink;
+            } else {
+              userProfile[item.Time_Entries.User_ID] =
+                "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541";
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
 
   return (
     <div>
@@ -428,8 +488,49 @@ export const ProjectTimeEntry = ({
             </CardContent>
           </Card>
 
+          <Card sx={{ mb: 2, mx: 2 }}>
+            <CardContent
+              sx={{
+                display: "flex",
+                //  justifyContent: "flex-end",
+                alignItems: "center",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <TextField
+                label="Start Date"
+                type="date"
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              -
+              <TextField
+                label="End Date"
+                type="date"
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleFetchData}
+              >
+                {isLoading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Submit"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Scrollable Content Section */}
-          <Box sx={{ overflowY: "auto", height: "calc(100vh - 140px)" }}>
+          <Box sx={{ overflowY: "auto", height: "calc(100vh - 200px)" }}>
             {" "}
             {/* Adjusted height to accommodate the header */}
             {viewproject && (
@@ -560,7 +661,7 @@ export const ProjectTimeEntry = ({
                                     {item.Task_Name}
                                   </Button>
                                 </TableCell>
-                                <TableCell ></TableCell>
+                                <TableCell></TableCell>
                                 <TableCell></TableCell>
                                 <TableCell></TableCell>
                                 <TableCell></TableCell>{" "}
@@ -569,7 +670,7 @@ export const ProjectTimeEntry = ({
                               </TableRow>
 
                               {/* Render project details if 'viewproject' is true */}
-                              {  viewproject &&
+                              {viewproject &&
                                 item.details?.map((entry, index) => (
                                   <TableRow key={index}>
                                     <TableCell
@@ -600,7 +701,7 @@ export const ProjectTimeEntry = ({
                                         entry.Time_Entries.Total_time
                                       )}
                                     </TableCell>
-                                    <TableCell>
+                                    {/* <TableCell>
                                       <IconButton
                                         color="primary"
                                         onClick={() =>
@@ -611,6 +712,43 @@ export const ProjectTimeEntry = ({
                                       >
                                         <DescriptionIcon />
                                       </IconButton>
+                                    </TableCell> */}
+                                    <TableCell>
+                                      <Tooltip
+                                        title={
+                                          <Typography
+                                            sx={{
+                                              fontSize: "1rem",
+                                              fontWeight: 500,
+                                            }}
+                                          >
+                                            {entry.Time_Entries.Note}
+                                          </Typography>
+                                        }
+                                        placement="left"
+                                        arrow
+                                        slotProps={{
+                                          tooltip: {
+                                            sx: {
+                                              borderRadius: "10px",
+                                              boxShadow:
+                                                "0px 4px 12px rgba(0, 0, 0, 0.1)",
+                                              p: 1.5,
+                                              maxWidth: 300,
+                                              // border: "1px solid #ddd",
+                                            },
+                                          },
+                                          arrow: {
+                                            sx: {
+                                              color: "#fefefe",
+                                            },
+                                          },
+                                        }}
+                                      >
+                                        <IconButton color="primary">
+                                          <DescriptionIcon />
+                                        </IconButton>
+                                      </Tooltip>
                                     </TableCell>
                                   </TableRow>
                                 ))}
@@ -724,59 +862,60 @@ export const ProjectTimeEntry = ({
         </Box>
       </Modal>
 
-      <Dialog 
-  open={openModal} 
-  onClose={handleCloseModal} 
-  maxWidth="sm" 
-  fullWidth
-  PaperProps={{
-    style: { 
-      borderRadius: "16px", 
-      padding: "20px",
-      backgroundColor: "#f5f5f5",
-    },
-  }}
->
-  <DialogTitle 
-    sx={{ 
-      textAlign: "center", 
-      fontWeight: "bold", 
-      fontSize: "1.5rem", 
-      color: "#3f51b5" 
-    }}
-  >
-    📝 Note
-  </DialogTitle>
-  <DialogContent 
-    dividers 
-    sx={{ 
-      textAlign: "center", 
-      margin: "20px 0", 
-      backgroundColor: "#ffffff",
-      borderRadius: "8px",
-    }}
-  >
-    <Typography variant="body1" sx={{ color: "#333", fontSize: "1.1rem" }}>
-      {selectedNote}
-    </Typography>
-  </DialogContent>
-  <DialogActions sx={{ justifyContent: "center" }}>
-    <Button 
-      onClick={handleCloseModal} 
-      variant="contained" 
-      color="primary" 
-      sx={{ 
-        textTransform: "none", 
-        borderRadius: "8px", 
-        fontWeight: "bold",
-      }}
-    >
-      Close
-    </Button>
-  </DialogActions>
-</Dialog>
-
-
+      <Dialog
+        open={openModal}
+        onClose={handleCloseModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          style: {
+            borderRadius: "16px",
+            padding: "20px",
+            backgroundColor: "#f5f5f5",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            textAlign: "center",
+            fontWeight: "bold",
+            fontSize: "1.5rem",
+            color: "#3f51b5",
+          }}
+        >
+          📝 Note
+        </DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            textAlign: "center",
+            margin: "20px 0",
+            backgroundColor: "#ffffff",
+            borderRadius: "8px",
+          }}
+        >
+          <Typography
+            variant="body1"
+            sx={{ color: "#333", fontSize: "1.1rem" }}
+          >
+            {selectedNote}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center" }}>
+          <Button
+            onClick={handleCloseModal}
+            variant="contained"
+            color="primary"
+            sx={{
+              textTransform: "none",
+              borderRadius: "8px",
+              fontWeight: "bold",
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

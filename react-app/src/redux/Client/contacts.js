@@ -51,7 +51,7 @@ export const fetchClientContact = createAsyncThunk(
           console.log("New Data to Add:", action.payload);
          
           // Directly mutate the state.data array without checking type (Immer will handle this)
-          state.data.push(action.payload);
+          state.data.unshift(action.payload);
     
           console.log("addClientData Reducer - After Update:", state.data);
         },
@@ -64,6 +64,12 @@ export const fetchClientContact = createAsyncThunk(
           if (contactIndex !== -1) {
             state.data[contactIndex].status = status;
           }
+        },
+        deleteClienttData: (state, action) => {
+          const rowIdToDelete = action.payload;
+          console.log("Deleting client with ROWID:", rowIdToDelete);
+          state.data = state.data.filter(client => client.ROWID !== rowIdToDelete);
+         
         },
 
        

@@ -109,7 +109,7 @@ function Project() {
 
   const {data :projects,isLoading} = useSelector((state) => state.empProjectReducer);
   //const employeeState = useSelector((state) => state.employeeReducer);
-  console.log("emp project in project section", projects);
+
   const dispatch = useDispatch();
   // Drawer State
   const [newProject, setNewProject] = useState({
@@ -613,6 +613,16 @@ function Project() {
                   <TableBody>
                     {paginatedProjects.map((project) => (
                       <TableRow key={project.Projects.ROWID}
+                      sx={{
+                        cursor: "pointer",
+                        "&:hover": {
+                          backgroundColor:
+                            theme.palette.mode === "light"
+                              ? "#e3f2fd"
+                              : theme.palette.primary.dark,
+                          color: theme.palette.primary.contrastText,
+                        },
+                      }}
                       onClick={(e) => handleDetailDrwaer(e, project.Projects)}
                       >
                         <TableCell>

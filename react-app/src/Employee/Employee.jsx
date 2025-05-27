@@ -654,70 +654,7 @@ useEffect(() => {
             </Box>
           </CardContent>
         </Card>
-      {/* <Paper
-        elevation={0}
-        sx={{
-          mb: 4,
-          p: { xs: 2, sm: 3 },
-          borderRadius: 3,
-          background: `linear-gradient(135deg, ${alpha(
-            theme.palette.primary.main,
-            0.08
-          )} 0%, ${alpha(theme.palette.primary.light, 0.15)} 100%)`,
-          boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          alignItems: { xs: "flex-start", md: "center" },
-          justifyContent: "space-between",
-          gap: 2,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            alignItems: { xs: "flex-start", sm: "center" },
-            width: "100%",
-
-            gap: 2,
-          }}
-        >
-          <Avatar
-            sx={{
-              bgcolor: theme.palette.primary.main,
-              width: 40,
-              height: 40,
-            }}
-          >
-            <PeopleIcon sx={{ color: "#fff" }} />
-          </Avatar>
-
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              mb: { xs: 1, sm: 0 },
-              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-              backgroundClip: "text",
-              WebkitBackgroundClip: "text",
-              color: "transparent",
-              display: "inline-block",
-              fontSize: { xs: "1.5rem", sm: "2rem" },
-            }}
-          >
-            Employees
-          </Typography>
-
-          <TextField
-            label="Search Employees"
-            variant="outlined"
-            size="small"
-            value={searchQuery}
-            onChange={handleSearch}
-            sx={{ width: "40%" }}
-          />
-        </Box>
-      </Paper> */}
+     
 
       {loading ? (
         <Grid container spacing={3}>
@@ -778,10 +715,12 @@ useEffect(() => {
                   flexDirection: "column",
                   transition: "transform 0.2s, box-shadow 0.2s",
                   "&:hover": {
+                    cursor:"pointer",
                     transform: "translateY(-4px)",
                     boxShadow: 4,
                   },
                 }}
+                onClick={() => handleProfileClick(employee)}
               >
                 <CardContent>
                   {/* Employee Header */}

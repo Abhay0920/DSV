@@ -42,7 +42,7 @@ export const fetchTasks = createAsyncThunk(
       addTaskData: (state, action) => {
         // Log the state before and after the update
         // Directly mutate the state.data array without checking type (Immer will handle this)
-        state.data.push(action.payload);
+        state.data.unshift(action.payload);
   
       },
 

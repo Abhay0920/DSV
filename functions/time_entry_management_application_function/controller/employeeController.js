@@ -13,6 +13,7 @@ app.use(fileUpload());
 app.use(express.json()); // To handle text data if sent as JSON
 app.use(express.urlencoded({ extended: true })); // To parse URL-encoded data
 app.use(cors());
+require("dotenv").config();
 
 const catalyst = require("zcatalyst-sdk-node");
 app.use(bodyParser.json());
@@ -24,6 +25,9 @@ app.use((req, res, next) => {
   req.catalystApp = catalyst.initialize(req);
   next();
 });
+
+const env = process.env.CATALYST_USER_ENVIRONMENT;
+console.log("Environment = ", env);
 
 const getAllUsers = async (req, res) => {
   try {
@@ -190,14 +194,58 @@ const addUser = async (req, res) => {
     const signupConfig = {
       platform_type: "web",
       template_details: {
-        senders_mail: "aj637061@gmail.com",
-        subject: "Welcome to %APP_NAME%",
-        message: `<p>Hello ,</p> 
-                  <p>Follow this link to join in %APP_NAME% .</p> 
-                  <p><a href='%LINK%'>%LINK%</a></p> 
-                  <p>If you didn't ask to join the application, you can ignore this email.</p> 
-                  <p>Thanks,</p> 
-                  <p>Your %APP_NAME% team</p>`,
+        senders_mail: "abhay@dsvcorp.com.au",
+        subject: "Welcome to DSV360 Portal",
+        message: `<html>
+  <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; color: #333333;">
+    <div style="max-width: 600px; margin: 40px auto; background: #ffffff; padding: 20px; border-radius: 8px; ">
+
+      <!-- Logo -->
+      <img alt="DSV360 Logo" width="90" height="70" src="https://fristinetech.com/wp-content/uploads/2023/11/Google-Ads-Logo.png" style="max-width: 100px; margin-bottom: 20px;">
+
+      <!-- Heading -->
+      <h2 style="color: #333333; font-size: 24px; margin-bottom: 10px; font-weight: 600;">
+        Hello, %FIRST_NAME% %LAST_NAME%
+      </h2>
+
+      <!-- Subheading -->
+      <h3 style="color: #333333; font-size: 18px; margin-bottom: 20px; font-weight: normal;">
+        You're invited to join the <span style="color: #007BFF; font-weight: bold;">DSV360 Portal</span>
+      </h3>
+
+      <!-- Invitation Message -->
+    
+      <p style="font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+        To get started, please click the button below to access the application.
+      </p>
+
+      <!-- Button -->
+      <a href="%LINK%"
+        style="display: inline-block; padding: 12px 24px; background-color: #007BFF; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 15px; font-weight: bold; margin: 20px 0; transition: background-color 0.3s ease;">
+        Access DSV360
+      </a>
+
+      <!-- Optional Disclaimer -->
+      <p style="font-size: 14px; color: #666666; margin-top: 20px;">
+        If you didn’t request to join or believe this invitation was sent by mistake, you may safely ignore this email.
+      </p>
+
+      <p style="font-size: 14px; color: #666666;">
+        Best regards, <br>
+        The <strong>DSV360</strong> Team
+      </p>
+
+      <!-- Divider -->
+      <hr style="margin-top: 30px; border: none; border-top: 1px solid #dddddd;">
+
+      <!-- Footer -->
+      <p style="font-size: 12px; color: #888888; text-align: left;">
+        © 2025 DSV360. All rights reserved.
+      </p>
+    </div>
+  </body>
+</html>
+`,
       },
     };
 
@@ -205,7 +253,7 @@ const addUser = async (req, res) => {
       first_name: data.first_name,
       last_name: data.last_name,
       email_id: data.email_id,
-      org_id: 10095488403,
+      org_id: env === "Production" ? 50027580589 : 50026358236,
       role_id: data.role_id,
     };
     console.log("userConfig", userConfig);
@@ -365,6 +413,239 @@ const getUnassignedEmployees = async (req, res) => {
   }
 };
 
+
+
+// app.post("/reinviteUser", async (req, res) => {
+//   //console.log("Req body", req.body);
+//   const { first_name, last_name, email_id, user_id, role_id } = req.body;
+
+//   try {
+//     const catalystApp = req.catalystApp;
+//     const userManagement = catalystApp.userManagement();
+
+//     // Step 1: Delete the existing user
+//     try {
+//       await userManagement.deleteUser(user_id);
+//     } catch (error) {
+//       return res.status(500).json({
+//         success: false,
+//         message: "Failed to delete existing user",
+//         error: error.message,
+//       });
+//     }
+
+//     // Step 2: Configure user invitation
+//     const signupConfig = {
+//       platform_type: "web",
+//       template_details: {
+//         senders_mail: "aj637061@gmail.com",
+//         subject: "Welcome to SKYi Customer Portal",
+//         message: `<html>
+//           <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0;">
+//               <div style="max-width: 600px; margin: 40px auto; background: #ffffff; padding: 20px; border-radius: 8px; text-align: left;">
+//                   <img src="https://esd-development.zohostratus.com/skyi-logo.png" alt="Company Logo" style="max-width: 150px; margin-bottom: 20px;">
+                  
+//                   <h2 style="color: #333;">Hi, ${first_name} ${last_name}</h2>
+                  
+//                   <h3 style="color: #333;">You are invited to join <span style="color: #ff6b00;">SKYi Customer Portal</span></h3>
+                  
+//                   <p style="color: #555;">SKYi Customer Portal wants you to join their team. Please follow this link and set up your account to get started.</p>
+                  
+//                   <a href="%LINK%" style="display: inline-block; padding: 12px 24px; background-color: #ff6b00; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold; margin: 20px 0;">Accept Invitation</a>
+                  
+//                   <p style="color: #777; font-size: 14px;">If you didn't request to join this application, you can ignore this email.</p>
+                  
+//                   <p style="color: #777; font-size: 14px;">Thanks,</p>
+//                   <p style="color: #777; font-size: 14px;">Your <strong>SKYi Customer Portal</strong> Team</p>
+                  
+//                   <hr style="border: 0; height: 1px; background: #ddd; margin: 20px 0;">
+                  
+//                   <p style="color: #aaa; font-size: 12px;">© 2025 SKYi Customer Portal. All rights reserved.</p>
+//               </div>
+//           </body>
+//           </html>`,
+//       },
+//     };
+
+//     const userConfig = {
+//       first_name,
+//       last_name,
+//       email_id,
+//       org_id: 50026144375,
+//       role_id: role_id,
+//     };
+
+//     // Step 3: Add user to organization
+//     let addedUser;
+//     try {
+//       addedUser = await userManagement.addUserToOrg(signupConfig, userConfig);
+
+//       if (!addedUser?.user_details?.user_id) {
+//         throw new Error("User added, but user ID not received.");
+//       }
+//     } catch (error) {
+//       return res.status(500).json({
+//         success: false,
+//         message: "Failed to add user to the organization",
+//         error: error.message,
+//       });
+//     }
+
+//     const newUserID = addedUser.user_details.user_id;
+
+//     // Step 4: Update User_ID in the Customers table
+//     try {
+//       const query = `UPDATE Customers SET User_ID = '${newUserID}' WHERE Email = '${email_id}'`;
+//       await catalystApp.zcql().executeZCQLQuery(query);
+//     } catch (error) {
+//       return res.status(500).json({
+//         success: false,
+//         message: "Failed to update User_ID in the database",
+//         error: error.message,
+//       });
+//     }
+
+//     res.status(200).json({
+//       message: "User reinvited successfully",
+//       data: addedUser,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Unexpected error occurred",
+//       error: error.message,
+//     });
+//   }
+// });
+const reInvitedEmployee = async(req,res)=>{
+  const { first_name, last_name, email_id, user_id, role_id } = req.body;
+
+  try {
+    const catalystApp = req.catalystApp;
+    const userManagement = catalystApp.userManagement();
+
+    // Step 1: Delete the existing user
+    try {
+      await userManagement.deleteUser(user_id);
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to delete existing user",
+        error: error.message,
+      });
+    }
+
+    // Step 2: Configure user invitation
+    const signupConfig = {
+      platform_type: "web",
+      template_details: {
+        senders_mail: "abhay@dsvcorp.com.au",
+        subject: "Welcome to DSV Portal",
+        message: `<html>
+  <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; color: #333333;">
+    <div style="max-width: 600px; margin: 40px auto; background: #ffffff; padding: 20px; border-radius: 8px; ">
+
+      <!-- Logo -->
+      <img alt="DSV360 Logo" width="90" height="70" src="https://fristinetech.com/wp-content/uploads/2023/11/Google-Ads-Logo.png" style="max-width: 100px; margin-bottom: 20px;">
+
+      <!-- Heading -->
+      <h2 style="color: #333333; font-size: 24px; margin-bottom: 10px; font-weight: 600;">
+        Hello, %FIRST_NAME% %LAST_NAME%
+      </h2>
+
+      <!-- Subheading -->
+      <h3 style="color: #333333; font-size: 18px; margin-bottom: 20px; font-weight: normal;">
+        You're invited to join the <span style="color: #007BFF; font-weight: bold;">DSV360 Portal</span>
+      </h3>
+
+      <!-- Invitation Message -->
+    
+      <p style="font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+        To get started, please click the button below to access the application.
+      </p>
+
+      <!-- Button -->
+      <a href="%LINK%"
+        style="display: inline-block; padding: 12px 24px; background-color: #007BFF; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 15px; font-weight: bold; margin: 20px 0; transition: background-color 0.3s ease;">
+        Access DSV360
+      </a>
+
+      <!-- Optional Disclaimer -->
+      <p style="font-size: 14px; color: #666666; margin-top: 20px;">
+        If you didn’t request to join or believe this invitation was sent by mistake, you may safely ignore this email.
+      </p>
+
+      <p style="font-size: 14px; color: #666666;">
+        Best regards, <br>
+        The <strong>DSV360</strong> Team
+      </p>
+
+      <!-- Divider -->
+      <hr style="margin-top: 30px; border: none; border-top: 1px solid #dddddd;">
+
+      <!-- Footer -->
+      <p style="font-size: 12px; color: #888888; text-align: left;">
+        © 2025 DSV360. All rights reserved.
+      </p>
+    </div>
+  </body>
+</html>`,
+      },
+    };
+
+    const userConfig = {
+      first_name,
+      last_name,
+      email_id,
+      org_id: env === "Production" ? 50027580589 : 50026358236,
+      role_id: role_id,
+    };
+
+    // Step 3: Add user to organization
+    let addedUser;
+    try {
+      addedUser = await userManagement.addUserToOrg(signupConfig, userConfig);
+
+      if (!addedUser?.user_details?.user_id) {
+        throw new Error("User added, but user ID not received.");
+      }
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to add user to the organization",
+        error: error.message,
+      });
+    }
+
+    const newUserID = addedUser.user_details.user_id;
+
+    // Step 4: Update User_ID in the Customers table
+    try {
+      const query = `UPDATE Users SET User_Id = '${newUserID}' WHERE User_Id = '${user_id}'`;
+      await catalystApp.zcql().executeZCQLQuery(query);
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update User_ID in the database",
+        error: error.message,
+      });
+    }
+
+    res.status(200).json({
+      message: "User reinvited successfully",
+      data: addedUser,
+      status:true,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Unexpected error occurred",
+      error: error.message,
+    });
+  }
+
+}
+
 module.exports = {
   getAllUsers,
   deleteUser,
@@ -374,4 +655,5 @@ module.exports = {
   getUserTasks,
   getUserProfile,
   getUnassignedEmployees,
+  reInvitedEmployee,
 };

@@ -684,9 +684,7 @@ function Dashboard() {
      // Runs when `taskState` changes
     
     useEffect(() => {
-      console.log("Selected Year:", taskYear, typeof taskYear);
-      console.log("Available Years:", Object.keys(userTasksByYear).map(Number)); // Convert to numbers
-      console.log("Data for Selected Year:", userTasksByYear[taskYear]);
+    
     
       if (userTasksByYear[taskYear]) {
         setTotalClose(userTasksByYear[taskYear].close || 0);

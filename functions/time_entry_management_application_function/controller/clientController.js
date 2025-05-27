@@ -9,6 +9,8 @@ app.use(fileUpload());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+require("dotenv").config();
+
 const catalyst = require("zcatalyst-sdk-node");
 const { container } = require("webpack");
 const { findPackageJSON } = require("module");
@@ -24,6 +26,10 @@ app.use((req, res, next) => {
   req.catalystApp = catalyst.initialize(req);
   next();
 });
+
+const env = process.env.CATALYST_USER_ENVIRONMENT;
+console.log("Environment = ", env);
+
 
 const contactDashBoard = async (req, res) => {
   const id = req.params.id;
@@ -81,6 +87,10 @@ const getClientData = async (req, res) => {
     const query = `SELECT * FROM Client_Contact WHERE UserID = ${id}`;
     const response = await catalystApp.zcql().executeZCQLQuery(query);
 
+    response.sort((a, b) => {
+      return new Date(b.CREATEDTIME) - new Date(a.CREATEDTIME);
+    });
+
     res.status(200).json({
       success: true,
       data: response,
@@ -99,6 +109,10 @@ const getClientOrg = async (req, res) => {
     const datastore = catalystApp.datastore();
     const table = datastore.table("Client_Org");
     const response = await table.getAllRows();
+    
+    response.sort((a, b) => {
+      return new Date(b.CREATEDTIME) - new Date(a.CREATEDTIME);
+    });
     res.status(200).json({
       success: true,
       data: response,
@@ -232,14 +246,62 @@ const addContact = async (req, res) => {
     const signupConfig = {
       platform_type: "web",
       template_details: {
-        senders_mail: "aj637061@gmail.com",
-        subject: "Welcome to %APP_NAME%",
-        message: `<p>Hello ${first_name},</p> 
-                    <p>Follow this link to join %APP_NAME%.</p> 
-                    <p><a href='%LINK%'>%LINK%</a></p> 
-                    <p>If you didn't request to join the application, you can ignore this email.</p> 
-                    <p>Thanks,</p> 
-                    <p>Your %APP_NAME% team</p>`,
+        senders_mail:  "abhay@dsvcorp.com.au",
+        subject: "Welcome to DSV Organization",
+        message: `<html>
+  <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; color: #333333;">
+    <div style="max-width: 600px; margin: 40px auto; background: #ffffff; padding: 20px; border-radius: 8px;">
+
+      <!-- Logo -->
+      <img alt="DSV360 Logo" width="90" height="70" src="https://fristinetech.com/wp-content/uploads/2023/11/Google-Ads-Logo.png" style="max-width: 100px; margin-bottom: 20px;">
+
+      <!-- Heading -->
+      <h2 style="color: #333333; font-size: 24px; margin-bottom: 10px; font-weight: 600;">
+        Dear ${first_name+ " "+ last_name}
+      </h2>
+
+      <!-- Subheading -->
+      <h3 style="color: #333333; font-size: 18px; margin-bottom: 20px; font-weight: normal;">
+        Welcome to <span style="color: #007BFF; font-weight: bold;">DSV</span>
+      </h3>
+
+      <!-- Invitation Message -->
+      <p style="font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+        We're excited to have you on board! As a valued client, you now have exclusive access to the DSV Portal where you can manage your services, track progress, and collaborate with our team.
+      </p>
+
+      <p style="font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+        Click the button below to set up your account and start exploring your personalized dashboard.
+      </p>
+
+      <!-- Button -->
+      <a href="%LINK%"
+        style="display: inline-block; padding: 12px 24px; background-color: #007BFF; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 15px; font-weight: bold; margin: 20px 0; transition: background-color 0.3s ease;">
+        Join DSV Now
+      </a>
+
+      <!-- Optional Disclaimer -->
+      <p style="font-size: 14px; color: #666666; margin-top: 20px;">
+        If you believe this invitation was sent to you in error, feel free to disregard this message.
+      </p>
+
+      <p style="font-size: 14px; color: #666666;">
+        We look forward to a great partnership. <br>
+        Sincerely, <br>
+        The <strong>DSV</strong> Team
+      </p>
+
+      <!-- Divider -->
+      <hr style="margin-top: 30px; border: none; border-top: 1px solid #dddddd;">
+
+      <!-- Footer -->
+      <p style="font-size: 12px; color: #888888; text-align: left;">
+        © 2025 DSV. All rights reserved.
+      </p>
+    </div>
+  </body>
+</html>
+`,
       },
     };
 
@@ -248,8 +310,8 @@ const addContact = async (req, res) => {
       first_name: first_name,
       last_name: last_name,
       email_id: email_id,
-      org_id: 10095488403,
-      role_id: 1380000001278009,
+      org_id: env === "Production" ? 50027580589 : 50026358236,
+      role_id: "17682000000035363",
     };
 
     // Add user to the system
@@ -376,6 +438,7 @@ const getClientTasks = async (req, res) => {
 
 const deleteORG = async (req, res) => {
   const id = req.params.id;
+  console.log("id",id);
 
   if (!id) {
     return res.status(400).json({
@@ -390,7 +453,7 @@ const deleteORG = async (req, res) => {
 
     const query = `SELECT * FROM Client_Contact WHERE OrgID = ${id}`;
     const response = await catalystApp.zcql().executeZCQLQuery(query);
-
+    console.log("response",response.length);
     if (response.length > 0) {
       return res.status(200).json({
         success: false,
@@ -502,6 +565,11 @@ const updateClientContactStatus = async (req, res) => {
     });
   }
 };
+
+
+
+
+
 
 
 

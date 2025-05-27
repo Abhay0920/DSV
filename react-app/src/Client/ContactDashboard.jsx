@@ -45,6 +45,15 @@ import HashLoader from "react-spinners/HashLoader";
 import PropagateLoader from "react-spinners/PropagateLoader";
 
 
+
+
+// Timeline components
+
+
+// MUI Button
+import { Button } from '@mui/material';
+
+
 // Register ChartJS components
 ChartJS.register(
   ArcElement,
@@ -60,6 +69,14 @@ ChartJS.register(
 );
 
 const ContactDashboard = () => {
+
+
+  
+
+
+
+
+
   const theme = useTheme();
   const [currUser, setCurrUser] = useState({});
   const [contactData, setContactData] = useState({});
@@ -98,6 +115,14 @@ const ContactDashboard = () => {
   const {data:projects} = useSelector((state)=> state.contactProjectReducer);
   const {data: tasks} = useSelector((state) => state.contactTaskReducer); 
   const {data:issue} = useSelector((state) => state.contactIssueReducer); 
+  
+
+
+  const [statusCounts, setStatusCounts] = useState({
+    Open: 0,
+    Completed: 0,
+    "Work In Process": 0,
+  });
   
   useEffect(() => {
     const fetchAllData = async () => {
@@ -145,6 +170,17 @@ const ContactDashboard = () => {
         settotalProjects(projectRes?.length);
   
         setTotalTasks(taskRes?.length || 0);
+
+        console.log("taskRes",taskRes);
+        const taskStatusCounts = { Open: 0, Completed: 0, "Work In Process": 0 };
+taskRes?.forEach((task) => {
+  if (taskStatusCounts[task.Status] !== undefined) {
+    taskStatusCounts[task.Status]++;
+  }
+});
+setStatusCounts(taskStatusCounts); // ✅ set the final counts to state
+
+
   
         const issuesData = { open: 0, inProgress: 0, closed: 0 };
         issueRes?.forEach((issue) => {
@@ -153,6 +189,8 @@ const ContactDashboard = () => {
           if (issue.Status === "Close") issuesData.closed++;
         });
         setTotalIssues(issuesData);
+
+        
       } catch (error) {
         console.error("Error loading data:", error);
       }
@@ -165,6 +203,7 @@ const ContactDashboard = () => {
     fetchAllData();
   }, []); 
   
+   
 
   // Colors
   const colors = {
@@ -215,20 +254,20 @@ const ContactDashboard = () => {
   };
 
   // Bar Chart for Task Completion
-  const taskCompletionChartData = {
-    labels: clientData.monthlyData,
-    datasets: [
-      {
-        label: "Completed Tasks",
-        data: clientData.taskCompletionTrend,
-        backgroundColor: `${colors.success}cc`,
-        borderColor: colors.success,
-        borderWidth: 1,
-        borderRadius: 5,
-        barThickness: 20,
-      },
-    ],
-  };
+  // const taskCompletionChartData = {
+  //   labels: clientData.monthlyData,
+  //   datasets: [
+  //     {
+  //       label: "Completed Tasks",
+  //        data: clientData.taskCompletionTrend,
+  //       backgroundColor: `${colors.success}cc`,
+  //       borderColor: colors.success,
+  //       borderWidth: 1,
+  //       borderRadius: 5,
+  //       barThickness: 20,
+  //     },
+  //   ],
+  // };
 
   const chartOptions = {
     responsive: true,
@@ -327,18 +366,54 @@ const ContactDashboard = () => {
   // Calculate the percentage change for KPIs
   const projectsChange = {
     value: 12,
-    percentage: 20,
+   
   };
   const tasksChange = {
     value: 28,
-    percentage: 18,
+  
   };
   const issuesChange = {
     value: -8,
-    percentage: -10,
+   
   };
 
-  return (
+ 
+  
+  tasks?.forEach((task) => {
+    if (statusCounts[task.status] !== undefined) {
+      statusCounts[task.status]++;
+    }
+  });
+  
+  const taskCompletionChartData = {
+    labels: ["Open", "Work in Progress", "Closed"],
+    datasets: [
+      {
+        label: "Task Status Distribution",
+        data: [
+          statusCounts["Open"],
+          statusCounts["Work In Process"],
+          statusCounts["Completed"],
+        ],
+        backgroundColor: [
+          `${colors.warning}cc`,      // Open
+          `${colors.info}cc`,         // Work in Progress
+          `${colors.success}cc`,      // Closed
+        ],
+        borderColor: [
+          colors.warning,
+          colors.info,
+          colors.success,
+        ],
+        borderWidth: 1,
+        borderRadius: 5,
+        barThickness: 30,
+      },
+    ],
+  };
+  
+
+   return (
 
     <>
  {loading ? (
@@ -490,32 +565,7 @@ const ContactDashboard = () => {
                 >
                   <AssignmentIcon fontSize="large" />
                 </Avatar>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    bgcolor:
-                      projectsChange.percentage >= 0
-                        ? `${colors.success}22`
-                        : `${colors.error}22`,
-                    color:
-                      projectsChange.percentage >= 0
-                        ? colors.success
-                        : colors.error,
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: 2,
-                  }}
-                >
-                  {projectsChange.percentage >= 0 ? (
-                    <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5 }} />
-                  ) : (
-                    <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5 }} />
-                  )}
-                  <Typography variant="body2" fontWeight="medium">
-                    {Math.abs(projectsChange.percentage)}%
-                  </Typography>
-                </Box>
+               
               </Box>
               <Typography variant="h3" fontWeight="bold" sx={{ mb: 0.5 }}>
                 {totalProjects}
@@ -564,32 +614,7 @@ const ContactDashboard = () => {
                 >
                   <TaskIcon fontSize="large" />
                 </Avatar>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    bgcolor:
-                      tasksChange.percentage >= 0
-                        ? `${colors.success}22`
-                        : `${colors.error}22`,
-                    color:
-                      tasksChange.percentage >= 0
-                        ? colors.success
-                        : colors.error,
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: 2,
-                  }}
-                >
-                  {tasksChange.percentage >= 0 ? (
-                    <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5 }} />
-                  ) : (
-                    <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5 }} />
-                  )}
-                  <Typography variant="body2" fontWeight="medium">
-                    {Math.abs(tasksChange.percentage)}%
-                  </Typography>
-                </Box>
+              
               </Box>
               <Typography variant="h3" fontWeight="bold" sx={{ mb: 0.5 }}>
                 {totalTasks}
@@ -638,32 +663,7 @@ const ContactDashboard = () => {
                 >
                   <BugReportIcon fontSize="large" />
                 </Avatar>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    bgcolor:
-                      issuesChange.percentage >= 0
-                        ? `${colors.error}22`
-                        : `${colors.success}22`,
-                    color:
-                      issuesChange.percentage >= 0
-                        ? colors.error
-                        : colors.success,
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: 2,
-                  }}
-                >
-                  {issuesChange.percentage < 0 ? (
-                    <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5 }} />
-                  ) : (
-                    <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5 }} />
-                  )}
-                  <Typography variant="body2" fontWeight="medium">
-                    {Math.abs(issuesChange.percentage)}%
-                  </Typography>
-                </Box>
+               
               </Box>
               <Typography variant="h3" fontWeight="bold" sx={{ mb: 0.5 }}>
                 {totalIssues.open + totalIssues.inProgress + totalIssues.closed}
@@ -691,7 +691,7 @@ const ContactDashboard = () => {
       {/* Charts */}
       <Grid container spacing={3}>
         {/* Project Progress Line Chart */}
-        <Grid item xs={12} md={8}>
+        {/* <Grid item xs={12} md={8}>
           <Card sx={{ borderRadius: "16px", height: "100%", p: 1 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom fontWeight="bold">
@@ -705,10 +705,10 @@ const ContactDashboard = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid> */}
 
         {/* Issues Distribution Pie Chart */}
-        <Grid item xs={12} md={4}>
+        {/* <Grid item xs={12} md={4}>
           <Card sx={{ borderRadius: "16px", height: "100%", p: 1 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom fontWeight="bold">
@@ -729,10 +729,10 @@ const ContactDashboard = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid> */}
 
         {/* Task Completion Bar Chart */}
-        <Grid item xs={12}>
+        {/* <Grid item xs={12}>
           <Card sx={{ borderRadius: "16px", height: "100%", p: 1 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom fontWeight="bold">
@@ -746,13 +746,33 @@ const ContactDashboard = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid> */}
+
+<Grid item xs={12}>
+  <Card sx={{ borderRadius: "16px", height: "100%", p: 1 }}>
+    <CardContent>
+      <Typography variant="h6" gutterBottom fontWeight="bold">
+        Task Status Overview
+      </Typography>
+      <Typography variant="body2" color="textSecondary" paragraph>
+        Overall distribution of tasks by status
+      </Typography>
+      <Box sx={{ height: 300 }}>
+        <Bar options={chartOptions} data={taskCompletionChartData} />
+      </Box>
+    </CardContent>
+  </Card>
+</Grid>
+
       </Grid>
     </Box>
     )}
     </>
    
   );
+
+
+
 };
 
 export default ContactDashboard;

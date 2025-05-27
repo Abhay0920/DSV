@@ -13,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 const catalyst = require("zcatalyst-sdk-node");
+const { error } = require("console");
 
 app.use(bodyParser.json());
 app.use(express.json({ limit: "50mb" }));
@@ -93,6 +94,7 @@ const updateCover = async (req, res) => {
   }
 
   const file = req.files.cover;
+  console.log("file",file)
 
   try {
     const catalystApp = req.catalystApp;
@@ -121,10 +123,12 @@ const updateCover = async (req, res) => {
     res.status(200).json({
       success: "true",
       data: queryResp,
+      coverURL
     });
   } catch (err) {
     res.status(200).json({
       success: "false",
+      error:err.message
     });
   }
 };

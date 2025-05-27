@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-
 import {
   Container,
   Typography,
@@ -170,13 +169,13 @@ const Feedback = () => {
           </Box>
         </Paper>
 
-        <div>
-          {viewMode === "card" ? (
-            <Grid container spacing={3}>
-              {isLoading
-                ? Array.from(new Array(6)).map((_, index) => (
-                    <Grid item xs={12} sm={6} md={4} key={index}>
-                      <Card
+<div>
+  {viewMode === "card" ? (
+    isLoading ? (
+      <Grid container spacing={3}>
+        {Array.from(new Array(6)).map((_, index) => (
+          <Grid item xs={12} sm={6} md={4} key={index}>
+           <Card
                         component={Paper}
                         elevation={3}
                         sx={{
@@ -211,109 +210,126 @@ const Feedback = () => {
                           />
                         </CardContent>
                       </Card>
-                    </Grid>
-                  ))
-                : sortedFeedback.map((item) => (
-                    <Grid item xs={12} sm={6} md={4} key={item.id}>
-                      <Card
-                        component={Paper}
-                        elevation={4}
-                        sx={{
-                          borderRadius: 3,
-                          height: 220, // Explicit height to maintain uniformity
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between",
-                          transition: "transform 0.3s ease-in-out",
-                          "&:hover": { transform: "scale(1.05)" },
-                          padding: "5px",
-                        }}
-                      >
-                        <CardContent
-                          sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            height: "100%",
-                            padding: 1,
-                            justifyContent: "space-between", // Ensure content is spread evenly
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 2,
-                              marginBottom: 1,
-                            }}
-                          >
-                            <Avatar>{item.Name.charAt(0).toUpperCase()}</Avatar>
-                            <Box>
-                              <Typography
-                                variant="h6"
-                                color="primary"
-                                sx={{ fontWeight: "bold" }}
-                              >
-                                {item.Name}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="textSecondary"
-                                sx={{ wordBreak: "break-all" }}
-                              >
-                                {item.Email}
-                              </Typography>
-                            </Box>
-                          </Box>
+          </Grid>
+        ))}
+      </Grid>
+    ) : sortedFeedback.length === 0 ? (
+      <Typography variant="h6" align="center" sx={{ mt: 4 }}>
+        No feedback found
+      </Typography>
+    ) : (
+      <Grid container spacing={3}>
+        {sortedFeedback.map((item) => (
+          
+          <Grid item xs={12} sm={6} md={4} key={item.id}>
+          <Card
+            component={Paper}
+            elevation={4}
+            sx={{
+              borderRadius: 3,
+              height: 220, // Explicit height to maintain uniformity
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              transition: "transform 0.3s ease-in-out",
+              "&:hover": { transform: "scale(1.05)" },
+              padding: "5px",
+            }}
+          >
+            <CardContent
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                height: "100%",
+                padding: 1,
+                justifyContent: "space-between", // Ensure content is spread evenly
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  marginBottom: 1,
+                }}
+              >
+                <Avatar>{item.Name.charAt(0).toUpperCase()}</Avatar>
+                <Box>
+                  <Typography
+                    variant="h6"
+                    color="primary"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    {item.Name}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="textSecondary"
+                    sx={{ wordBreak: "break-all" }}
+                  >
+                    {item.Email}
+                  </Typography>
+                </Box>
+              </Box>
 
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              marginBottom: 1,
-                              overflowY: "auto", // Enable scrolling for overflowed content
-                              maxHeight: "6em", // Max height for the message
-                              display: "-webkit-box",
-                              WebkitLineClamp: 4, // Limit message to 4 lines
-                              WebkitBoxOrient: "vertical",
-                              flexGrow: 1, // Allow this area to grow and fill the space
-                            }}
-                          >
-                            {item.Message}
-                          </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  marginBottom: 1,
+                  overflowY: "auto", // Enable scrolling for overflowed content
+                  maxHeight: "6em", // Max height for the message
+                  display: "-webkit-box",
+                  WebkitLineClamp: 4, // Limit message to 4 lines
+                  WebkitBoxOrient: "vertical",
+                  flexGrow: 1, // Allow this area to grow and fill the space
+                }}
+              >
+                {item.Message}
+              </Typography>
 
-                          <Box
-                            sx={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              marginTop: "auto", // Pushes the date and status to the bottom
-                            }}
-                          >
-                            <Chip
-                              label={new Date(
-                                item.MODIFIEDTIME
-                              ).toLocaleString()}
-                              color="primary"
-                              variant="outlined"
-                            />
-                            <Chip
-                              label={item.Status ? "Fixed" : "Will Fix Soon"}
-                              sx={{
-                                backgroundColor: item.Status
-                                  ? "lightgreen"
-                                  : "#D3D3D3",
-                                color: item.Status ? "green" : "initial",
-                              }}
-                            />
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-            </Grid>
-          ) : (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: "auto", // Pushes the date and status to the bottom
+                }}
+              >
+                <Chip
+                  label={new Date(
+                    item.MODIFIEDTIME
+                  ).toLocaleString()}
+                  color="primary"
+                  variant="outlined"
+                />
+                <Chip
+                  label={item.Status ? "Fixed" : "Will Fix Soon"}
+                  sx={{
+                    backgroundColor: item.Status
+                      ? "lightgreen"
+                      : "#D3D3D3",
+                    color: item.Status ? "green" : "initial",
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        ))}
+      </Grid>
+    )
+  ) : isLoading ? (
+    <Typography variant="h6" align="center" sx={{ mt: 4 }}>
+      Loading...
+    </Typography>
+  ) : sortedFeedback.length === 0 ? (
+    <Typography variant="h6" align="center" sx={{ mt: 4 }}>
+      No feedback found
+    </Typography>
+  ) : (
+    <TableContainer component={Paper}>
+      <Table>
+      <TableHead>
                   <TableRow sx={{ backgroundColor: "#1976d2" }}>
                     <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
                       Name
@@ -355,10 +371,11 @@ const Feedback = () => {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </div>
+      </Table>
+    </TableContainer>
+  )}
+</div>
+
       </Box>
     </div>
   );
