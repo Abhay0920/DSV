@@ -194,7 +194,7 @@ const addUser = async (req, res) => {
     const signupConfig = {
       platform_type: "web",
       template_details: {
-        senders_mail: "abhay@dsvcorp.com.au",
+        senders_mail: "catalystadmin@dsv360.ai",
         subject: "Welcome to DSV360 Portal",
         message: `<html>
   <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; color: #333333;">
@@ -517,6 +517,7 @@ const getUnassignedEmployees = async (req, res) => {
 //     });
 //   }
 // });
+
 const reInvitedEmployee = async(req,res)=>{
   const { first_name, last_name, email_id, user_id, role_id } = req.body;
 
@@ -539,7 +540,7 @@ const reInvitedEmployee = async(req,res)=>{
     const signupConfig = {
       platform_type: "web",
       template_details: {
-        senders_mail: "abhay@dsvcorp.com.au",
+        senders_mail: "catalystadmin@dsv360.ai",
         subject: "Welcome to DSV Portal",
         message: `<html>
   <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; color: #333333;">

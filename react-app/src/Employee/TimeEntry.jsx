@@ -1200,7 +1200,7 @@ export const TimeEntry = ({
             rows={4}
             value={currentEditTimeEntry?.note || ""}
             onChange={handleEditChange}
-            inputProps={{ maxLength: MAX_NOTE_LENGTH }}
+
             sx={{ marginBottom: 2 }}
           />
           <Box

@@ -229,30 +229,30 @@ app.post("/sendEmail", async (req, res) => {
   try {
     const catalystApp = req.catalystApp;
     
-    // const users = await catalystApp.userManagement().getAllUsers();
+    const users = await catalystApp.userManagement().getAllUsers();
     // console.log("Users: ", users);
 
-    const users=[
-      {
-        zuid: '10095630092',
-        zaaid: '10095488403',
-        org_id: '10095488403',
-        status: 'ACTIVE',
-        is_confirmed: true,
-        email_id: 'abhay@dsvcorp.com.au',
-        first_name: 'Aman',
-        last_name: 'Jain',
-        created_time: 'Feb 12, 2025 04:02 PM',
-        modified_time: 'Apr 07, 2025 04:45 PM',
-        invited_time: 'Feb 12, 2025 04:02 PM',
-        role_details: { role_name: 'App User', role_id: '1380000001199208' },
-        user_type: 'App User',
-        source: 'Email',
-        user_id: '1380000001198369',
-        locale: 'us|en_us|America/Los_Angeles',
-        time_zone: 'America/Los_Angeles'
-      } 
-    ]
+    // const users=[
+    //   {
+    //     zuid: '10095630092',
+    //     zaaid: '10095488403',
+    //     org_id: '10095488403',
+    //     status: 'ACTIVE',
+    //     is_confirmed: true,
+    //     email_id: 'abhay@dsvcorp.com.au',
+    //     first_name: 'Aman',
+    //     last_name: 'Jain',
+    //     created_time: 'Feb 12, 2025 04:02 PM',
+    //     modified_time: 'Apr 07, 2025 04:45 PM',
+    //     invited_time: 'Feb 12, 2025 04:02 PM',
+    //     role_details: { role_name: 'App User', role_id: '1380000001199208' },
+    //     user_type: 'App User',
+    //     source: 'Email',
+    //     user_id: '1380000001198369',
+    //     locale: 'us|en_us|America/Los_Angeles',
+    //     time_zone: 'America/Los_Angeles'
+    //   } 
+    // ]
     
   
 
@@ -304,47 +304,87 @@ app.post("/sendEmail", async (req, res) => {
 
 //       `;
 
-const htmlContent = `
-  <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+// const htmlContent = `
+//   <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
   
-    <div style="margin-bottom: 20px;">
-      <img src="https://fristinetech.com/wp-content/uploads/2023/11/Google-Ads-Logo.png" alt="Fristine InfoTech Logo" style="max-width: 100px;">
-    </div>
+//     <div style="margin-bottom: 20px;">
+//       <img src="https://fristinetech.com/wp-content/uploads/2023/11/Google-Ads-Logo.png" alt="Fristine InfoTech Logo" style="max-width: 100px;">
+//     </div>
 
-    <p style="font-size: 16px;">Hi <strong>${req.body.first_name}</strong>,</p>
+//     <p style="font-size: 16px;">Hi <strong>${req.body.first_name}</strong>,</p>
 
-    <p style="font-size: 15px; line-height: 1.6;">
-      We’re pleased to inform you that you have been <strong>assigned a new project</strong> as part of your responsibilities at Fristine InfoTech.
-    </p>
+//     <p style="font-size: 15px; line-height: 1.6;">
+//       We’re pleased to inform you that you have been <strong>assigned a new project</strong> as part of your responsibilities at Fristine InfoTech.
+//     </p>
 
-    <p style="font-size: 15px; line-height: 1.6;">
-      🆕 <strong>Project Name:</strong> ${req.body.project_name}
-    </p>
+//     <p style="font-size: 15px; line-height: 1.6;">
+//       🆕 <strong>Project Name:</strong> ${req.body.project_name}
+//     </p>
 
-    <p style="font-size: 15px; line-height: 1.6;">
-      Please check the project dashboard for more details, timelines, and assigned tasks. Your active participation is essential for the project's success.
-    </p>
+//     <p style="font-size: 15px; line-height: 1.6;">
+//       Please check the project dashboard for more details, timelines, and assigned tasks. Your active participation is essential for the project's success.
+//     </p>
 
-    <p style="font-size: 15px; line-height: 1.6;">
-      If you have any questions or require additional support, feel free to reach out through the project platform.
-    </p>
+//     <p style="font-size: 15px; line-height: 1.6;">
+//       If you have any questions or require additional support, feel free to reach out through the project platform.
+//     </p>
 
-    <p style="font-size: 15px; line-height: 1.6;">Thank you for your commitment and collaboration.</p>
+//     <p style="font-size: 15px; line-height: 1.6;">Thank you for your commitment and collaboration.</p>
 
-    <p style="font-size: 15px;">
-      Best regards,<br>
-      <strong>Product Team</strong><br>
-      Fristine InfoTech Pvt. Ltd.
-    </p>
+//     <p style="font-size: 15px;">
+//       Best regards,<br>
+//       <strong>Product Team</strong><br>
+//       Fristine InfoTech Pvt. Ltd.
+//     </p>
 
-    <hr style="margin-top: 30px; border: none; border-top: 1px solid #dddddd;">
+//     <hr style="margin-top: 30px; border: none; border-top: 1px solid #dddddd;">
 
-    <p style="font-size: 12px; color: #888888; text-align: left;">
-      © ${new Date().getFullYear()} Fristine InfoTech Pvt. Ltd. All rights reserved.
-    </p>
+//     <p style="font-size: 12px; color: #888888; text-align: left;">
+//       © ${new Date().getFullYear()} Fristine InfoTech Pvt. Ltd. All rights reserved.
+//     </p>
 
+//   </div>
+// `;
+
+const htmlContent = `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+  
+  <div style="margin-bottom: 20px;">
+    <img src="https://fristinetech.com/wp-content/uploads/2023/11/Google-Ads-Logo.png" alt="Fristine InfoTech Logo" style="max-width: 100px;">
   </div>
-`;
+
+  <p style="font-size: 16px;">Dear Team,</p>
+
+  <p style="font-size: 15px; line-height: 1.6;">
+    We would like to inform you that <strong>Fristine InfoTech is transitioning to a new platform identity</strong>. As part of this migration, the current project management system will be replaced.
+  </p>
+
+  <p style="font-size: 15px; line-height: 1.6;">
+    ✅ <strong>Action Required:</strong> Please continue accessing the current platform using the following domain until <strong>31st May</strong>:
+    <br>
+    <a href="https://project-management-771555683.development.catalystserverless.com" style="color: #1a73e8;">https://project-management-771555683.development.catalystserverless.com</a>
+  </p>
+
+  <p style="font-size: 15px; line-height: 1.6;">
+    🚨 <strong>Important Notice:</strong> Starting <strong>1st June</strong>, the current platform will be decommissioned. Please contact the <strong>Product Team</strong> to receive your new login credentials and access details for the updated platform.
+  </p>
+
+  <p style="font-size: 15px; line-height: 1.6;">
+    We appreciate your cooperation and support during this transition. If you have any questions or face any issues, don’t hesitate to reach out to the Product Team.
+  </p>
+
+  <p style="font-size: 15px;">
+    Best regards,<br>
+    <strong>Product Team</strong><br>
+    Fristine InfoTech Pvt. Ltd.
+  </p>
+
+  <hr style="margin-top: 30px; border: none; border-top: 1px solid #dddddd;">
+
+  <p style="font-size: 12px; color: #888888; text-align: left;">
+    © ${new Date().getFullYear()} Fristine InfoTech Pvt. Ltd. All rights reserved.
+  </p>
+
+</div>`
 
       console.log(first_name, email_id);
     
@@ -448,5 +488,6 @@ app.post("/sendEmailProject", async (req, res) => {
 app.use((req, res) => {
   res.status(404).send("The page you are looking for does not exist.");
 });
+
 
 module.exports = app;
